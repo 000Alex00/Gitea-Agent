@@ -403,22 +403,83 @@ Implementierung für Issue #{number}.
 # Entry Point
 # ---------------------------------------------------------------------------
 
+def cmd_auto(project_root: Path) -> None:
+    """
+    Standard-Modus (kein Argument): Scannt alle Workflow-States in Gitea
+    und verarbeitet automatisch was möglich ist.
+
+    Reihenfolge:
+        1. agent-proposed + Freigabe vorhanden → implement
+        2. ready-for-agent → Plan posten
+        3. Sonst → Status-Übersicht
+
+    Args:
+        project_root: Wurzelverzeichnis des Projekts
+    """
+    print("=" * 70)
+    print("  GITEA AGENT — AUTO-SCAN")
+    print("=" * 70)
+
+    # Schritt 1: Freigegebene Pläne implementieren
+    proposed = gitea.get_issues(label=LABEL_PROPOSED)
+    approved  = [i for i in proposed if gitea.check_approval(i["number"])]
+    if approved:
+        approved.sort(key=lambda x: risk_level(x)[0])
+        issue = approved[0]
+        print(f"\n[✓] Freigabe für Issue #{issue['number']}: {issue['title'][:55]}")
+        cmd_implement(issue["number"], project_root)
+        return
+
+    # Schritt 2: Neue Issues planen
+    ready = gitea.get_issues(label=LABEL_READY)
+    if ready:
+        ready.sort(key=lambda x: risk_level(x)[0])
+        print(f"\n[→] {len(ready)} Issue(s) bereit — poste Pläne:\n")
+        for issue in ready:
+            stufe, _ = risk_level(issue)
+            print(f"    #{issue['number']} (Stufe {stufe}) {issue['title'][:55]}")
+            cmd_plan(issue["number"], project_root)
+            print()
+        print(f"[→] Issues in Gitea freigeben ('ok' kommentieren):")
+        print(f"    {gitea.GITEA_URL}/{gitea.REPO}/issues")
+        return
+
+    # Schritt 3: Status-Übersicht
+    in_progress = gitea.get_issues(label=LABEL_PROGRESS)
+    waiting     = gitea.get_issues(label=LABEL_PROPOSED)
+
+    if not any([in_progress, waiting]):
+        print("\n[✓] Nichts zu tun — keine Issues mit Workflow-Labels.")
+        print(f"    {gitea.GITEA_URL}/{gitea.REPO}/issues")
+        return
+
+    print("\n--- Status ---\n")
+    if in_progress:
+        print(f"In Arbeit ({len(in_progress)}):")
+        for i in in_progress:
+            print(f"  #{i['number']} {i['title'][:60]}")
+    if waiting:
+        print(f"\nWartet auf Freigabe ({len(waiting)}):")
+        for i in waiting:
+            flag = "✅ Freigabe vorhanden" if gitea.check_approval(i["number"]) else "⏳ Wartet auf 'ok'"
+            print(f"  #{i['number']} {i['title'][:50]}  [{flag}]")
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Gitea Agent — LLM-agnostischer Issue-Workflow",
+        description="Gitea Agent — automatischer Issue-Workflow",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Workflow:
-  1. python3 agent_start.py --issue 16      → Plan posten
-  2. [Du kommentierst 'ok' in Gitea]
-  3. python3 agent_start.py --implement 16  → Branch + Implementierungskontext
-  4. [LLM implementiert + committed]
-  5. python3 agent_start.py --pr 16 --branch fix/issue-16-xyz  → PR erstellen
+Ohne Argumente: Auto-Modus — scannt Gitea und arbeitet selbständig.
 
-Konfiguration: .env Datei mit GITEA_URL, GITEA_USER, GITEA_TOKEN, GITEA_REPO
+Manuell:
+  python3 agent_start.py --list               → Status-Übersicht
+  python3 agent_start.py --issue 16           → Plan für Issue #16 posten
+  python3 agent_start.py --implement 16       → Branch + Implementierungskontext
+  python3 agent_start.py --pr 16 --branch fix/issue-16-xyz  → PR erstellen
         """
     )
-    parser.add_argument("--list",      action="store_true",        help="Alle ready-for-agent Issues auflisten")
+    parser.add_argument("--list",      action="store_true",        help="Alle Workflow-Issues auflisten")
     parser.add_argument("--issue",     type=int,  metavar="NR",    help="Issue analysieren + Plan posten")
     parser.add_argument("--implement", type=int,  metavar="NR",    help="Nach OK: Branch erstellen + Kontext")
     parser.add_argument("--pr",        type=int,  metavar="NR",    help="PR erstellen (mit --branch)")
@@ -440,14 +501,7 @@ Konfiguration: .env Datei mit GITEA_URL, GITEA_USER, GITEA_TOKEN, GITEA_REPO
             sys.exit(1)
         cmd_pr(args.pr, args.branch)
     else:
-        # Standard: nächstes ready-for-agent Issue
-        issues = gitea.get_issues(label=LABEL_READY)
-        if not issues:
-            print(f"Keine Issues mit Label '{LABEL_READY}'.")
-            print(f"Labels setzen: {gitea.GITEA_URL}/{gitea.REPO}/issues")
-            sys.exit(0)
-        issues.sort(key=lambda x: risk_level(x)[0])
-        cmd_plan(issues[0]["number"], project_root)
+        cmd_auto(project_root)
 
 
 if __name__ == "__main__":
