@@ -40,6 +40,16 @@ import gitea_api as gitea
 
 # Projektroot: aus .env oder Elternverzeichnis des Scripts
 def _project_root() -> Path:
+    """
+    Bestimmt das Projektverzeichnis das bearbeitet wird.
+
+    Reihenfolge:
+        1. PROJECT_ROOT aus .env (falls gesetzt und existiert)
+        2. Elternverzeichnis von agent_start.py (Standard)
+
+    Returns:
+        Absoluter Pfad zum Projektroot.
+    """
     env_file = _HERE / ".env"
     if env_file.exists():
         for line in env_file.read_text().splitlines():
@@ -228,7 +238,12 @@ def print_context(issue: dict) -> None:
 # ---------------------------------------------------------------------------
 
 def cmd_list() -> None:
-    """Listet alle Issues mit Label 'ready-for-agent' auf."""
+    """
+    Listet alle Issues mit Label 'ready-for-agent' auf, sortiert nach Risiko.
+
+    Aufgerufen von:
+        main() wenn --list gesetzt
+    """
     issues = gitea.get_issues(label=LABEL_READY)
     if not issues:
         print("Keine Issues mit Label 'ready-for-agent' gefunden.")

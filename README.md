@@ -9,23 +9,31 @@ Verbindet einen LLM-Agenten (Claude Code, ChatGPT, lokales LLM, …) mit dem Git
 ## Konzept
 
 ```
-Gitea Issue (ready-for-agent)
+python3 agent_start.py          ← Auto-Modus (empfohlen, kein Argument nötig)
         ↓
-  agent_start.py --issue <NR>
+  Scannt alle Labels in Gitea
         ↓
-  LLM liest Code + Issue
+  ┌─ ready-for-agent ──────────────────────────────────────────────┐
+  │  LLM liest Issue + Code → Plan-Kommentar in Gitea posten       │
+  │  Label: ready-for-agent → agent-proposed                       │
+  └────────────────────────────────────────────────────────────────┘
         ↓
-  Plan-Kommentar in Gitea posten
+  Mensch kommentiert "ok" in Gitea
         ↓
-  Mensch kommentiert "ok"
+  ┌─ agent-proposed + Freigabe ────────────────────────────────────┐
+  │  Branch erstellen → Implementierungskontext ausgeben           │
+  │  Label: agent-proposed → in-progress                           │
+  └────────────────────────────────────────────────────────────────┘
         ↓
-  agent_start.py --implement <NR>
-        ↓
-  Branch erstellen + Implementieren
+  LLM implementiert + committet
         ↓
   agent_start.py --pr <NR> --branch <branch>
         ↓
-  PR in Gitea
+  ┌─ PR erstellt ──────────────────────────────────────────────────┐
+  │  Abschluss-Kommentar ins Issue + Label: needs-review           │
+  └────────────────────────────────────────────────────────────────┘
+        ↓
+  Mensch reviewt + mergt
 ```
 
 Kein automatisches Deployment. Kein Auto-Merge. Der Mensch behält die Kontrolle über jeden Schritt.
@@ -152,5 +160,5 @@ Der Output enthält: Issue-Beschreibung, Risikostufe, erkannte Dateien, Branch-B
 
 - Cron-Job: einmal täglich `--list` → nächstes Issue automatisch bearbeiten
 - Webhook: Gitea-Event bei neuem `ready-for-agent` Label triggert Agent
-- Multi-Repo: `.env` je Projekt, `--root` für Projektwechsel
+- Multi-Repo: `.env` je Projekt, `PROJECT_ROOT` für Projektwechsel
 - Audit-Log: alle Agent-Aktionen in Datei schreiben
