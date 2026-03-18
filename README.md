@@ -52,34 +52,38 @@ Keine zusätzlichen Abhängigkeiten — nur Python 3.10+ Stdlib.
 | Variable | Beschreibung | Beispiel |
 |----------|-------------|---------|
 | `GITEA_URL` | Gitea-Instanz URL | `http://192.168.1.x:3001` |
-| `GITEA_USER` | Gitea-Benutzername | `youruser` |
+| `GITEA_USER` | Gitea-Benutzername | `admin` |
 | `GITEA_TOKEN` | API-Token (Settings → Applications) | `abc123...` |
-| `GITEA_REPO` | Repository (owner/name) | `youruser/myproject` |
+| `GITEA_REPO` | Repository (owner/name) | `admin/myproject` |
+| `GITEA_BOT_USER` | Bot-User für Kommentare (optional) | `working-bot` |
+| `GITEA_BOT_TOKEN` | API-Token des Bot-Users (optional) | `xyz789...` |
+| `PROJECT_ROOT` | Pfad zum Projekt-Repo (optional) | `/home/user/myproject` |
 
 **Token-Scopes:** `issue` (read+write), `repository` (read+write)
+
+**Bot-User (optional):** Erstelle einen separaten Gitea-User (z.B. `working-bot`) damit Agent-Kommentare klar als Bot erkennbar sind. Nur API-Token nötig — kein SSH/GPG.
 
 ---
 
 ## Verwendung
 
 ```bash
-# Alle Issues mit Label "ready-for-agent" anzeigen
-python3 agent_start.py --list
+# Auto-Modus (empfohlen): scannt alle Labels, arbeitet alles ab
+python3 agent_start.py
 
-# Issue analysieren + Plan als Gitea-Kommentar posten
-python3 agent_start.py --issue 16
-
-# [Im Browser: "ok" kommentieren auf das Issue]
-
-# Nach Freigabe: Branch erstellen + Implementierungskontext ausgeben
-python3 agent_start.py --implement 16
-
-# Nach Implementierung: PR erstellen
-python3 agent_start.py --pr 16 --branch fix/issue-16-mein-feature
-
-# Anderes Projektverzeichnis angeben
-python3 agent_start.py --issue 16 --root /path/to/project
+# Manuell:
+python3 agent_start.py --list                                    # Status-Übersicht
+python3 agent_start.py --issue 16                                # Plan für Issue #16 posten
+python3 agent_start.py --implement 16                            # Nach "ok": implementieren
+python3 agent_start.py --pr 16 --branch fix/issue-16-xyz        # PR erstellen
+python3 agent_start.py --pr 16 --branch fix/issue-16-xyz \
+  --summary "- Funktion X geändert\n- Doku aktualisiert"        # PR mit Zusammenfassung
 ```
+
+**Auto-Modus Ablauf:**
+1. Erster Run → postet Pläne für alle `ready-for-agent` Issues
+2. Du kommentierst `ok` in Gitea
+3. Zweiter Run → implementiert alle freigegebenen Issues, postet PRs
 
 ---
 

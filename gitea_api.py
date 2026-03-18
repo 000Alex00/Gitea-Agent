@@ -5,14 +5,12 @@ gitea_api.py — Gitea REST API Helper für den Agent-Workflow.
 Kapselt alle Gitea-API-Calls. Wird von agent_start.py genutzt.
 
 Konfiguration (via .env im selben Verzeichnis oder Umgebungsvariablen):
-    GITEA_URL   = http://your-gitea-host:3000
-    GITEA_USER  = your-username
-    GITEA_TOKEN = your-api-token
-    GITEA_REPO  = owner/repo-name
-
-Auth:
-    Liest GITEA_TOKEN aus .env oder Umgebungsvariablen.
-    Fallback: interaktiver Passwort-Prompt.
+    GITEA_URL       = http://your-gitea-host:3000
+    GITEA_USER      = your-username
+    GITEA_TOKEN     = your-api-token
+    GITEA_REPO      = owner/repo-name
+    GITEA_BOT_USER  = bot-username        (optional, für Kommentare)
+    GITEA_BOT_TOKEN = bot-api-token       (optional)
 
 Verwendete Endpunkte:
     GET    /repos/{repo}/issues                   → Issues lesen
@@ -34,90 +32,76 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+_ENV_FILE = Path(__file__).parent / ".env"
 
-# ---------------------------------------------------------------------------
-# Konfiguration — aus .env laden
-# ---------------------------------------------------------------------------
 
-def _find_env_file() -> Path | None:
+def _load_env() -> dict:
     """
-    Sucht .env-Datei: zuerst im gleichen Verzeichnis wie dieses Script,
-    dann im aktuellen Arbeitsverzeichnis.
+    Liest alle relevanten Variablen aus .env und Umgebungsvariablen.
+
+    Reihenfolge: Umgebungsvariable → .env Datei → Standardwert.
 
     Returns:
-        Path zur .env-Datei oder None wenn nicht gefunden.
+        Dict mit GITEA_URL, GITEA_USER, GITEA_TOKEN, GITEA_REPO,
+        GITEA_BOT_USER, GITEA_BOT_TOKEN.
     """
-    candidates = [
-        Path(__file__).parent / ".env",
-        Path.cwd() / ".env",
-    ]
-    for p in candidates:
-        if p.exists():
-            return p
-    return None
-
-
-def _load_config() -> dict:
-    """
-    Lädt Konfiguration aus .env-Datei und Umgebungsvariablen.
-
-    Priorität: Umgebungsvariablen > .env-Datei > Defaults/Prompt.
-
-    Returns:
-        dict mit keys: url, user, token, repo
-    """
-    cfg = {
-        "url":  os.getenv("GITEA_URL", ""),
-        "user": os.getenv("GITEA_USER", ""),
-        "token": os.getenv("GITEA_TOKEN", ""),
-        "repo": os.getenv("GITEA_REPO", ""),
+    env = {
+        "GITEA_URL":       os.getenv("GITEA_URL", "http://localhost:3000"),
+        "GITEA_USER":      os.getenv("GITEA_USER", ""),
+        "GITEA_TOKEN":     os.getenv("GITEA_TOKEN", ""),
+        "GITEA_REPO":      os.getenv("GITEA_REPO", ""),
+        "GITEA_BOT_USER":  os.getenv("GITEA_BOT_USER", ""),
+        "GITEA_BOT_TOKEN": os.getenv("GITEA_BOT_TOKEN", ""),
     }
-
-    env_file = _find_env_file()
-    if env_file:
-        for line in env_file.read_text().splitlines():
+    if _ENV_FILE.exists():
+        for line in _ENV_FILE.read_text().splitlines():
             line = line.strip()
-            if line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            key, val = key.strip(), val.strip()
-            if key == "GITEA_URL"   and not cfg["url"]:   cfg["url"]   = val
-            if key == "GITEA_USER"  and not cfg["user"]:  cfg["user"]  = val
-            if key == "GITEA_TOKEN" and not cfg["token"]: cfg["token"] = val
-            if key == "GITEA_REPO"  and not cfg["repo"]:  cfg["repo"]  = val
+            for key in env:
+                if line.startswith(f"{key}="):
+                    env[key] = line.split("=", 1)[1].strip()
+    return env
 
-    if not cfg["url"]:
-        cfg["url"] = input("Gitea URL (z.B. http://192.168.1.x:3001): ").strip()
-    if not cfg["repo"]:
-        cfg["repo"] = input("Repository (owner/name): ").strip()
-    if not cfg["token"]:
+
+def _make_auth(user: str, token: str, prompt_fallback: bool = False) -> str:
+    """
+    Erstellt Base64-Basic-Auth-Header aus user+token.
+
+    Args:
+        user:            Gitea-Username
+        token:           API-Token oder Passwort
+        prompt_fallback: Bei leerem Token interaktiv nachfragen
+
+    Returns:
+        Base64-kodierter Basic-Auth-String.
+    """
+    if not token and prompt_fallback:
         import getpass
-        cfg["token"] = getpass.getpass(f"Gitea Token/Passwort für {cfg['user']}: ")
-
-    return cfg
-
-
-_CFG  = _load_config()
-GITEA_URL = _CFG["url"].rstrip("/")
-REPO      = _CFG["repo"]
-_AUTH     = base64.b64encode(f"{_CFG['user']}:{_CFG['token']}".encode()).decode()
+        token = getpass.getpass(f"Gitea Passwort/Token für {user}: ")
+    return base64.b64encode(f"{user}:{token}".encode()).decode()
 
 
-# ---------------------------------------------------------------------------
-# Interner HTTP-Client
-# ---------------------------------------------------------------------------
+# Einmalig beim Import laden
+_ENV      = _load_env()
+GITEA_URL = _ENV["GITEA_URL"]
+REPO      = _ENV["GITEA_REPO"]
 
-def _request(method: str, path: str, data: dict | None = None) -> dict | list | None:
+_AUTH     = _make_auth(_ENV["GITEA_USER"], _ENV["GITEA_TOKEN"], prompt_fallback=True)
+_BOT_AUTH = (
+    _make_auth(_ENV["GITEA_BOT_USER"], _ENV["GITEA_BOT_TOKEN"])
+    if _ENV["GITEA_BOT_TOKEN"]
+    else _AUTH  # Fallback: gleicher User wenn kein Bot konfiguriert
+)
+
+
+def _request(method: str, path: str, data: dict | None = None, auth: str | None = None) -> dict | list | None:
     """
     Führt einen Gitea-API-Request aus.
 
-    Aufgerufen von:
-        Alle öffentlichen Funktionen dieses Moduls.
-
     Args:
         method: HTTP-Methode (GET, POST, PATCH, DELETE)
-        path:   API-Pfad ohne Basis-URL, z.B. \"/repos/owner/repo/issues\"
+        path:   API-Pfad ohne Basis-URL, z.B. "/repos/owner/repo/issues"
         data:   Optionaler Request-Body als dict (wird zu JSON serialisiert)
+        auth:   Auth-Header (Standard: _AUTH / Admin-User)
 
     Returns:
         Geparste JSON-Antwort (dict oder list), oder None bei DELETE.
@@ -128,7 +112,7 @@ def _request(method: str, path: str, data: dict | None = None) -> dict | list | 
     url     = f"{GITEA_URL}/api/v1{path}"
     payload = json.dumps(data).encode() if data else None
     headers = {
-        "Authorization": f"Basic {_AUTH}",
+        "Authorization": f"Basic {auth or _AUTH}",
         "Content-Type":  "application/json",
         "Accept":        "application/json",
     }
@@ -164,8 +148,8 @@ def get_issues(label: str | None = None, state: str = "open") -> list:
     Liest Issues, optional gefiltert nach Label.
 
     Args:
-        label: Optionaler Label-Filter, z.B. \"ready-for-agent\"
-        state: \"open\", \"closed\" oder \"all\"
+        label: Optionaler Label-Filter, z.B. "ready-for-agent"
+        state: "open", "closed" oder "all"
 
     Returns:
         Liste von Issue-dicts.
@@ -176,7 +160,7 @@ def get_issues(label: str | None = None, state: str = "open") -> list:
     issues = _request("GET", f"/repos/{REPO}/issues{params}")
     if label:
         issues = [i for i in issues if any(l["name"] == label for l in i.get("labels", []))]
-    return issues or []
+    return issues
 
 
 def update_issue(number: int, *, state: str | None = None, body: str | None = None) -> dict:
@@ -185,7 +169,7 @@ def update_issue(number: int, *, state: str | None = None, body: str | None = No
 
     Args:
         number: Issue-Nummer
-        state:  \"open\" oder \"closed\"
+        state:  "open" oder "closed"
         body:   Neuer Issue-Body
 
     Returns:
@@ -211,12 +195,12 @@ def get_comments(number: int) -> list:
     Returns:
         Liste von Kommentar-dicts mit keys: id, body, user.login, created_at
     """
-    return _request("GET", f"/repos/{REPO}/issues/{number}/comments") or []
+    return _request("GET", f"/repos/{REPO}/issues/{number}/comments")
 
 
 def post_comment(number: int, body: str) -> dict:
     """
-    Schreibt einen Kommentar auf ein Issue.
+    Schreibt einen Kommentar als Bot-User (oder Admin-Fallback).
 
     Args:
         number: Issue-Nummer
@@ -225,15 +209,15 @@ def post_comment(number: int, body: str) -> dict:
     Returns:
         Erstellter Kommentar als dict.
     """
-    return _request("POST", f"/repos/{REPO}/issues/{number}/comments", {"body": body})
+    return _request("POST", f"/repos/{REPO}/issues/{number}/comments", {"body": body}, auth=_BOT_AUTH)
 
 
 def check_approval(number: int) -> bool:
     """
     Prüft ob ein Issue-Kommentar eine Freigabe enthält.
 
-    Sucht nach Freigabe-Keywords in Kommentaren die NACH dem letzten
-    Agent-Kommentar (erkennbar an \"OK zum Implementieren?\") erstellt wurden.
+    Sucht nach "ok", "yes", "ja", "approved", "freigabe" (case-insensitive)
+    in Kommentaren die NACH dem letzten Agent-Kommentar erstellt wurden.
 
     Args:
         number: Issue-Nummer
@@ -243,7 +227,6 @@ def check_approval(number: int) -> bool:
     """
     APPROVAL_KEYWORDS = {"ok", "yes", "ja", "approved", "freigabe", "👍", "✅"}
     comments = get_comments(number)
-
     last_agent_idx = -1
     for i, c in enumerate(comments):
         if "OK zum Implementieren?" in c.get("body", ""):
@@ -266,9 +249,9 @@ def get_all_labels() -> dict:
     Liest alle verfügbaren Labels des Repos.
 
     Returns:
-        dict: name → id Mapping, z.B. {\"bug\": 1, \"enhancement\": 3}
+        dict: name → id Mapping, z.B. {"bug": 1, "enhancement": 3}
     """
-    labels = _request("GET", f"/repos/{REPO}/labels") or []
+    labels = _request("GET", f"/repos/{REPO}/labels")
     return {l["name"]: l["id"] for l in labels}
 
 
@@ -282,7 +265,7 @@ def add_label(number: int, label_name: str) -> None:
     """
     labels = get_all_labels()
     if label_name not in labels:
-        print(f"[Warnung] Label '{label_name}' existiert nicht.")
+        print(f"[Warnung] Label '{label_name}' existiert nicht in Gitea.")
         return
     _request("POST", f"/repos/{REPO}/issues/{number}/labels", {"labels": [labels[label_name]]})
 
@@ -326,7 +309,7 @@ def create_pr(branch: str, title: str, body: str, base: str = "main") -> dict:
         branch: Feature-Branch (head)
         title:  PR-Titel
         body:   PR-Beschreibung (Markdown)
-        base:   Ziel-Branch, Standard: \"main\"
+        base:   Ziel-Branch, Standard: "main"
 
     Returns:
         Erstellter PR als dict mit key: html_url
