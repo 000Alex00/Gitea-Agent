@@ -50,13 +50,12 @@ def _project_root() -> Path:
         Absoluter Pfad zum Projektroot.
     """
     env_file = _HERE / ".env"
-    if env_file.exists():
-        for line in env_file.read_text().splitlines():
-            if line.startswith("PROJECT_ROOT="):
-                p = Path(line.split("=", 1)[1].strip())
-                if p.exists():
-                    log.debug(f"PROJECT_ROOT aus .env: {p}")
-                    return p
+    if settings.PROJECT_ROOT:
+        p = Path(settings.PROJECT_ROOT)
+        if p.exists():
+            log.debug(f"PROJECT_ROOT aus settings: {p}")
+            return p
+        log.warning(f"PROJECT_ROOT '{settings.PROJECT_ROOT}' existiert nicht — verwende Standard")
     p = _HERE.parent
     log.debug(f"PROJECT_ROOT (Standard): {p}")
     return p
@@ -176,12 +175,7 @@ def build_plan_comment(issue: dict) -> str:
 {file_list}
 
 ### Implementierungsplan
-> Dieser Abschnitt wird vom LLM-Agenten nach Code-Analyse ausgefüllt.
-> Der Agent liest die Dateien, mappt Abhängigkeiten und beschreibt:
-> - Root-Cause / Was genau geändert wird
-> - Welche Funktionen/Zeilen betroffen sind
-> - Mögliche Seiteneffekte / Regressionsrisiko
-> - Vorgehensweise Schritt für Schritt
+{settings.PLAN_PLACEHOLDER_TEXT}
 
 ### Geplanter Branch
 `{branch}`
@@ -194,7 +188,7 @@ def build_plan_comment(issue: dict) -> str:
 ---
 
 **OK zum Implementieren?**
-Antworte mit `ok`, `ja` oder `✅` um die Implementierung zu starten.
+{settings.APPROVAL_PROMPT}
 """
 
 
@@ -343,14 +337,12 @@ def cmd_pr(number: int, branch: str, summary: str = "") -> None:
     """
     issue   = gitea.get_issue(number)
     title   = f"{issue['title']} (closes #{number})"
+    checklist = "\n".join(f"- [ ] {item}" for item in settings.PR_CHECKLIST)
     pr_body = f"""## Änderungen
 Implementierung für Issue #{number}.
 
 ## Checkliste
-- [ ] Code geändert
-- [ ] Dokumentation aktualisiert
-- [ ] Kein toter Code hinzugefügt
-- [ ] Getestet
+{checklist}
 
 ## Issue
 {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}
@@ -369,8 +361,7 @@ Implementierung für Issue #{number}.
 
 {summary_block}
 
-**Nächster Schritt:** PR reviewen und mergen.
-Nach dem Merge: Issue schließen.""")
+**Nächster Schritt:** {settings.COMPLETION_NEXT_STEP}""")
 
     log.info(f"PR erstellt: {pr_url}")
     print(f"[✓] PR erstellt: {pr_url}")

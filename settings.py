@@ -114,3 +114,39 @@ CLAUDE_MAX_TOKENS  = _env_int("CLAUDE_MAX_TOKENS", 4096)
 
 LOG_LEVEL = _env("LOG_LEVEL", "INFO")   # DEBUG, INFO, WARNING, ERROR
 LOG_FILE  = _env("LOG_FILE",  "gitea-agent.log")
+
+# ---------------------------------------------------------------------------
+# Textbausteine / Templates
+# ---------------------------------------------------------------------------
+
+# Projekt-Root (überschreibt Elternverzeichnis von agent_start.py)
+PROJECT_ROOT = _env("PROJECT_ROOT", "")
+
+# Freigabe-Aufforderung am Ende des Plan-Kommentars
+APPROVAL_PROMPT = _env(
+    "APPROVAL_PROMPT",
+    "Antworte mit `ok`, `ja` oder `✅` um die Implementierung zu starten.",
+)
+
+# Platzhalter im Plan-Kommentar (vom LLM auszufüllen)
+# Mehrzeilig — direkt hier editieren, nicht via .env
+PLAN_PLACEHOLDER_TEXT = (
+    "> Dieser Abschnitt wird vom LLM-Agenten nach Code-Analyse ausgefüllt.\n"
+    "> Der Agent liest die Dateien, mappt Abhängigkeiten und beschreibt:\n"
+    "> - Root-Cause / Was genau geändert wird\n"
+    "> - Welche Funktionen/Zeilen betroffen sind\n"
+    "> - Mögliche Seiteneffekte / Regressionsrisiko\n"
+    "> - Vorgehensweise Schritt für Schritt"
+)
+
+# PR-Checkliste (kommagetrennt → wird als "- [ ] ..." gerendert)
+PR_CHECKLIST = _env_list(
+    "PR_CHECKLIST",
+    "Code geändert,Dokumentation aktualisiert,Kein toter Code hinzugefügt,Getestet",
+)
+
+# Text am Ende des Abschluss-Kommentars nach PR-Erstellung
+COMPLETION_NEXT_STEP = _env(
+    "COMPLETION_NEXT_STEP",
+    "PR reviewen und mergen.\nNach dem Merge: Issue schließen.",
+)
