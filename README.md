@@ -126,17 +126,28 @@ PR in Gitea reviewen → mergen → Issue schließen. Fertig.
 ```
 Du:     Issue schreiben + Label "ready-for-agent" setzen
         ↓
-Script: Scannt Gitea → Plan-Kommentar ins Issue
+Script: Plan-Kommentar ins Issue (mit 🤖 Metadaten-Block: Zeitstempel, Tokens, Dateien)
+        contexts/{N}-{typ}/starter.md erstellt → Label: agent-proposed
+        ↓ (Stufe 2/3 zusätzlich — wenn noch kein Plan vorhanden:)
+Script: Analyse-Kommentar + Nächste Schritte ins Issue
+        Label "help wanted" gesetzt, "agent-proposed" entfernt
         ↓
-Du:     "ok" in Gitea kommentieren
+Du:     Fragen im Issue beantworten
+        python3 agent_start.py --issue {N}  → starter.md mit Kommentarhistorie aktualisiert
+        [Wiederholen bis Konzept steht]
+        Label "help wanted" manuell entfernen → "ok" kommentieren
         ↓
-Script: Erkennt Freigabe → Branch erstellen → Label: in-progress
+Script: Freigabe erkannt (help wanted weg + ok) → Branch erstellen
+        Label: agent-proposed → in-progress
+        Nächste Schritte ins Issue gepostet
+        contexts/{N}-{typ}/files.md erstellt
         ↓
-LLM:    Liest Output → implementiert → committet nach jeder Datei
+LLM:    Liest starter.md + files.md → implementiert → committet
         ↓
 Script: --pr <NR> --branch <branch> --summary "..."
         ↓
         PR erstellt + Abschluss-Kommentar + Label: needs-review
+        contexts/{N}-{typ}/ → contexts/done/{N}-{typ}/
         ↓
 Du:     PR reviewen + mergen
 ```
@@ -196,6 +207,7 @@ python3 agent_start.py --pr 16 --branch fix/issue-16-xyz \
 |-------|-----------|
 | `ready-for-agent` | Issue bereit zur Bearbeitung |
 | `agent-proposed` | Plan gepostet, wartet auf Freigabe |
+| `help wanted` | Stufe 2/3: offene Fragen offen — `agent-proposed` wird entfernt bis Konzept steht |
 | `in-progress` | Agent implementiert |
 | `needs-review` | PR erstellt, wartet auf Review |
 
@@ -207,10 +219,12 @@ Der Agent stuft jedes Issue automatisch ein:
 
 | Stufe | Beschreibung | Vorgehen |
 |-------|-------------|---------|
-| 1 | Docs, Cleanup | Plan automatisch generiert + sofort gepostet |
-| 2 | Enhancements | Plan-Draft → LLM befüllt → manuell posten |
-| 3 | Bugs, Features | Plan-Draft → LLM befüllt → Freigabe erforderlich |
+| 1 | Docs, Cleanup | Plan gepostet → Freigabe → Implementierung |
+| 2 | Enhancements | Plan + Analyse-Kommentar → `help wanted` → Freigabe → Implementierung |
+| 3 | Bugs, Features | Plan + Analyse-Kommentar → `help wanted` → Freigabe → Implementierung |
 | 4 | Breaking Changes | Nicht automatisiert — nur manuell |
+
+**Stufe 2/3:** Der Agent postet Plan-Kommentar + Analyse-Kommentar mit offenen Fragen (Seiteneffekte, betroffene Module, Konfiguration). Label wird zu `help wanted` — `agent-proposed` wird entfernt (Plan noch nicht freigegeben). Erst nach Beantwortung, `help wanted` manuell entfernen und `ok`-Kommentar startet die Implementierung.
 
 ---
 
@@ -227,14 +241,23 @@ Der Agent stuft jedes Issue automatisch ein:
 
 ```
 gitea-agent/
-├── agent_start.py   # CLI + Workflow-Logik
-├── gitea_api.py     # Gitea REST API Wrapper
-├── settings.py      # Alle konfigurierbaren Werte (Labels, Texte, Limits)
-├── log.py           # Logging-Konfiguration (Console + File)
-├── .env.example     # Konfigurationsvorlage
-├── .env             # Secrets (nicht im Git!)
+├── agent_start.py      # CLI + Workflow-Logik
+├── gitea_api.py        # Gitea REST API Wrapper
+├── settings.py         # Alle konfigurierbaren Werte (Labels, Texte, Limits)
+├── log.py              # Logging-Konfiguration (Console + File)
+├── .env.example        # Konfigurationsvorlage
+├── .env                # Secrets (nicht im Git!)
+├── contexts/           # Kontext-Dateien pro Issue (auto-erstellt)
+│   ├── 21-docs/        # Ein Unterordner pro Issue: {num}-{typ}
+│   │   ├── starter.md  # Metadaten, Plan, Checkliste, Kommentarhistorie
+│   │   ├── files.md    # Quellcode (max MAX_FILE_LINES pro Datei)
+│   │   └── plan.md     # Plan-Draft (Stufe 2/3, lokal befüllen)
+│   └── done/           # Nach PR: ganzer Ordner wird hierher verschoben
+│       └── 21-docs/
 └── README.md
 ```
+
+**Typen** (aus Gitea-Label): `bug`, `feature_request`, `enhancement`, `docs`, `task`
 
 ---
 

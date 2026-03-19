@@ -24,7 +24,11 @@ LLM-agnostisch:
 """
 
 import argparse
+import ast
+import datetime
 import os
+import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -89,6 +93,21 @@ def risk_level(issue: dict) -> tuple[int, str]:
             return 1, "NIEDRIG — Dokumentation/Cleanup"
         return 2, "MITTEL — Enhancement (Plan vor Implementierung)"
     return 2, "MITTEL — (Plan vor Implementierung)"
+
+
+def issue_type(issue: dict) -> str:
+    """Leitet den Issue-Typ aus den Gitea-Labels ab."""
+    labels = [l["name"] for l in issue.get("labels", [])]
+    title  = issue.get("title", "").lower()
+    if any(lb in labels for lb in settings.RISK_BUG_LABELS):
+        return "bug"
+    if any(lb in labels for lb in settings.RISK_FEAT_LABELS):
+        return "feature_request"
+    if any(lb in labels for lb in settings.RISK_ENAK_LABELS):
+        if any(w in title for w in settings.SAFE_KEYWORDS):
+            return "docs"
+        return "enhancement"
+    return "task"
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +208,10 @@ def build_plan_comment(issue: dict) -> str:
 
 **OK zum Implementieren?**
 {settings.APPROVAL_PROMPT}
+
+## Nächste Schritte
+- Plan prüfen
+- Mit `ok` oder `ja` kommentieren → Implementierung startet
 """
 
 
@@ -248,11 +271,34 @@ def _context_dir() -> Path:
     return p if p.is_absolute() else _HERE / p
 
 
+def _issue_dir(issue: dict) -> Path:
+    """Gibt den Issue-Unterordner zurück und erstellt ihn falls nötig.
+
+    Format: contexts/{num}-{typ}/  z.B. contexts/32-feature_request/
+    """
+    d = _context_dir() / f"{issue['number']}-{issue_type(issue)}"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _find_issue_dir(number: int) -> Path | None:
+    """Findet den Issue-Ordner anhand der Nummer (Typ unbekannt → glob)."""
+    matches = list(_context_dir().glob(f"{number}-*"))
+    return matches[0] if matches else None
+
+
+def _done_dir() -> Path:
+    """Gibt den done/-Ordner zurück und erstellt ihn falls nötig."""
+    d = _context_dir() / "done"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def save_plan_context(issue: dict) -> Path:
     """
     Speichert einen kompakten Kontext für die Plan-Phase.
 
-    Erstellt contexts/issue-{num}.md mit Status ⏳.
+    Erstellt contexts/{num}-{typ}/starter.md mit Status ⏳.
     Kein Quellcode — nur Metadaten für den Plan-Schritt.
 
     Args:
@@ -298,9 +344,7 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
 ## Gitea
 {gitea.GITEA_URL}/{gitea.REPO}/issues/{num}
 """
-    ctx = _context_dir()
-    ctx.mkdir(parents=True, exist_ok=True)
-    out = ctx / f"issue-{num}.md"
+    out = _issue_dir(issue) / "starter.md"
     out.write_text(content, encoding="utf-8")
     log.info(f"Kontext gespeichert: {out}")
     return out
@@ -311,8 +355,8 @@ def save_implement_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:
     Speichert Kontext + Quellcode für die Implementierungs-Phase.
 
     Erstellt:
-        contexts/issue-{num}.md       — Metadaten, Status 🔧 READY
-        contexts/issue-{num}-files.md — Quellcode (max settings.MAX_FILE_LINES pro Datei)
+        contexts/{num}-{typ}/starter.md — Metadaten, Status 🔧 READY
+        contexts/{num}-{typ}/files.md   — Quellcode (max settings.MAX_FILE_LINES pro Datei)
 
     Args:
         issue:      Issue-dict aus Gitea API
@@ -341,10 +385,10 @@ Branch: {branch}
 
 ## Dateien
 {file_list}
-(Quellcode: issue-{num}-files.md)
+(Quellcode: files.md)
 
 ## Checkliste
-- [ ] Quellcode lesen (issue-{num}-files.md)
+- [ ] Quellcode lesen (files.md)
 - [ ] Änderung vornehmen
 - [ ] Nach jeder Datei: git add <datei> && git commit -m "..."
 - [ ] git push origin {branch}
@@ -370,11 +414,9 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
             code = "\n".join(lines)
         parts.append(f"## {name}\n```\n{code}\n```")
 
-    ctx = _context_dir()
-    ctx.mkdir(parents=True, exist_ok=True)
-
-    ctx_file   = ctx / f"issue-{num}.md"
-    files_file = ctx / f"issue-{num}-files.md"
+    idir       = _issue_dir(issue)
+    ctx_file   = idir / "starter.md"
+    files_file = idir / "files.md"
 
     ctx_file.write_text(ctx_content, encoding="utf-8")
     files_file.write_text(
@@ -384,6 +426,164 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
 
     log.info(f"Kontext gespeichert: {ctx_file}, {files_file}")
     return ctx_file, files_file
+
+
+# ---------------------------------------------------------------------------
+# Analyse-Kommentar für Stufe 2/3
+# ---------------------------------------------------------------------------
+
+def _build_analyse_comment(issue: dict, files: list[Path]) -> str:
+    """
+    Erstellt einen Analyse-Kommentar für Stufe-2/3-Issues.
+
+    Scannt Python-Importe der betroffenen Dateien um zusätzlich betroffene
+    Module zu finden. Generiert label-spezifische Rückfragen.
+
+    Aufgerufen von:
+        cmd_plan() für Stufe 2/3 Issues
+
+    Args:
+        issue: Issue-dict aus Gitea API
+        files: Bereits erkannte relevante Dateipfade
+
+    Returns:
+        Markdown-String für den Gitea-Kommentar.
+    """
+    num    = issue["number"]
+    labels = [l["name"] for l in issue.get("labels", [])]
+
+    # Zusätzliche betroffene Module via Import-Analyse
+    extra_files = []
+    for f in files:
+        if f.suffix != ".py":
+            continue
+        try:
+            tree = ast.parse(f.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module:
+                    parts = node.module.split(".")
+                    candidate = PROJECT / Path(*parts).with_suffix(".py")
+                    if candidate.exists() and candidate not in files and candidate not in extra_files:
+                        extra_files.append(candidate)
+        except Exception:
+            pass
+
+    if any(lb in labels for lb in settings.RISK_BUG_LABELS):
+        questions = [
+            "Ist der Fehler reproduzierbar? Unter welchen Bedingungen tritt er auf?",
+            "Welche Systemzustände / Konfigurationen sind betroffen?",
+            "Gibt es einen bekannten Workaround?",
+            "Welche anderen Komponenten könnten durch den Fix beeinflusst werden?",
+        ]
+        typ = "Bug"
+    elif any(lb in labels for lb in settings.RISK_FEAT_LABELS):
+        questions = [
+            "Welche bestehenden Funktionen werden durch dieses Feature berührt?",
+            "Gibt es ähnliche Funktionalität die erweitert werden könnte statt neu zu bauen?",
+            "Wie soll das Feature konfigurierbar sein?",
+            "Was ist der Fallback wenn das Feature fehlschlägt?",
+        ]
+        typ = "Feature Request"
+    else:
+        questions = [
+            "Welche Funktionen / Klassen sind konkret betroffen?",
+            "Gibt es Abhängigkeiten zu anderen Modulen die mitgeändert werden müssen?",
+            "Muss die Dokumentation aktualisiert werden?",
+            "Gibt es Regressions-Risiken?",
+        ]
+        typ = "Enhancement"
+
+    questions_md = "\n".join(f"- [ ] {q}" for q in questions)
+
+    extra_md = ""
+    if extra_files:
+        extra_list = "\n".join(f"- `{f.relative_to(PROJECT)}`" for f in extra_files)
+        extra_md = f"""
+### Zusätzlich möglicherweise betroffene Dateien
+(via Import-Analyse — bitte prüfen ob relevant)
+{extra_list}
+"""
+
+    return f"""## 🔍 Analyse — Issue #{num} ({typ})
+
+**Label:** `{settings.LABEL_HELP}` gesetzt — bitte vor Implementierung beantworten.
+{extra_md}
+### Offene Fragen
+{questions_md}
+
+### Potenzielle Seiteneffekte
+- [ ] Betroffene Module prüfen (siehe Dateien oben)
+- [ ] Regressions-Risiko einschätzen
+
+---
+*Fragen beantworten oder kommentieren, dann `ok` für Freigabe.*
+
+## Nächste Schritte
+- Fragen oben als Kommentar beantworten
+- Für neue Diskussionsrunde: `python3 agent_start.py --issue {num}` erneut starten
+- Wenn Konzept steht: Label `{settings.LABEL_HELP}` manuell entfernen
+- Dann `ok` kommentieren → Implementierung startet"""
+
+
+# ---------------------------------------------------------------------------
+# Plan- und Diskussions-Hilfsfunktionen
+# ---------------------------------------------------------------------------
+
+def _has_detailed_plan(number: int) -> bool:
+    """Prüft ob in Gitea bereits ein befüllter Plan-Kommentar existiert.
+
+    Verhindert doppeltes Posten des Analyse-Kommentars wenn Plan schon vorhanden.
+
+    Aufgerufen von:
+        cmd_plan() vor dem Posten des Analyse-Kommentars
+
+    Args:
+        number: Issue-Nummer
+
+    Returns:
+        True wenn befüllter Plan-Kommentar gefunden (kein Platzhalter).
+    """
+    comments = gitea.get_comments(number)
+    for c in comments:
+        body = c.get("body", "")
+        if "Implementierungsplan" in body and "<!-- CLAUDE:" not in body:
+            return True
+    return False
+
+
+def _update_discussion(issue: dict, starter_path: Path) -> None:
+    """Liest Gitea-Kommentarhistorie und aktualisiert die starter.md.
+
+    Wird beim Re-Run von --issue aufgerufen wenn Plan-Draft schon existiert.
+    Ersetzt den ## Kommentarhistorie Block in starter.md.
+
+    Aufgerufen von:
+        cmd_plan() wenn plan.md bereits existiert (Diskussions-Runde)
+
+    Args:
+        issue:        Issue-dict aus Gitea API
+        starter_path: Pfad zur starter.md
+    """
+    comments = gitea.get_comments(issue["number"])
+    if not comments:
+        return
+
+    lines = []
+    for c in comments:
+        user       = c.get("user", {}).get("login", "")
+        body       = c.get("body", "")
+        ts         = c.get("created_at", "")[:10]
+        body_short = body[:1500] + ("..." if len(body) > 1500 else "")
+        lines.append(f"**[{ts}] {user}:**\n{body_short}")
+
+    current = starter_path.read_text(encoding="utf-8")
+    if "## Kommentarhistorie" in current:
+        current = current[:current.index("## Kommentarhistorie")]
+
+    starter_path.write_text(
+        current.rstrip() + "\n\n## Kommentarhistorie\n\n" + "\n\n---\n\n".join(lines) + "\n",
+        encoding="utf-8"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -422,14 +622,74 @@ def cmd_plan(number: int) -> None:
     """
     issue = gitea.get_issue(number)
 
+    stufe, _ = risk_level(issue)
+    files    = relevant_files(issue)
+
+    # Metadaten-Block (collapsible) aufbauen
+    file_stats  = []
+    total_chars = 0
+    for f in files:
+        try:
+            text  = f.read_text(encoding="utf-8")
+            chars = len(text)
+            total_chars += chars
+            file_stats.append(f"  {f.relative_to(PROJECT)} ({text.count(chr(10))} Zeilen, ~{chars // 4:,} Tokens)")
+        except Exception:
+            file_stats.append(f"  {f.relative_to(PROJECT)} (nicht lesbar)")
+
+    total_tokens = total_chars // 4
+    timestamp    = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    model        = os.environ.get("CLAUDE_MODEL", os.environ.get("MODEL", "unbekannt"))
+    try:
+        branch_cur = subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=PROJECT, stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except Exception:
+        branch_cur = "unbekannt"
+
+    file_lines = "\n".join(file_stats) or "  keine Dateien erkannt"
+    metadata = f"""
+---
+
+<details>
+<summary>🤖 Agent-Metadaten</summary>
+
+| | |
+|---|---|
+| **Zeitstempel** | {timestamp} |
+| **Modell** | {model} |
+| **Git-Branch** | `{branch_cur}` |
+| **Tokens geladen (est.)** | ~{total_tokens:,} (Dateiinhalt) |
+
+**Analysierte Dateien:**
+{file_lines}
+
+> Token-Schätzung: 1 Token ≈ 4 Zeichen. Kontext-Limit Claude Sonnet: ~200.000 Token.
+
+</details>"""
+
     log.info(f"Poste Plan-Kommentar für Issue #{number}")
     print("\n[→] Poste Plan-Kommentar auf Gitea...")
-    gitea.post_comment(number, build_plan_comment(issue))
+    gitea.post_comment(number, build_plan_comment(issue) + metadata)
     gitea.swap_label(number, settings.LABEL_READY, settings.LABEL_PROPOSED)
 
     out = save_plan_context(issue)
-    print(f"[✓] Kommentar gepostet: {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
-    print(f"[✓] Kontext: {out}")
+    print(f"[✓] Plan gepostet: {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
+    print(f"[✓] Kontext: {out.name}")
+
+    if stufe >= 2:
+        if not _has_detailed_plan(number):
+            analyse_body = _build_analyse_comment(issue, files)
+            gitea.post_comment(number, analyse_body)
+            gitea.add_label(number, settings.LABEL_HELP)
+            gitea.remove_label(number, settings.LABEL_PROPOSED)  # Plan noch nicht freigegeben
+            out.write_text(out.read_text(encoding="utf-8") + "\n## Analyse\n" + analyse_body, encoding="utf-8")
+            log.info(f"Analyse-Kommentar gepostet, Label '{settings.LABEL_HELP}' gesetzt, '{settings.LABEL_PROPOSED}' entfernt")
+            print(f"[✓] Analyse-Kommentar gepostet, Label '{settings.LABEL_HELP}' gesetzt, '{settings.LABEL_PROPOSED}' entfernt")
+        else:
+            print(f"[!] Gitea hat bereits befüllten Plan — kein Analyse-Kommentar gepostet")
+
     print(f"[→] Freigabe: mit 'ok' oder 'ja' kommentieren")
 
 
@@ -443,7 +703,7 @@ def cmd_implement(number: int) -> None:
     """
     issue = gitea.get_issue(number)
 
-    if not gitea.check_approval(number):
+    if not gitea.check_approval(number, settings.LABEL_HELP):
         log.warning(f"Keine Freigabe für Issue #{number}")
         print(f"[✗] Keine Freigabe für Issue #{number}.")
         print(f"    Kommentiere 'ok' auf: {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
@@ -451,6 +711,7 @@ def cmd_implement(number: int) -> None:
 
     log.info(f"Freigabe erhalten für Issue #{number} — starte Implementierung")
     print(f"[✓] Freigabe erhalten — starte Implementierung.")
+    gitea.remove_label(number, settings.LABEL_HELP)
     branch = branch_name(issue)
 
     try:
@@ -471,12 +732,26 @@ def cmd_implement(number: int) -> None:
 
     gitea.swap_label(number, settings.LABEL_PROPOSED, settings.LABEL_PROGRESS)
 
+    typ = issue_type(issue)
+    num = issue["number"]
+    gitea.post_comment(number, f"""## ✅ Implementierung gestartet
+
+**Branch:** `{branch}`
+
+## Nächste Schritte
+- Branch auschecken: `git checkout {branch}`
+- Kontext lesen: `contexts/{num}-{typ}/starter.md`
+- Implementieren + nach jeder Datei committen
+- PR erstellen: `python3 agent_start.py --pr {num} --branch {branch} --summary "..."`
+""")
+
     files_dict = {
         str(f.relative_to(PROJECT)): f.read_text(encoding="utf-8")
         for f in relevant_files(issue)
     }
     ctx_file, files_file = save_implement_context(issue, files_dict)
-    print(f"[✓] Kontext: {ctx_file.name} + {files_file.name} — bereit zur Implementierung")
+    _idir2 = _find_issue_dir(num)
+    print(f"[✓] Kontext: {_idir2.name if _idir2 else ''}/starter.md + files.md — bereit zur Implementierung")
 
 
 def cmd_pr(number: int, branch: str, summary: str = "") -> None:
@@ -516,6 +791,10 @@ Implementierung für Issue #{number}.
 
 **Nächster Schritt:** {settings.COMPLETION_NEXT_STEP}""")
 
+    idir = _find_issue_dir(number)
+    if idir and idir.exists():
+        shutil.move(str(idir), str(_done_dir() / idir.name))
+
     log.info(f"PR erstellt: {pr_url}")
     print(f"[✓] PR erstellt: {pr_url}")
     print(f"[✓] Kommentar in Issue #{number} gepostet.")
@@ -544,7 +823,7 @@ def cmd_auto() -> None:
     # Freigegebene Pläne implementieren
     proposed = gitea.get_issues(label=settings.LABEL_PROPOSED)
     approved = sorted(
-        [i for i in proposed if gitea.check_approval(i["number"])],
+        [i for i in proposed if gitea.check_approval(i["number"], settings.LABEL_HELP)],
         key=lambda x: risk_level(x)[0]
     )
     if approved:
@@ -571,7 +850,7 @@ def cmd_auto() -> None:
 
     # Status-Übersicht
     in_progress = gitea.get_issues(label=settings.LABEL_PROGRESS)
-    waiting     = [i for i in proposed if not gitea.check_approval(i["number"])]
+    waiting     = [i for i in proposed if not gitea.check_approval(i["number"], settings.LABEL_HELP)]
 
     if in_progress:
         print(f"\nIn Arbeit ({len(in_progress)}):")
@@ -596,9 +875,26 @@ def cmd_auto() -> None:
 # Entry Point
 # ---------------------------------------------------------------------------
 
+def _apply_auto_approve() -> None:
+    """Schreibt .claude/settings.local.json basierend auf AUTO_APPROVE in .env."""
+    import json
+    claude_dir  = _HERE / ".claude"
+    claude_dir.mkdir(exist_ok=True)
+    target = claude_dir / "settings.local.json"
+
+    if settings.AUTO_APPROVE:
+        data = {"permissions": {"allow": ["Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "Glob(*)", "Grep(*)", "Agent(*)", "WebFetch(*)", "WebSearch(*)"]}}
+    else:
+        data = {"permissions": {"allow": []}}
+
+    target.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    log.debug(f"AUTO_APPROVE={'true' if settings.AUTO_APPROVE else 'false'} → {target}")
+
+
 def main():
     from log import setup as log_setup
     log_setup(log_file=settings.LOG_FILE, level=settings.LOG_LEVEL)
+    _apply_auto_approve()
 
     parser = argparse.ArgumentParser(
         description="Gitea Agent — automatischer Issue-Workflow",

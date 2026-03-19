@@ -49,6 +49,7 @@ LABEL_READY    = _env("LABEL_READY",    "ready-for-agent")
 LABEL_PROPOSED = _env("LABEL_PROPOSED", "agent-proposed")
 LABEL_PROGRESS = _env("LABEL_PROGRESS", "in-progress")
 LABEL_REVIEW   = _env("LABEL_REVIEW",   "needs-review")
+LABEL_HELP     = _env("LABEL_HELP",     "help wanted")
 
 # ---------------------------------------------------------------------------
 # Risiko-Klassifikation
@@ -114,6 +115,9 @@ CLAUDE_MAX_TOKENS  = _env_int("CLAUDE_MAX_TOKENS", 4096)
 
 LOG_LEVEL = _env("LOG_LEVEL", "INFO")   # DEBUG, INFO, WARNING, ERROR
 LOG_FILE  = _env("LOG_FILE",  "gitea-agent.log")
+
+# Auto-Approve für Claude Code Tool-Calls (schreibt .claude/settings.local.json)
+AUTO_APPROVE = _env_bool("AUTO_APPROVE", False)
 
 # ---------------------------------------------------------------------------
 # Textbausteine / Templates

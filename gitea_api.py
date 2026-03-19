@@ -212,18 +212,26 @@ def post_comment(number: int, body: str) -> dict:
                     {"body": body}, auth=_BOT_AUTH)
 
 
-def check_approval(number: int) -> bool:
+def check_approval(number: int, blocked_label: str | None = None) -> bool:
     """
     Prüft ob ein Kommentar nach dem letzten Agent-Kommentar eine Freigabe enthält.
 
     Freigabe-Keywords und Agent-Marker kommen aus settings.py.
 
     Args:
-        number: Issue-Nummer
+        number:        Issue-Nummer
+        blocked_label: Wenn gesetzt und das Label noch am Issue hängt, wird
+                       sofort False zurückgegeben (help-needed blockiert Freigabe).
 
     Returns:
         True wenn Freigabe gefunden.
     """
+    if blocked_label:
+        issue  = get_issue(number)
+        labels = [l["name"] for l in issue.get("labels", [])]
+        if blocked_label in labels:
+            return False
+
     comments       = get_comments(number)
     last_agent_idx = -1
     for i, c in enumerate(comments):
