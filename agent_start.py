@@ -775,6 +775,22 @@ Implementierung für Issue #{number}.
 ## Issue
 {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}
 """
+    # Prüfen ob Documentation/ seit Abzweig von main aktualisiert wurde
+    docs_warning = ""
+    try:
+        changed  = subprocess.check_output(
+            ["git", "diff", "--name-only", f"main...{branch}"],
+            cwd=PROJECT, stderr=subprocess.DEVNULL
+        ).decode().splitlines()
+        code_changed = [f for f in changed if not f.startswith("Documentation/")]
+        docs_changed = [f for f in changed if f.startswith("Documentation/")]
+        if code_changed and not docs_changed:
+            log.warning("Code geändert aber Documentation/ nicht aktualisiert")
+            print("[!] Warnung: Code geändert aber keine Documentation/*.md aktualisiert.")
+            docs_warning = "\n> ⚠️ **Hinweis:** `Documentation/` wurde nicht aktualisiert — bitte vor dem Merge nachholen."
+    except Exception:
+        pass
+
     log.info(f"Erstelle PR für Issue #{number} von Branch '{branch}'")
     pr     = gitea.create_pr(branch=branch, title=title, body=pr_body)
     pr_url = pr.get("html_url", "?")
@@ -786,10 +802,12 @@ Implementierung für Issue #{number}.
 
 **Branch:** `{branch}`
 **PR:** {pr_url}
+{docs_warning}
 
 {summary_block}
 
-**Nächster Schritt:** {settings.COMPLETION_NEXT_STEP}""")
+**Nächster Schritt:** {settings.COMPLETION_NEXT_STEP}
+- Bei Revert: `Documentation/` synchron zurücksetzen""")
 
     idir = _find_issue_dir(number)
     if idir and idir.exists():
@@ -798,6 +816,42 @@ Implementierung für Issue #{number}.
     log.info(f"PR erstellt: {pr_url}")
     print(f"[✓] PR erstellt: {pr_url}")
     print(f"[✓] Kommentar in Issue #{number} gepostet.")
+
+
+def cmd_fixup(number: int) -> None:
+    """
+    Nach einem Bugfix-Commit auf einem in-progress Issue:
+    - Liest die letzte Commit-Message
+    - Postet Bugfix-Kommentar ins Gitea-Issue
+    - Setzt Label: in-progress → needs-review
+    """
+    try:
+        commit_msg = subprocess.check_output(
+            ["git", "log", "-1", "--pretty=%s%n%n%b"],
+            cwd=PROJECT, stderr=subprocess.DEVNULL
+        ).decode().strip()
+        commit_sha = subprocess.check_output(
+            ["git", "log", "-1", "--pretty=%h"],
+            cwd=PROJECT, stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except Exception as e:
+        log.warning(f"git log fehlgeschlagen: {e}")
+        commit_msg = "(Commit-Message nicht lesbar)"
+        commit_sha = "?"
+
+    body = (
+        f"## 🔧 Bugfix committed\n\n"
+        f"**Commit:** `{commit_sha}`\n\n"
+        f"```\n{commit_msg}\n```\n\n"
+        f"## Nächste Schritte\n"
+        f"- Bitte erneut testen\n"
+        f"- Bei OK: PR mergen + Issue schließen"
+    )
+    gitea.post_comment(number, body)
+    gitea.swap_label(number, settings.LABEL_PROGRESS, settings.LABEL_REVIEW)
+    log.info(f"Bugfix-Kommentar gepostet für Issue #{number}")
+    print(f"[✓] Bugfix-Kommentar gepostet + Label → needs-review")
+    print(f"    {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
 
 
 # ---------------------------------------------------------------------------
@@ -817,6 +871,22 @@ def cmd_auto() -> None:
     print("  GITEA AGENT — AUTO-SCAN")
     print("=" * 70)
     log.info("Auto-Scan gestartet")
+
+    # Aufräumen: geschlossene Issues → contexts/done/
+    contexts = _context_dir()
+    if contexts.exists():
+        for idir in contexts.iterdir():
+            if not idir.is_dir() or idir.name == "done":
+                continue
+            try:
+                num   = int(idir.name.split("-")[0])
+                issue = gitea.get_issue(num)
+                if issue.get("state") == "closed":
+                    shutil.move(str(idir), str(_done_dir() / idir.name))
+                    log.info(f"Issue #{num} geschlossen → contexts/done/{idir.name}/")
+                    print(f"[✓] Issue #{num} geschlossen → contexts/done/{idir.name}/")
+            except Exception:
+                pass
 
     did_something = False
 
@@ -912,6 +982,7 @@ Ohne Argumente: automatischer Modus.
     parser.add_argument("--list",      action="store_true",        help="Alle ready-for-agent Issues auflisten")
     parser.add_argument("--issue",     type=int,  metavar="NR",    help="Plan für Issue posten")
     parser.add_argument("--implement", type=int,  metavar="NR",    help="Nach OK: Branch + Implementierungskontext")
+    parser.add_argument("--fixup",     type=int,  metavar="NR",    help="Nach Bugfix: Kommentar + needs-review setzen")
     parser.add_argument("--pr",        type=int,  metavar="NR",    help="PR erstellen (mit --branch)")
     parser.add_argument("--branch",    type=str,  metavar="BRANCH",help="Branch-Name für --pr")
     parser.add_argument("--summary",   type=str,  metavar="TEXT",  help="Zusammenfassung für Issue-Kommentar", default="")
@@ -923,6 +994,8 @@ Ohne Argumente: automatischer Modus.
         cmd_plan(args.issue)
     elif args.implement:
         cmd_implement(args.implement)
+    elif args.fixup:
+        cmd_fixup(args.fixup)
     elif args.pr:
         if not args.branch:
             log.error("--pr benötigt --branch <branch-name>")

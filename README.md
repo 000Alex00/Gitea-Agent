@@ -194,6 +194,7 @@ python3 agent_start.py
 python3 agent_start.py --list                              # Status-Übersicht
 python3 agent_start.py --issue 16                          # Plan posten
 python3 agent_start.py --implement 16                      # Nach "ok": Branch
+python3 agent_start.py --fixup 16                          # Nach Bugfix: Kommentar + needs-review
 python3 agent_start.py --pr 16 --branch fix/issue-16-xyz  # PR erstellen
 python3 agent_start.py --pr 16 --branch fix/issue-16-xyz \
   --summary "- X geändert\n- Doku aktualisiert"           # PR mit Zusammenfassung
@@ -225,6 +226,12 @@ Der Agent stuft jedes Issue automatisch ein:
 | 4 | Breaking Changes | Nicht automatisiert — nur manuell |
 
 **Stufe 2/3:** Der Agent postet Plan-Kommentar + Analyse-Kommentar mit offenen Fragen (Seiteneffekte, betroffene Module, Konfiguration). Label wird zu `help wanted` — `agent-proposed` wird entfernt (Plan noch nicht freigegeben). Erst nach Beantwortung, `help wanted` manuell entfernen und `ok`-Kommentar startet die Implementierung.
+
+**Bugfix-Workflow:** Issue nach Test auf `in-progress` zurücksetzen → fix committen → `--fixup <NR>` → postet Commit-Message als Kommentar + setzt `needs-review`.
+
+**Docs-Check:** `--pr` prüft automatisch ob `Documentation/` seit Abzweig von main geändert wurde. Warnung im Terminal + Gitea-Kommentar wenn nicht. Abschluss-Kommentar enthält immer Revert-Hinweis.
+
+**Auto-Cleanup:** Beim Start verschiebt der Agent automatisch Kontext-Ordner geschlossener Issues nach `contexts/done/`.
 
 ---
 
