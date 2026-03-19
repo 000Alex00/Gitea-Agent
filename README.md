@@ -108,10 +108,20 @@ Nach der Implementierung:
 python3 agent_start.py --pr 21 --branch docs/issue-21-xyz --summary "- Docstrings ergänzt"
 ```
 
-Der Agent:
-- erstellt den PR in Gitea
+Der Agent führt vor dem PR-Erstellen automatisch das Eval-System aus (falls `tests/agent_eval.json` im Zielprojekt vorhanden):
+
+| Ergebnis | Verhalten |
+|---|---|
+| Kein `agent_eval.json` | Übersprungen — PR wird normal erstellt |
+| server offline | Warnung — PR wird trotzdem erstellt |
+| PASS (score >= baseline) | PR wird erstellt |
+| FAIL (score < baseline) | PR blockiert, Kommentar ins Issue |
+
+Danach:
 - postet einen Abschluss-Kommentar ins Issue
 - setzt das Label auf `needs-review`
+
+Siehe `Documentation/evaluation.py.md` für Konfiguration und Format.
 
 ---
 
