@@ -37,6 +37,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 import gitea_api as gitea
 import settings
+import evaluation
 from log import get_logger
 
 log = get_logger(__name__)
@@ -790,6 +791,20 @@ Implementierung für Issue #{number}.
             docs_warning = "\n> ⚠️ **Hinweis:** `Documentation/` wurde nicht aktualisiert — bitte vor dem Merge nachholen."
     except Exception:
         pass
+
+    # Eval ausführen — blockiert PR bei FAIL
+    eval_result = evaluation.run(PROJECT)
+    print(evaluation.format_terminal(eval_result))
+    if eval_result.skipped:
+        log.info("Eval übersprungen (kein agent_eval.json)")
+    elif eval_result.warned and not eval_result.all_tests:
+        log.warning("Eval: Infrastruktur offline — PR wird trotzdem erstellt")
+    elif not eval_result.passed:
+        gitea.post_comment(number, evaluation.format_gitea_comment(eval_result))
+        gitea.swap_label(number, settings.LABEL_REVIEW, settings.LABEL_PROGRESS)
+        log.error(f"Eval FAIL — PR blockiert (Score {eval_result.score}/{eval_result.max_score})")
+        print(f"[✗] PR blockiert. Kommentar in Issue #{number} gepostet.")
+        return
 
     log.info(f"Erstelle PR für Issue #{number} von Branch '{branch}'")
     pr     = gitea.create_pr(branch=branch, title=title, body=pr_body)
