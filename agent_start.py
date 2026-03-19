@@ -421,7 +421,6 @@ def cmd_plan(number: int) -> None:
         3. Label: ready-for-agent → agent-proposed
     """
     issue = gitea.get_issue(number)
-    print_context(issue)
 
     log.info(f"Poste Plan-Kommentar für Issue #{number}")
     print("\n[→] Poste Plan-Kommentar auf Gitea...")
@@ -477,18 +476,7 @@ def cmd_implement(number: int) -> None:
         for f in relevant_files(issue)
     }
     ctx_file, files_file = save_implement_context(issue, files_dict)
-    print(f"[✓] Kontext: {ctx_file.name} + {files_file.name}")
-    print_context(issue)
-
-    print(f"""
-[→] Implementierungs-Checkliste:
-    [ ] Quellcode der betroffenen Dateien lesen
-    [ ] Ähnliche Funktionen per grep prüfen
-    [ ] Änderung vornehmen
-    [ ] Nach jeder Datei: git add <datei> && git commit -m "..."
-    [ ] git push origin {branch}
-    [ ] PR erstellen: python3 agent_start.py --pr {number} --branch {branch}
-""")
+    print(f"[✓] Kontext: {ctx_file.name} + {files_file.name} — bereit zur Implementierung")
 
 
 def cmd_pr(number: int, branch: str, summary: str = "") -> None:
