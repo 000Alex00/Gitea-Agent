@@ -15,13 +15,8 @@ Workflow:
        --pr <NR> --branch X → PR erstellen + Abschluss-Kommentar
 
 Konfiguration (.env im selben Verzeichnis):
-    GITEA_URL       = http://your-gitea:3000
-    GITEA_USER      = username
-    GITEA_TOKEN     = api-token
-    GITEA_REPO      = owner/repo
-    GITEA_BOT_USER  = bot-username   (optional)
-    GITEA_BOT_TOKEN = bot-api-token  (optional)
-    PROJECT_ROOT    = /path/to/project  (optional, Standard: Elternverzeichnis)
+    Alle konfigurierbaren Werte kommen aus settings.py / .env.
+    Secrets (Tokens) gehören in .env — nicht in settings.py.
 
 LLM-agnostisch:
     Für Claude Code: direkt im Terminal ausführen
@@ -37,6 +32,10 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 import gitea_api as gitea
+import settings
+from log import get_logger
+
+log = get_logger(__name__)
 
 # Projektroot: aus .env oder Elternverzeichnis des Scripts
 def _project_root() -> Path:
@@ -56,15 +55,13 @@ def _project_root() -> Path:
             if line.startswith("PROJECT_ROOT="):
                 p = Path(line.split("=", 1)[1].strip())
                 if p.exists():
+                    log.debug(f"PROJECT_ROOT aus .env: {p}")
                     return p
-    return _HERE.parent
+    p = _HERE.parent
+    log.debug(f"PROJECT_ROOT (Standard): {p}")
+    return p
 
 PROJECT = _project_root()
-
-LABEL_READY    = "ready-for-agent"
-LABEL_PROPOSED = "agent-proposed"
-LABEL_PROGRESS = "in-progress"
-LABEL_REVIEW   = "needs-review"
 
 
 # ---------------------------------------------------------------------------
@@ -83,14 +80,13 @@ def risk_level(issue: dict) -> tuple[int, str]:
     """
     labels = [l["name"] for l in issue.get("labels", [])]
     title  = issue.get("title", "").lower()
-    safe   = ["docstring", "docs", "comment", "dead code", "cleanup", "import"]
 
-    if "bug" in labels:
+    if any(lb in labels for lb in settings.RISK_BUG_LABELS):
         return 3, "HOCH — Bug (Plan erforderlich)"
-    if "Feature request" in labels:
+    if any(lb in labels for lb in settings.RISK_FEAT_LABELS):
         return 3, "HOCH — Neues Feature (Plan + Freigabe erforderlich)"
-    if "enhancement" in labels:
-        if any(w in title for w in safe):
+    if any(lb in labels for lb in settings.RISK_ENAK_LABELS):
+        if any(w in title for w in settings.SAFE_KEYWORDS):
             return 1, "NIEDRIG — Dokumentation/Cleanup"
         return 2, "MITTEL — Enhancement (Plan vor Implementierung)"
     return 2, "MITTEL — (Plan vor Implementierung)"
@@ -110,12 +106,13 @@ def relevant_files(issue: dict) -> list[Path]:
     Returns:
         Liste existierender Dateipfade (dedupliziert).
     """
-    body  = issue.get("body", "")
-    found = []
+    body      = issue.get("body", "")
+    exts      = tuple(settings.CODE_EXTENSIONS)
+    found     = []
     for line in body.splitlines():
         for part in line.split("`"):
             p = PROJECT / part.strip()
-            if p.exists() and p.is_file() and p.suffix in (".py", ".js", ".sh", ".yaml", ".md"):
+            if p.exists() and p.is_file() and p.suffix in exts:
                 found.append(p)
     return list(dict.fromkeys(found))
 
@@ -131,9 +128,15 @@ def branch_name(issue: dict) -> str:
     title  = issue.get("title", "").lower()
     labels = [l["name"] for l in issue.get("labels", [])]
 
-    prefix = "fix" if "bug" in labels else "feat" if "Feature request" in labels else "chore"
-    if any(w in title for w in ["docs", "docstring", "comment"]):
-        prefix = "docs"
+    if any(lb in labels for lb in settings.RISK_BUG_LABELS):
+        prefix = settings.PREFIX_FIX
+    elif any(lb in labels for lb in settings.RISK_FEAT_LABELS):
+        prefix = settings.PREFIX_FEAT
+    else:
+        prefix = settings.PREFIX_DEFAULT
+
+    if any(w in title for w in settings.DOCS_KEYWORDS):
+        prefix = settings.PREFIX_DOCS
 
     slug = title
     for ch in " /()→.:,äöüß":
@@ -244,9 +247,9 @@ def cmd_list() -> None:
     Aufgerufen von:
         main() wenn --list gesetzt
     """
-    issues = gitea.get_issues(label=LABEL_READY)
+    issues = gitea.get_issues(label=settings.LABEL_READY)
     if not issues:
-        print("Keine Issues mit Label 'ready-for-agent' gefunden.")
+        print(f"Keine Issues mit Label '{settings.LABEL_READY}' gefunden.")
         print(f"Label setzen in: {gitea.GITEA_URL}/{gitea.REPO}/issues")
         return
 
@@ -270,9 +273,10 @@ def cmd_plan(number: int) -> None:
     issue = gitea.get_issue(number)
     print_context(issue)
 
+    log.info(f"Poste Plan-Kommentar für Issue #{number}")
     print("\n[→] Poste Plan-Kommentar auf Gitea...")
     gitea.post_comment(number, build_plan_comment(issue))
-    gitea.swap_label(number, LABEL_READY, LABEL_PROPOSED)
+    gitea.swap_label(number, settings.LABEL_READY, settings.LABEL_PROPOSED)
 
     print(f"[✓] Kommentar gepostet: {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
     print(f"[→] Freigabe: mit 'ok' oder 'ja' kommentieren")
@@ -289,10 +293,12 @@ def cmd_implement(number: int) -> None:
     issue = gitea.get_issue(number)
 
     if not gitea.check_approval(number):
+        log.warning(f"Keine Freigabe für Issue #{number}")
         print(f"[✗] Keine Freigabe für Issue #{number}.")
         print(f"    Kommentiere 'ok' auf: {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
         sys.exit(1)
 
+    log.info(f"Freigabe erhalten für Issue #{number} — starte Implementierung")
     print(f"[✓] Freigabe erhalten — starte Implementierung.")
     branch = branch_name(issue)
 
@@ -302,14 +308,17 @@ def cmd_implement(number: int) -> None:
             cwd=PROJECT, capture_output=True, text=True
         )
         if result.returncode == 0:
+            log.info(f"Branch '{branch}' erstellt")
             print(f"[✓] Branch '{branch}' erstellt.")
         else:
+            log.warning(f"Branch existiert bereits: {result.stderr.strip()}")
             print(f"[!] Branch existiert bereits: {result.stderr.strip()}")
             subprocess.run(["git", "checkout", branch], cwd=PROJECT)
     except FileNotFoundError:
+        log.warning("git nicht gefunden — Branch manuell erstellen")
         print("[!] git nicht gefunden — Branch manuell erstellen.")
 
-    gitea.swap_label(number, LABEL_PROPOSED, LABEL_PROGRESS)
+    gitea.swap_label(number, settings.LABEL_PROPOSED, settings.LABEL_PROGRESS)
     print_context(issue)
 
     print(f"""
@@ -346,10 +355,11 @@ Implementierung für Issue #{number}.
 ## Issue
 {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}
 """
+    log.info(f"Erstelle PR für Issue #{number} von Branch '{branch}'")
     pr     = gitea.create_pr(branch=branch, title=title, body=pr_body)
     pr_url = pr.get("html_url", "?")
 
-    gitea.swap_label(number, LABEL_PROGRESS, LABEL_REVIEW)
+    gitea.swap_label(number, settings.LABEL_PROGRESS, settings.LABEL_REVIEW)
 
     summary_block = ("### Was wurde gemacht\n" + summary) if summary else ""
     gitea.post_comment(number, f"""## Implementierung abgeschlossen
@@ -362,6 +372,7 @@ Implementierung für Issue #{number}.
 **Nächster Schritt:** PR reviewen und mergen.
 Nach dem Merge: Issue schließen.""")
 
+    log.info(f"PR erstellt: {pr_url}")
     print(f"[✓] PR erstellt: {pr_url}")
     print(f"[✓] Kommentar in Issue #{number} gepostet.")
 
@@ -382,11 +393,12 @@ def cmd_auto() -> None:
     print("=" * 70)
     print("  GITEA AGENT — AUTO-SCAN")
     print("=" * 70)
+    log.info("Auto-Scan gestartet")
 
     did_something = False
 
     # Freigegebene Pläne implementieren
-    proposed = gitea.get_issues(label=LABEL_PROPOSED)
+    proposed = gitea.get_issues(label=settings.LABEL_PROPOSED)
     approved = sorted(
         [i for i in proposed if gitea.check_approval(i["number"])],
         key=lambda x: risk_level(x)[0]
@@ -394,17 +406,19 @@ def cmd_auto() -> None:
     if approved:
         print(f"\n[✓] {len(approved)} freigegebene Issue(s) — starte Implementierung:\n")
         for issue in approved:
+            log.info(f"Implementiere Issue #{issue['number']}: {issue['title'][:60]}")
             print(f"  → #{issue['number']} {issue['title'][:60]}")
             cmd_implement(issue["number"])
             print()
         did_something = True
 
     # Neue Issues planen
-    ready = sorted(gitea.get_issues(label=LABEL_READY), key=lambda x: risk_level(x)[0])
+    ready = sorted(gitea.get_issues(label=settings.LABEL_READY), key=lambda x: risk_level(x)[0])
     if ready:
         print(f"\n[→] {len(ready)} Issue(s) bereit — poste Pläne:\n")
         for issue in ready:
             stufe, _ = risk_level(issue)
+            log.info(f"Plane Issue #{issue['number']} (Stufe {stufe}): {issue['title'][:55]}")
             print(f"  → #{issue['number']} (Stufe {stufe}) {issue['title'][:55]}")
             cmd_plan(issue["number"])
             print()
@@ -412,7 +426,7 @@ def cmd_auto() -> None:
         did_something = True
 
     # Status-Übersicht
-    in_progress = gitea.get_issues(label=LABEL_PROGRESS)
+    in_progress = gitea.get_issues(label=settings.LABEL_PROGRESS)
     waiting     = [i for i in proposed if not gitea.check_approval(i["number"])]
 
     if in_progress:
@@ -428,6 +442,7 @@ def cmd_auto() -> None:
         did_something = True
 
     if not did_something:
+        log.info("Auto-Scan: Nichts zu tun")
         print("\n[✓] Nichts zu tun.")
         print(f"    {gitea.GITEA_URL}/{gitea.REPO}/issues")
     print()
@@ -438,6 +453,9 @@ def cmd_auto() -> None:
 # ---------------------------------------------------------------------------
 
 def main():
+    from log import setup as log_setup
+    log_setup(log_file=settings.LOG_FILE, level=settings.LOG_LEVEL)
+
     parser = argparse.ArgumentParser(
         description="Gitea Agent — automatischer Issue-Workflow",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -467,6 +485,7 @@ Ohne Argumente: automatischer Modus.
         cmd_implement(args.implement)
     elif args.pr:
         if not args.branch:
+            log.error("--pr benötigt --branch <branch-name>")
             print("[✗] --pr benötigt --branch <branch-name>")
             sys.exit(1)
         cmd_pr(args.pr, args.branch, args.summary)

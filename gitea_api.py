@@ -1,16 +1,8 @@
-#!/usr/bin/env python3
 """
 gitea_api.py — Gitea REST API Helper für den Agent-Workflow.
 
 Kapselt alle Gitea-API-Calls. Wird von agent_start.py genutzt.
-
-Konfiguration (via .env im selben Verzeichnis oder Umgebungsvariablen):
-    GITEA_URL       = http://your-gitea-host:3000
-    GITEA_USER      = your-username
-    GITEA_TOKEN     = your-api-token
-    GITEA_REPO      = owner/repo-name
-    GITEA_BOT_USER  = bot-username        (optional, für Kommentare)
-    GITEA_BOT_TOKEN = bot-api-token       (optional)
+Alle konfigurierbaren Werte kommen aus settings.py / .env.
 
 Verwendete Endpunkte:
     GET    /repos/{repo}/issues                   → Issues lesen
@@ -32,12 +24,17 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+import settings
+from log import get_logger
+
+log = get_logger(__name__)
+
 _ENV_FILE = Path(__file__).parent / ".env"
 
 
 def _load_env() -> dict:
     """
-    Liest alle relevanten Variablen aus .env und Umgebungsvariablen.
+    Liest Gitea-Zugangsdaten aus .env und Umgebungsvariablen.
 
     Reihenfolge: Umgebungsvariable → .env Datei → Standardwert.
 
@@ -45,19 +42,16 @@ def _load_env() -> dict:
         Dict mit GITEA_URL, GITEA_USER, GITEA_TOKEN, GITEA_REPO,
         GITEA_BOT_USER, GITEA_BOT_TOKEN.
     """
-    env = {
-        "GITEA_URL":       os.getenv("GITEA_URL", "http://localhost:3000"),
-        "GITEA_USER":      os.getenv("GITEA_USER", ""),
-        "GITEA_TOKEN":     os.getenv("GITEA_TOKEN", ""),
-        "GITEA_REPO":      os.getenv("GITEA_REPO", ""),
-        "GITEA_BOT_USER":  os.getenv("GITEA_BOT_USER", ""),
-        "GITEA_BOT_TOKEN": os.getenv("GITEA_BOT_TOKEN", ""),
-    }
+    keys = ["GITEA_URL", "GITEA_USER", "GITEA_TOKEN", "GITEA_REPO",
+            "GITEA_BOT_USER", "GITEA_BOT_TOKEN"]
+    env  = {k: os.getenv(k, "") for k in keys}
+    env.setdefault("GITEA_URL", "http://localhost:3000")
+
     if _ENV_FILE.exists():
-        for line in _ENV_FILE.read_text().splitlines():
+        for line in _ENV_FILE.read_text(encoding="utf-8").splitlines():
             line = line.strip()
-            for key in env:
-                if line.startswith(f"{key}="):
+            for key in keys:
+                if line.startswith(f"{key}=") and not os.getenv(key):
                     env[key] = line.split("=", 1)[1].strip()
     return env
 
@@ -89,7 +83,7 @@ _AUTH     = _make_auth(_ENV["GITEA_USER"], _ENV["GITEA_TOKEN"], prompt_fallback=
 _BOT_AUTH = (
     _make_auth(_ENV["GITEA_BOT_USER"], _ENV["GITEA_BOT_TOKEN"])
     if _ENV["GITEA_BOT_TOKEN"]
-    else _AUTH  # Fallback: gleicher User wenn kein Bot konfiguriert
+    else _AUTH
 )
 
 
@@ -99,12 +93,12 @@ def _request(method: str, path: str, data: dict | None = None, auth: str | None 
 
     Args:
         method: HTTP-Methode (GET, POST, PATCH, DELETE)
-        path:   API-Pfad ohne Basis-URL, z.B. "/repos/owner/repo/issues"
-        data:   Optionaler Request-Body als dict (wird zu JSON serialisiert)
-        auth:   Auth-Header (Standard: _AUTH / Admin-User)
+        path:   API-Pfad ohne Basis-URL
+        data:   Optionaler Request-Body als dict
+        auth:   Auth-Header (Standard: _AUTH)
 
     Returns:
-        Geparste JSON-Antwort (dict oder list), oder None bei DELETE.
+        Geparste JSON-Antwort oder None bei DELETE.
 
     Raises:
         urllib.error.HTTPError: Bei 4xx/5xx-Antworten.
@@ -116,13 +110,14 @@ def _request(method: str, path: str, data: dict | None = None, auth: str | None 
         "Content-Type":  "application/json",
         "Accept":        "application/json",
     }
+    log.debug(f"{method} {path}")
     req = urllib.request.Request(url, data=payload, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req) as resp:
             body = resp.read()
             return json.loads(body) if body else None
     except urllib.error.HTTPError as e:
-        print(f"[Gitea API Fehler] {method} {path} → {e.code}: {e.read().decode()}")
+        log.error(f"API-Fehler {method} {path} → {e.code}: {e.read().decode()[:200]}")
         raise
 
 
@@ -140,6 +135,7 @@ def get_issue(number: int) -> dict:
     Returns:
         Issue-dict mit keys: number, title, body, labels, state
     """
+    log.debug(f"get_issue #{number}")
     return _request("GET", f"/repos/{REPO}/issues/{number}")
 
 
@@ -148,16 +144,17 @@ def get_issues(label: str | None = None, state: str = "open") -> list:
     Liest Issues, optional gefiltert nach Label.
 
     Args:
-        label: Optionaler Label-Filter, z.B. "ready-for-agent"
+        label: Optionaler Label-Filter
         state: "open", "closed" oder "all"
 
     Returns:
         Liste von Issue-dicts.
     """
-    params = f"?type=issues&state={state}&limit=50"
+    params = f"?type=issues&state={state}&limit={settings.ISSUE_LIMIT}"
     if label:
         params += f"&labels={urllib.parse.quote(label)}"
-    issues = _request("GET", f"/repos/{REPO}/issues{params}")
+    log.debug(f"get_issues label={label}")
+    issues = _request("GET", f"/repos/{REPO}/issues{params}") or []
     if label:
         issues = [i for i in issues if any(l["name"] == label for l in i.get("labels", []))]
     return issues
@@ -178,6 +175,7 @@ def update_issue(number: int, *, state: str | None = None, body: str | None = No
     data = {}
     if state: data["state"] = state
     if body:  data["body"]  = body
+    log.info(f"update_issue #{number} state={state}")
     return _request("PATCH", f"/repos/{REPO}/issues/{number}", data)
 
 
@@ -193,9 +191,9 @@ def get_comments(number: int) -> list:
         number: Issue-Nummer
 
     Returns:
-        Liste von Kommentar-dicts mit keys: id, body, user.login, created_at
+        Liste von Kommentar-dicts.
     """
-    return _request("GET", f"/repos/{REPO}/issues/{number}/comments")
+    return _request("GET", f"/repos/{REPO}/issues/{number}/comments") or []
 
 
 def post_comment(number: int, body: str) -> dict:
@@ -204,38 +202,39 @@ def post_comment(number: int, body: str) -> dict:
 
     Args:
         number: Issue-Nummer
-        body:   Kommentar-Text (Markdown unterstützt)
+        body:   Kommentar-Text (Markdown)
 
     Returns:
         Erstellter Kommentar als dict.
     """
-    return _request("POST", f"/repos/{REPO}/issues/{number}/comments", {"body": body}, auth=_BOT_AUTH)
+    log.info(f"post_comment #{number} ({len(body)} Zeichen)")
+    return _request("POST", f"/repos/{REPO}/issues/{number}/comments",
+                    {"body": body}, auth=_BOT_AUTH)
 
 
 def check_approval(number: int) -> bool:
     """
-    Prüft ob ein Issue-Kommentar eine Freigabe enthält.
+    Prüft ob ein Kommentar nach dem letzten Agent-Kommentar eine Freigabe enthält.
 
-    Sucht nach "ok", "yes", "ja", "approved", "freigabe" (case-insensitive)
-    in Kommentaren die NACH dem letzten Agent-Kommentar erstellt wurden.
+    Freigabe-Keywords und Agent-Marker kommen aus settings.py.
 
     Args:
         number: Issue-Nummer
 
     Returns:
-        True wenn Freigabe-Kommentar gefunden.
+        True wenn Freigabe gefunden.
     """
-    APPROVAL_KEYWORDS = {"ok", "yes", "ja", "approved", "freigabe", "👍", "✅"}
-    comments = get_comments(number)
+    comments       = get_comments(number)
     last_agent_idx = -1
     for i, c in enumerate(comments):
-        if "OK zum Implementieren?" in c.get("body", ""):
+        if settings.AGENT_MARKER in c.get("body", ""):
             last_agent_idx = i
 
-    review_comments = comments[last_agent_idx + 1:] if last_agent_idx >= 0 else comments
-    for c in review_comments:
+    review = comments[last_agent_idx + 1:] if last_agent_idx >= 0 else comments
+    for c in review:
         body_lower = c.get("body", "").lower().strip()
-        if any(kw in body_lower for kw in APPROVAL_KEYWORDS):
+        if any(kw.lower() in body_lower for kw in settings.APPROVAL_KEYWORDS):
+            log.info(f"check_approval #{number} → freigegeben")
             return True
     return False
 
@@ -249,9 +248,9 @@ def get_all_labels() -> dict:
     Liest alle verfügbaren Labels des Repos.
 
     Returns:
-        dict: name → id Mapping, z.B. {"bug": 1, "enhancement": 3}
+        dict: name → id Mapping
     """
-    labels = _request("GET", f"/repos/{REPO}/labels")
+    labels = _request("GET", f"/repos/{REPO}/labels") or []
     return {l["name"]: l["id"] for l in labels}
 
 
@@ -265,8 +264,9 @@ def add_label(number: int, label_name: str) -> None:
     """
     labels = get_all_labels()
     if label_name not in labels:
-        print(f"[Warnung] Label '{label_name}' existiert nicht in Gitea.")
+        log.warning(f"Label '{label_name}' existiert nicht in Gitea — übersprungen")
         return
+    log.info(f"add_label #{number} → '{label_name}'")
     _request("POST", f"/repos/{REPO}/issues/{number}/labels", {"labels": [labels[label_name]]})
 
 
@@ -281,18 +281,20 @@ def remove_label(number: int, label_name: str) -> None:
     labels = get_all_labels()
     if label_name not in labels:
         return
+    log.info(f"remove_label #{number} ← '{label_name}'")
     _request("DELETE", f"/repos/{REPO}/issues/{number}/labels/{labels[label_name]}")
 
 
 def swap_label(number: int, remove: str, add: str) -> None:
     """
-    Tauscht ein Label gegen ein anderes (atomarer Status-Wechsel).
+    Tauscht ein Label gegen ein anderes (Status-Wechsel).
 
     Args:
         number: Issue-Nummer
         remove: Label das entfernt wird
         add:    Label das gesetzt wird
     """
+    log.info(f"swap_label #{number}: '{remove}' → '{add}'")
     remove_label(number, remove)
     add_label(number, add)
 
@@ -301,7 +303,7 @@ def swap_label(number: int, remove: str, add: str) -> None:
 # Pull Requests
 # ---------------------------------------------------------------------------
 
-def create_pr(branch: str, title: str, body: str, base: str = "main") -> dict:
+def create_pr(branch: str, title: str, body: str, base: str | None = None) -> dict:
     """
     Erstellt einen Pull Request.
 
@@ -309,11 +311,13 @@ def create_pr(branch: str, title: str, body: str, base: str = "main") -> dict:
         branch: Feature-Branch (head)
         title:  PR-Titel
         body:   PR-Beschreibung (Markdown)
-        base:   Ziel-Branch, Standard: "main"
+        base:   Ziel-Branch (Standard aus settings.PR_BASE_BRANCH)
 
     Returns:
         Erstellter PR als dict mit key: html_url
     """
+    base = base or settings.PR_BASE_BRANCH
+    log.info(f"create_pr '{branch}' → '{base}': {title[:60]}")
     return _request("POST", f"/repos/{REPO}/pulls", {
         "title": title,
         "body":  body,
