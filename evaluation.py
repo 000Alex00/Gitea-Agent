@@ -109,6 +109,44 @@ def _keywords_match(text: str, keywords: list[str]) -> bool:
     return all(kw.lower() in text_lower for kw in keywords)
 
 
+def _run_steps(server_url: str, endpoint: str, steps: list[dict]) -> tuple[bool, str]:
+    """
+    Führt einen mehrstufigen Test sequenziell aus.
+
+    Jeder Step kann entweder:
+    - ``expect_stored: true``  — Nachricht senden, nur Antwort (kein Fehler) erwartet
+    - ``expected_keywords: [...]`` — Antwort wird auf Keywords geprüft
+
+    Aufgerufen von:
+        run() für Tests mit "steps"-Schlüssel
+
+    Args:
+        server_url: Basis-URL von server.py
+        endpoint:   Chat-Endpunkt (z.B. "/chat")
+        steps:      Liste von Step-Dicts aus agent_eval.json
+
+    Returns:
+        Tuple (passed: bool, reason: str)
+    """
+    for i, step in enumerate(steps, start=1):
+        message  = step.get("message", "")
+        keywords = step.get("expected_keywords", [])
+        stored   = step.get("expect_stored", False)
+
+        response = _chat(server_url, endpoint, message)
+        if response is None:
+            return False, f"Step {i}: Keine Antwort von server.py"
+
+        if stored:
+            # Nur prüfen ob server geantwortet hat — kein Keyword-Check
+            continue
+
+        if keywords and not _keywords_match(response, keywords):
+            return False, f"Step {i}: Keywords {keywords!r} nicht in Antwort"
+
+    return True, ""
+
+
 def _load_config(project_root: Path) -> dict | None:
     """Lädt agent_eval.json aus dem Zielprojekt. None wenn nicht vorhanden."""
     cfg_path = project_root / EVAL_CONFIG
@@ -203,19 +241,21 @@ def run(project_root: Path, update_baseline: bool = False) -> EvalResult:
             result.all_tests.append(tr)
             continue
 
-        response = _chat(server_url, endpoint, message)
-        if response is None:
-            tr = TestResult(name=name, weight=weight, passed=False,
-                            reason="Keine Antwort von server.py")
-            result.all_tests.append(tr)
-            result.failed_tests.append(tr)
-            continue
+        steps = t.get("steps")
+        if steps:
+            passed, reason = _run_steps(server_url, endpoint, steps)
+        else:
+            response = _chat(server_url, endpoint, message)
+            if response is None:
+                tr = TestResult(name=name, weight=weight, passed=False,
+                                reason="Keine Antwort von server.py")
+                result.all_tests.append(tr)
+                result.failed_tests.append(tr)
+                continue
+            passed = _keywords_match(response, keywords)
+            reason = "" if passed else f"Keywords {keywords!r} nicht in Antwort"
 
-        passed = _keywords_match(response, keywords)
-        tr = TestResult(
-            name=name, weight=weight, passed=passed,
-            reason="" if passed else f"Keywords {keywords!r} nicht in Antwort"
-        )
+        tr = TestResult(name=name, weight=weight, passed=passed, reason=reason)
         result.all_tests.append(tr)
         if passed:
             earned_weight += weight
