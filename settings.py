@@ -122,6 +122,9 @@ LOG_FILE  = _env("LOG_FILE",  "gitea-agent.log")
 # Projekt-Root (überschreibt Elternverzeichnis von agent_start.py)
 PROJECT_ROOT = _env("PROJECT_ROOT", "")
 
+# Verzeichnis für Kontext-Dateien (relativ zu agent_start.py oder absolut)
+CONTEXT_DIR = _env("CONTEXT_DIR", "contexts")
+
 # Freigabe-Aufforderung am Ende des Plan-Kommentars
 APPROVAL_PROMPT = _env(
     "APPROVAL_PROMPT",

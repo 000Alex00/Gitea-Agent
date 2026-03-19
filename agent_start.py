@@ -231,6 +231,162 @@ def print_context(issue: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Kontext-Dateien
+# ---------------------------------------------------------------------------
+
+def _context_dir() -> Path:
+    """
+    Gibt den Pfad zum contexts/-Verzeichnis zurück.
+
+    Relativ → wird relativ zu agent_start.py aufgelöst.
+    Absolut → wird direkt verwendet.
+
+    Returns:
+        Absoluter Pfad zum Kontext-Verzeichnis.
+    """
+    p = Path(settings.CONTEXT_DIR)
+    return p if p.is_absolute() else _HERE / p
+
+
+def save_plan_context(issue: dict) -> Path:
+    """
+    Speichert einen kompakten Kontext für die Plan-Phase.
+
+    Erstellt contexts/issue-{num}.md mit Status ⏳.
+    Kein Quellcode — nur Metadaten für den Plan-Schritt.
+
+    Args:
+        issue: Issue-dict aus Gitea API
+
+    Returns:
+        Pfad zur geschriebenen Datei.
+    """
+    num         = issue["number"]
+    title       = issue.get("title", "")
+    body        = (issue.get("body", "") or "").strip()
+    stufe, desc = risk_level(issue)
+    files       = relevant_files(issue)
+    branch      = branch_name(issue)
+
+    body_short = body[:200] + ("..." if len(body) > 200 else "")
+    file_list  = "\n".join(f"- {f.relative_to(PROJECT)}" for f in files) \
+                 or "- keine erkannt"
+
+    content = f"""# Issue #{num} — {title}
+Status: ⏳ Wartet auf Freigabe
+Risiko: {stufe}/4 — {desc}
+Branch: {branch}
+
+## Ziel
+{body_short}
+
+## Dateien
+{file_list}
+
+## Checkliste
+- [ ] Quellcode lesen
+- [ ] Änderung vornehmen
+- [ ] Nach jeder Datei committen
+- [ ] git push origin {branch}
+
+## Commit-Template
+<typ>: <beschreibung> (closes #{num})
+
+## PR-Befehl
+python3 agent_start.py --pr {num} --branch {branch} --summary "..."
+
+## Gitea
+{gitea.GITEA_URL}/{gitea.REPO}/issues/{num}
+"""
+    ctx = _context_dir()
+    ctx.mkdir(parents=True, exist_ok=True)
+    out = ctx / f"issue-{num}.md"
+    out.write_text(content, encoding="utf-8")
+    log.info(f"Kontext gespeichert: {out}")
+    return out
+
+
+def save_implement_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:
+    """
+    Speichert Kontext + Quellcode für die Implementierungs-Phase.
+
+    Erstellt:
+        contexts/issue-{num}.md       — Metadaten, Status 🔧 READY
+        contexts/issue-{num}-files.md — Quellcode (max settings.MAX_FILE_LINES pro Datei)
+
+    Args:
+        issue:      Issue-dict aus Gitea API
+        files_dict: {relativer Pfad: Dateiinhalt}
+
+    Returns:
+        Tuple (kontext_datei, code_datei).
+    """
+    num         = issue["number"]
+    title       = issue.get("title", "")
+    body        = (issue.get("body", "") or "").strip()
+    stufe, desc = risk_level(issue)
+    branch      = branch_name(issue)
+
+    body_short = body[:200] + ("..." if len(body) > 200 else "")
+    file_list  = "\n".join(f"- {name}" for name in files_dict) \
+                 or "- keine erkannt"
+
+    ctx_content = f"""# Issue #{num} — {title}
+Status: 🔧 READY — Implementierung starten
+Risiko: {stufe}/4 — {desc}
+Branch: {branch}
+
+## Ziel
+{body_short}
+
+## Dateien
+{file_list}
+(Quellcode: issue-{num}-files.md)
+
+## Checkliste
+- [ ] Quellcode lesen (issue-{num}-files.md)
+- [ ] Änderung vornehmen
+- [ ] Nach jeder Datei: git add <datei> && git commit -m "..."
+- [ ] git push origin {branch}
+
+## Commit-Template
+<typ>: <beschreibung> (closes #{num})
+
+## PR-Befehl
+python3 agent_start.py --pr {num} --branch {branch} --summary "..."
+
+## Gitea
+{gitea.GITEA_URL}/{gitea.REPO}/issues/{num}
+"""
+
+    limit = settings.MAX_FILE_LINES
+    parts = []
+    for name, text in files_dict.items():
+        lines = text.splitlines()
+        if len(lines) > limit:
+            code = "\n".join(lines[:limit])
+            code += f"\n\n[... gekürzt — {len(lines) - limit} Zeilen weggelassen ...]"
+        else:
+            code = "\n".join(lines)
+        parts.append(f"## {name}\n```\n{code}\n```")
+
+    ctx = _context_dir()
+    ctx.mkdir(parents=True, exist_ok=True)
+
+    ctx_file   = ctx / f"issue-{num}.md"
+    files_file = ctx / f"issue-{num}-files.md"
+
+    ctx_file.write_text(ctx_content, encoding="utf-8")
+    files_file.write_text(
+        f"# Dateien — Issue #{num}\n\n" + "\n\n".join(parts) + "\n",
+        encoding="utf-8"
+    )
+
+    log.info(f"Kontext gespeichert: {ctx_file}, {files_file}")
+    return ctx_file, files_file
+
+
+# ---------------------------------------------------------------------------
 # Subcommands
 # ---------------------------------------------------------------------------
 
@@ -272,7 +428,9 @@ def cmd_plan(number: int) -> None:
     gitea.post_comment(number, build_plan_comment(issue))
     gitea.swap_label(number, settings.LABEL_READY, settings.LABEL_PROPOSED)
 
+    out = save_plan_context(issue)
     print(f"[✓] Kommentar gepostet: {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
+    print(f"[✓] Kontext: {out}")
     print(f"[→] Freigabe: mit 'ok' oder 'ja' kommentieren")
 
 
@@ -313,6 +471,13 @@ def cmd_implement(number: int) -> None:
         print("[!] git nicht gefunden — Branch manuell erstellen.")
 
     gitea.swap_label(number, settings.LABEL_PROPOSED, settings.LABEL_PROGRESS)
+
+    files_dict = {
+        str(f.relative_to(PROJECT)): f.read_text(encoding="utf-8")
+        for f in relevant_files(issue)
+    }
+    ctx_file, files_file = save_implement_context(issue, files_dict)
+    print(f"[✓] Kontext: {ctx_file.name} + {files_file.name}")
     print_context(issue)
 
     print(f"""
