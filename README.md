@@ -121,13 +121,91 @@ Danach:
 - postet einen Abschluss-Kommentar ins Issue
 - setzt das Label auf `needs-review`
 
-Siehe `Documentation/evaluation.py.md` für Konfiguration und Format.
-
 ---
 
 ### 7. Review und Merge
 
 PR in Gitea reviewen → mergen → Issue schließen. Fertig.
+
+---
+
+## Eval-System
+
+`evaluation.py` prüft vor jedem PR ob das Zielprojekt noch korrekt funktioniert. Schlägt ein Test fehl, wird der PR blockiert.
+
+### Voraussetzung
+
+Im Zielprojekt muss eine `tests/agent_eval.json` existieren:
+
+```json
+{
+  "server_url": "http://192.168.1.x:8000",
+  "chat_endpoint": "/chat",
+  "pi5_url": "http://192.168.1.x:1235",
+  "tests": [
+    {
+      "name": "Routing einfach",
+      "weight": 1,
+      "pi5_required": false,
+      "message": "Was ist 2 plus 2?",
+      "expected_keywords": ["4"]
+    },
+    {
+      "name": "Stilles Failure",
+      "weight": 2,
+      "pi5_required": true,
+      "steps": [
+        {"message": "Mein Name ist Max", "expect_stored": true},
+        {"message": "Wie heiße ich?", "expected_keywords": ["Max"]}
+      ]
+    }
+  ]
+}
+```
+
+### Felder
+
+| Feld | Beschreibung |
+|---|---|
+| `server_url` | URL des zu testenden Servers |
+| `chat_endpoint` | HTTP-POST Endpunkt — wird aus dem Zielprojekt gelesen, nicht hardcodiert |
+| `pi5_url` | Optionaler Backend-Worker — wird vorab auf Erreichbarkeit geprüft |
+| `weight` | Gewichtung im Score (1–3) |
+| `pi5_required` | Bei `true`: Test wird übersprungen wenn Pi5 offline |
+| `message` | Nachricht an den Server |
+| `expected_keywords` | Alle Keywords müssen in der Antwort enthalten sein (case-insensitive). Leer `[]` = nur Antwort vorhanden prüfen |
+| `expect_stored` | `true` = Antwort darf `null` sein — prüft nur ob Server nicht abstürzt (z.B. beim Einschreiben von Fakten) |
+| `steps` | Mehrschrittige Tests: Schritte werden sequenziell mit derselben User-ID ausgeführt, alle müssen bestehen |
+
+### Score-Berechnung
+
+Gewichtetes Binär — kein LLM-Judgement:
+- Test bestanden → `weight` Punkte
+- Test nicht bestanden → 0 Punkte
+- `max_score` = Summe aller Gewichte
+
+### Verhalten bei Infrastruktur-Problemen
+
+| Situation | Verhalten |
+|---|---|
+| `server_url` offline | Warnung — Eval übersprungen, PR wird trotzdem erstellt |
+| `pi5_url` offline | Pi5-Tests übersprungen, Rest läuft durch |
+| Score < Baseline | PR blockiert + Kommentar ins Issue |
+| Kein `agent_eval.json` | Eval übersprungen |
+
+### Baseline verwalten
+
+```bash
+cd /home/user/gitea-agent
+
+# Baseline setzen / zurücksetzen (nach bewusster Score-Änderung)
+python3 evaluation.py --project /path/to/project --update-baseline
+
+# Manuell testen ohne PR
+python3 evaluation.py --project /path/to/project
+```
+
+`baseline.json` liegt im Zielprojekt unter `tests/baseline.json` und sollte in `.gitignore` stehen — sie ist maschinenspezifisch und wird beim ersten Lauf automatisch angelegt.
 
 ---
 
@@ -259,6 +337,7 @@ Der Agent stuft jedes Issue automatisch ein:
 ```
 gitea-agent/
 ├── agent_start.py      # CLI + Workflow-Logik
+├── evaluation.py       # Eval-System: liest tests/agent_eval.json, HTTP-Tests gegen server
 ├── gitea_api.py        # Gitea REST API Wrapper
 ├── settings.py         # Alle konfigurierbaren Werte (Labels, Texte, Limits)
 ├── log.py              # Logging-Konfiguration (Console + File)
