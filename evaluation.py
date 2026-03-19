@@ -17,6 +17,7 @@ import json
 import sys
 import urllib.error
 import urllib.request
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -58,20 +59,17 @@ class EvalResult:
 # ---------------------------------------------------------------------------
 
 def _ping(url: str) -> bool:
-    """Prüft ob eine URL erreichbar ist (HEAD oder GET)."""
+    """Prüft ob eine URL erreichbar ist (GET, ignoriert HTTP-Fehlercode)."""
     try:
-        req = urllib.request.Request(url, method="HEAD")
-        urllib.request.urlopen(req, timeout=TIMEOUT)
+        urllib.request.urlopen(url, timeout=TIMEOUT)
         return True
+    except urllib.error.HTTPError:
+        return True  # Server antwortet → erreichbar
     except Exception:
-        try:
-            urllib.request.urlopen(url, timeout=TIMEOUT)
-            return True
-        except Exception:
-            return False
+        return False
 
 
-def _chat(server_url: str, endpoint: str, message: str) -> str | None:
+def _chat(server_url: str, endpoint: str, message: str, eval_user: str) -> str | None:
     """
     Sendet eine Nachricht an server.py und gibt die Antwort zurück.
 
@@ -79,12 +77,13 @@ def _chat(server_url: str, endpoint: str, message: str) -> str | None:
         server_url: Basis-URL, z.B. "http://localhost:8000"
         endpoint:   Pfad, z.B. "/chat" (aus agent_eval.json)
         message:    Nachrichtentext
+        eval_user:  Eindeutige User-ID pro Eval-Lauf (verhindert Kontext-Bleeding)
 
     Returns:
         Antworttext als String oder None bei Fehler.
     """
     url  = server_url.rstrip("/") + endpoint
-    body = json.dumps({"message": message}).encode()
+    body = json.dumps({"prompt": message, "user": eval_user}).encode()
     req  = urllib.request.Request(
         url,
         data=body,
@@ -94,7 +93,6 @@ def _chat(server_url: str, endpoint: str, message: str) -> str | None:
     try:
         with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
             data = json.loads(resp.read())
-            # Antwort kann unter "response", "reply", "text" oder "message" liegen
             for key in ("response", "reply", "text", "message"):
                 if key in data:
                     return str(data[key])
@@ -109,7 +107,7 @@ def _keywords_match(text: str, keywords: list[str]) -> bool:
     return all(kw.lower() in text_lower for kw in keywords)
 
 
-def _run_steps(server_url: str, endpoint: str, steps: list[dict]) -> tuple[bool, str]:
+def _run_steps(server_url: str, endpoint: str, steps: list[dict], eval_user: str) -> tuple[bool, str]:
     """
     Führt einen mehrstufigen Test sequenziell aus.
 
@@ -133,7 +131,7 @@ def _run_steps(server_url: str, endpoint: str, steps: list[dict]) -> tuple[bool,
         keywords = step.get("expected_keywords", [])
         stored   = step.get("expect_stored", False)
 
-        response = _chat(server_url, endpoint, message)
+        response = _chat(server_url, endpoint, message, eval_user)
         if response is None:
             return False, f"Step {i}: Keine Antwort von server.py"
 
@@ -223,7 +221,8 @@ def run(project_root: Path, update_baseline: bool = False) -> EvalResult:
             result.warned = True
             result.warn_reasons.append(f"Pi5 nicht erreichbar ({pi5_url}) — Pi5-Tests werden übersprungen")
 
-    # 3. Tests ausführen
+    # 3. Tests ausführen — eindeutiger User pro Lauf verhindert Kontext-Bleeding
+    eval_user     = f"eval-{uuid.uuid4().hex[:8]}"
     total_weight  = 0
     earned_weight = 0
 
@@ -243,9 +242,9 @@ def run(project_root: Path, update_baseline: bool = False) -> EvalResult:
 
         steps = t.get("steps")
         if steps:
-            passed, reason = _run_steps(server_url, endpoint, steps)
+            passed, reason = _run_steps(server_url, endpoint, steps, eval_user)
         else:
-            response = _chat(server_url, endpoint, message)
+            response = _chat(server_url, endpoint, message, eval_user)
             if response is None:
                 tr = TestResult(name=name, weight=weight, passed=False,
                                 reason="Keine Antwort von server.py")
