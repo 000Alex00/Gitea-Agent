@@ -26,6 +26,7 @@ LLM-agnostisch:
 import argparse
 import ast
 import datetime
+import json
 import os
 import re
 import shutil
@@ -319,7 +320,7 @@ def save_plan_context(issue: dict) -> Path:
     file_list  = "\n".join(f"- {f.relative_to(PROJECT)}" for f in files) \
                  or "- keine erkannt"
 
-    content = f"""# Issue #{num} — {title}
+    content = f"""{settings.STARTER_MD_PFLICHTREGELN}# Issue #{num} — {title}
 Status: ⏳ Wartet auf Freigabe
 Risiko: {stufe}/4 — {desc}
 Branch: {branch}
@@ -376,7 +377,7 @@ def save_implement_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:
     file_list  = "\n".join(f"- {name}" for name in files_dict) \
                  or "- keine erkannt"
 
-    ctx_content = f"""# Issue #{num} — {title}
+    ctx_content = f"""{settings.STARTER_MD_PFLICHTREGELN}# Issue #{num} — {title}
 Status: 🔧 READY — Implementierung starten
 Risiko: {stufe}/4 — {desc}
 Branch: {branch}
@@ -552,6 +553,136 @@ def _has_detailed_plan(number: int) -> bool:
     return False
 
 
+# ---------------------------------------------------------------------------
+# Prozess-Enforcement (Issue #6)
+# ---------------------------------------------------------------------------
+
+def _check_pr_preconditions(number: int, branch: str) -> None:
+    """
+    Maßnahme 1 (höchste Priorität): Technische Schranke vor cmd_pr().
+
+    Technische Schranken haben Vorrang vor Prompt-Regeln — diese Prüfung
+    kann nicht durch LLM-Kontext-Drift umgangen werden.
+
+    Prüfungen (in Reihenfolge):
+        1. Branch ist nicht main/master
+        2. Plan-Kommentar existiert im Issue (enthält "Implementierungsplan" oder "Agent-Analyse")
+        3. Metadata-Block im Plan-Kommentar vorhanden (enthält "Agent-Metadaten")
+        4. Eval nach letztem Commit ausgeführt (score_history.json Timestamp > letzter Commit)
+
+    Args:
+        number: Issue-Nummer
+        branch: Feature-Branch-Name
+
+    Raises:
+        SystemExit(1) wenn eine Prüfung fehlschlägt.
+    """
+    fehler = []
+
+    # 1. Branch ≠ main/master
+    if branch.strip().lower() in ("main", "master"):
+        fehler.append("Branch ist 'main'/'master' — PR von main verboten")
+
+    # 2. Plan-Kommentar existiert
+    try:
+        comments = gitea.get_comments(number)
+        plan_kommentar = any(
+            ("Implementierungsplan" in c.get("body", "") or "Agent-Analyse" in c.get("body", ""))
+            for c in comments
+        )
+        if not plan_kommentar:
+            fehler.append("Kein Plan-Kommentar im Issue gefunden (cmd_plan ausgeführt?)")
+        else:
+            # 3. Metadata-Block im Plan-Kommentar
+            meta_vorhanden = any(
+                "Agent-Metadaten" in c.get("body", "")
+                for c in comments
+                if "Implementierungsplan" in c.get("body", "") or "Agent-Analyse" in c.get("body", "")
+            )
+            if not meta_vorhanden:
+                fehler.append("Plan-Kommentar ohne Metadata-Block (cmd_plan neu ausführen)")
+    except Exception as e:
+        log.warning(f"Kommentar-Prüfung fehlgeschlagen: {e}")
+
+    # 4. Eval nach letztem Commit — nur wenn agent_eval.json existiert
+    eval_cfg = PROJECT / "tests" / "agent_eval.json"
+    hist_path = PROJECT / evaluation.SCORE_HISTORY
+    if eval_cfg.exists():
+        if hist_path.exists():
+            try:
+                with hist_path.open(encoding="utf-8") as f:
+                    history = json.load(f)
+                if history:
+                    last_eval_ts = history[-1].get("timestamp", "")
+                    last_commit_ts = subprocess.check_output(
+                        ["git", "log", "-1", "--pretty=%cI"],
+                        cwd=PROJECT, stderr=subprocess.DEVNULL
+                    ).decode().strip()
+                    if last_eval_ts < last_commit_ts:
+                        fehler.append(
+                            f"Eval nicht nach letztem Commit ausgeführt "
+                            f"(letzter Eval: {last_eval_ts[:16]}, letzter Commit: {last_commit_ts[:16]})"
+                        )
+                else:
+                    fehler.append("score_history.json leer — Eval noch nie ausgeführt")
+            except Exception as e:
+                log.warning(f"score_history Prüfung fehlgeschlagen: {e}")
+        else:
+            fehler.append("score_history.json nicht gefunden — Eval noch nie ausgeführt")
+    else:
+        log.debug("Kein agent_eval.json — Eval-Prüfung übersprungen")
+
+    if fehler:
+        print("\n❌ cmd_pr abgebrochen — Prozess nicht vollständig:")
+        for f in fehler:
+            print(f"   • {f}")
+        print("\n→ Fehlende Schritte nachholen, dann erneut ausführen.")
+        sys.exit(1)
+
+
+def _validate_pr_completion(number: int, branch: str, pr_url: str, idir_moved: bool) -> None:
+    """
+    Maßnahme 4: Validiert nach cmd_pr() ob alle Pflichtschritte erfolgt sind.
+
+    Prüft:
+        - PR-URL vorhanden (nicht "?")
+        - Label 'needs-review' gesetzt
+        - Context-Ordner verschoben
+
+    Bei fehlenden Schritten: Terminal-Warnung + Gitea-Kommentar.
+
+    Args:
+        number:     Issue-Nummer
+        branch:     Feature-Branch
+        pr_url:     URL des erstellten PR
+        idir_moved: True wenn Context-Ordner erfolgreich verschoben wurde
+    """
+    fehlend = []
+
+    if pr_url == "?":
+        fehlend.append("PR-URL fehlt — PR möglicherweise nicht erstellt")
+
+    try:
+        issue = gitea.get_issue(number)
+        label_names = [l["name"] for l in issue.get("labels", [])]
+        if settings.LABEL_REVIEW not in label_names:
+            fehlend.append(f"Label '{settings.LABEL_REVIEW}' nicht gesetzt")
+    except Exception as e:
+        log.warning(f"Label-Prüfung fehlgeschlagen: {e}")
+
+    if not idir_moved:
+        fehlend.append("Context-Ordner nicht verschoben (contexts/ → contexts/done/)")
+
+    if fehlend:
+        warnung = "⚠️ **Prozess unvollständig** — folgende Schritte fehlen:\n" + \
+                  "\n".join(f"- {s}" for s in fehlend)
+        print(f"\n[!] {warnung.replace('**', '')}")
+        try:
+            gitea.post_comment(number, warnung)
+        except Exception as e:
+            log.warning(f"Abschluss-Validierung Kommentar fehlgeschlagen: {e}")
+
+
 def _update_discussion(issue: dict, starter_path: Path) -> None:
     """Liest Gitea-Kommentarhistorie und aktualisiert die starter.md.
 
@@ -704,6 +835,29 @@ def cmd_implement(number: int) -> None:
     """
     issue = gitea.get_issue(number)
 
+    # Maßnahme 5: Vorbedingungen prüfen
+    stufe, _ = risk_level(issue)
+    if stufe >= 4:
+        print(f"[✗] Issue #{number} hat Risikostufe 4 — kein automatischer Implement-Start.")
+        print(f"    Bitte manuell implementieren und mit --pr abschließen.")
+        sys.exit(1)
+
+    idir_existing = _find_issue_dir(number)
+    if not idir_existing:
+        print(f"[✗] Kein Kontext-Ordner für Issue #{number} gefunden.")
+        print(f"    Zuerst ausführen: python3 agent_start.py --issue {number}")
+        sys.exit(1)
+
+    starter = idir_existing / "starter.md"
+    if not starter.exists():
+        print(f"[✗] starter.md nicht gefunden in {idir_existing}.")
+        print(f"    Zuerst ausführen: python3 agent_start.py --issue {number}")
+        sys.exit(1)
+
+    if "PFLICHTREGELN" not in starter.read_text(encoding="utf-8"):
+        print(f"[!] Warnung: starter.md enthält keinen PFLICHTREGELN-Block.")
+        print(f"    Bitte --issue {number} erneut ausführen um aktuellen Kontext zu laden.")
+
     if not gitea.check_approval(number, settings.LABEL_HELP):
         log.warning(f"Keine Freigabe für Issue #{number}")
         print(f"[✗] Keine Freigabe für Issue #{number}.")
@@ -764,6 +918,9 @@ def cmd_pr(number: int, branch: str, summary: str = "") -> None:
         branch:  Feature-Branch
         summary: Optionale Zusammenfassung was gemacht wurde
     """
+    # Maßnahme 1: Vorbedingungen prüfen (blockiert bei Prozess-Verletzung)
+    _check_pr_preconditions(number, branch)
+
     issue   = gitea.get_issue(number)
     title   = f"{issue['title']} (closes #{number})"
     checklist = "\n".join(f"- [ ] {item}" for item in settings.PR_CHECKLIST)
@@ -835,12 +992,17 @@ Implementierung für Issue #{number}.
 - Bei Revert: `Documentation/` synchron zurücksetzen""")
 
     idir = _find_issue_dir(number)
+    idir_moved = False
     if idir and idir.exists():
         shutil.move(str(idir), str(_done_dir() / idir.name))
+        idir_moved = True
 
     log.info(f"PR erstellt: {pr_url}")
     print(f"[✓] PR erstellt: {pr_url}")
     print(f"[✓] Kommentar in Issue #{number} gepostet.")
+
+    # Maßnahme 4: Abschluss-Validierung
+    _validate_pr_completion(number, branch, pr_url, idir_moved)
 
 
 def cmd_fixup(number: int) -> None:

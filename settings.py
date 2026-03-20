@@ -157,3 +157,31 @@ COMPLETION_NEXT_STEP = _env(
     "COMPLETION_NEXT_STEP",
     "PR reviewen und mergen.\nNach dem Merge: Issue schließen.",
 )
+
+# ---------------------------------------------------------------------------
+# Prozess-Enforcement (Issue #6)
+# ---------------------------------------------------------------------------
+
+# Pflichtregeln-Block der in jede starter.md eingefügt wird (Maßnahme 2+3)
+STARTER_MD_PFLICHTREGELN = """\
+## PFLICHTREGELN (bei Kontext-Drift: neue Session starten)
+> ⚠️ **Technische Schranken haben Vorrang vor Prompt-Regeln.**
+> `cmd_pr()` prüft Vorbedingungen automatisch — kein manueller Bypass möglich.
+
+- NIEMALS `curl` statt `agent_start.py` verwenden
+- NIEMALS Schritte überspringen
+- NIEMALS PR manuell erstellen
+
+⚠️ **Sessions-Limit:** Nach 2 Issues neue Claude-Session empfohlen.
+Kontext-Drift Symptome: curl statt agent_start.py, fehlende Metadata, übersprungene Schritte.
+
+## SELBST-CHECK vor jedem Schritt
+- [ ] Vorheriger Schritt vollständig abgeschlossen?
+- [ ] `agent_start.py` verwendet (nicht curl)?
+- [ ] Metadata-Block vorhanden?
+- [ ] Eval gelaufen?
+
+Wenn Checkbox offen → **STOPP**. Schritt nachholen oder neue Session.
+
+---
+"""
