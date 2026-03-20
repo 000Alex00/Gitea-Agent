@@ -976,27 +976,33 @@ Implementierung für Issue #{number}.
         pass
 
     # Eval ausführen — blockiert PR bei FAIL
+    # Risikostufe 1: Eval überspringen (kein Risk-Gate nötig)
+    stufe, _ = risk_level(issue)
     eval_result = None
-    try:
-        eval_result = evaluation.run(PROJECT, trigger="pr")
-        print(evaluation.format_terminal(eval_result))
-        if eval_result.skipped:
-            log.info("Eval übersprungen (kein agent_eval.json)")
-        elif eval_result.warned and not eval_result.all_tests:
-            log.warning("Eval: Infrastruktur offline — PR wird trotzdem erstellt")
-        elif not eval_result.passed:
-            eval_comment = evaluation.format_gitea_comment(eval_result)
-            gitea.post_comment(number, eval_comment)
-            _validate_comment(eval_comment, "eval_fail", critical=True)
-            gitea.swap_label(number, settings.LABEL_REVIEW, settings.LABEL_PROGRESS)
-            log.error(f"Eval FAIL — PR blockiert (Score {eval_result.score}/{eval_result.max_score})")
-            print(f"[✗] PR blockiert. Kommentar in Issue #{number} gepostet.")
-            return
-    except Exception as e:
-        msg = f"⚠️ **Eval-Fehler** — Evaluation konnte nicht ausgeführt werden:\n```\n{e}\n```\nPR wurde trotzdem erstellt — bitte `evaluation.py` prüfen."
-        gitea.post_comment(number, msg)
-        log.warning(f"Eval-Fehler (Warnung gepostet): {e}")
-        print(f"[!] Eval-Fehler (Warnung gepostet): {e}")
+    if stufe <= 1:
+        print("[Eval] Risikostufe 1 — übersprungen.")
+        log.info("Eval übersprungen — Risikostufe 1")
+    else:
+        try:
+            eval_result = evaluation.run(PROJECT, trigger="pr")
+            print(evaluation.format_terminal(eval_result))
+            if eval_result.skipped:
+                log.info("Eval übersprungen (kein agent_eval.json)")
+            elif eval_result.warned and not eval_result.all_tests:
+                log.warning("Eval: Infrastruktur offline — PR wird trotzdem erstellt")
+            elif not eval_result.passed:
+                eval_comment = evaluation.format_gitea_comment(eval_result)
+                gitea.post_comment(number, eval_comment)
+                _validate_comment(eval_comment, "eval_fail", critical=True)
+                gitea.swap_label(number, settings.LABEL_REVIEW, settings.LABEL_PROGRESS)
+                log.error(f"Eval FAIL — PR blockiert (Score {eval_result.score}/{eval_result.max_score})")
+                print(f"[✗] PR blockiert. Kommentar in Issue #{number} gepostet.")
+                return
+        except Exception as e:
+            msg = f"⚠️ **Eval-Fehler** — Evaluation konnte nicht ausgeführt werden:\n```\n{e}\n```\nPR wurde trotzdem erstellt — bitte `evaluation.py` prüfen."
+            gitea.post_comment(number, msg)
+            log.warning(f"Eval-Fehler (Warnung gepostet): {e}")
+            print(f"[!] Eval-Fehler (Warnung gepostet): {e}")
 
     log.info(f"Erstelle PR für Issue #{number} von Branch '{branch}'")
     pr     = gitea.create_pr(branch=branch, title=title, body=pr_body)
