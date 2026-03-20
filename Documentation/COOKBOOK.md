@@ -437,6 +437,14 @@ python3 Helper-tools/agent_start.py --eval-after-restart 61
 # Kein manueller Eingriff nötig
 ```
 
+**Konfiguration (`.env` oder Umgebungsvariable):**
+
+| Variable | Standard | Bedeutung |
+|---|---|---|
+| `SERVER_URL` | `http://localhost:8000` | Ziel-URL für Polling |
+| `SERVER_WAIT_TIMEOUT` | `300` | Max. Wartezeit in Sekunden |
+| `SERVER_WAIT_INTERVAL` | `10` | Polling-Intervall in Sekunden |
+
 **Pitfalls:**
 - Timeout 5 min: wenn server.py nach 5 min immer noch nicht antwortet → exit 1
 - Ohne `<NR>`: nur score_history, kein Gitea-Kommentar
