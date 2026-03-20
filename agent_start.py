@@ -1026,15 +1026,16 @@ Implementierung für Issue #{number}.
         "> ⚠️ Keine Zusammenfassung angegeben — beim nächsten Mal `--summary \"...\"` mitgeben."
     history_block = _format_history_block(PROJECT)
 
-    # Eval-Ergebnis für Abschluss-Kommentar (Änderung 1)
+    # Eval-Ergebnis für Abschluss-Kommentar
+    # "Score:" muss im Text enthalten sein (COMMENT_REQUIRED_FIELDS["completion"])
     if eval_result is None:
         eval_line = "⏭️ Eval: übersprungen (Risikostufe 1) — Score: n/a"
     elif eval_result.skipped:
         eval_line = "⏭️ Eval: übersprungen (kein agent_eval.json) — Score: n/a"
     elif eval_result.passed:
-        eval_line = f"✅ Eval: {eval_result.score}/{eval_result.max_score} PASS (Baseline: {eval_result.baseline_score})"
+        eval_line = f"✅ Eval PASS — Score: {eval_result.score}/{eval_result.max_score} (Baseline: {eval_result.baseline_score})"
     else:
-        eval_line = f"⚠️ Eval: {eval_result.score}/{eval_result.max_score} — teilweise bestanden (Baseline: {eval_result.baseline_score})"
+        eval_line = f"⚠️ Eval WARN — Score: {eval_result.score}/{eval_result.max_score} (Baseline: {eval_result.baseline_score})"
 
     # Session-Status (Änderung 3)
     try:
