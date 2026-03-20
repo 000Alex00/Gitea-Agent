@@ -794,7 +794,7 @@ Implementierung für Issue #{number}.
 
     # Eval ausführen — blockiert PR bei FAIL
     try:
-        eval_result = evaluation.run(PROJECT)
+        eval_result = evaluation.run(PROJECT, trigger="pr")
         print(evaluation.format_terminal(eval_result))
         if eval_result.skipped:
             log.info("Eval übersprungen (kein agent_eval.json)")
@@ -874,6 +874,98 @@ def cmd_fixup(number: int) -> None:
     log.info(f"Bugfix-Kommentar gepostet für Issue #{number}")
     print(f"[✓] Bugfix-Kommentar gepostet + Label → needs-review")
     print(f"    {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
+
+
+# ---------------------------------------------------------------------------
+# Watch-Modus
+# ---------------------------------------------------------------------------
+
+def _auto_issue_exists(test_name: str) -> bool:
+    """Prüft ob ein offenes [Auto]-Issue für diesen Test bereits existiert."""
+    issues = gitea.get_issues(state="open")
+    marker = f"[Auto] {test_name}"
+    return any(marker in i.get("title", "") for i in issues)
+
+
+def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
+    """Schließt [Auto]-Issues deren Test jetzt wieder besteht."""
+    passed_names = {t.name for t in result.all_tests if t.passed}
+    issues = gitea.get_issues(state="open")
+    for issue in issues:
+        title = issue.get("title", "")
+        if not title.startswith("[Auto]"):
+            continue
+        for name in passed_names:
+            if name in title:
+                gitea.close_issue(issue["number"])
+                log.info(f"[Auto]-Issue #{issue['number']} geschlossen — Test '{name}' besteht wieder")
+                print(f"[✓] Auto-Issue #{issue['number']} geschlossen ({name} wieder OK)")
+
+
+def cmd_watch(interval_minutes: int = 60) -> None:
+    """
+    Periodischer Eval-Loop: läuft alle interval_minutes Minuten.
+
+    Bei Score-Verlust: erstellt automatisch ein Gitea-Issue mit Label ready-for-agent.
+    Bei Erholung: schließt das [Auto]-Issue wieder.
+    Deduplication: pro Test nur ein offenes [Auto]-Issue (Titel-Check).
+
+    Aufgerufen von:
+        main() wenn --watch gesetzt
+    """
+    print(f"[→] Watch-Modus gestartet — Interval: {interval_minutes} Minuten")
+    print(f"    Abbrechen mit Ctrl+C\n")
+    log.info(f"Watch-Modus gestartet (Interval: {interval_minutes}min)")
+
+    while True:
+        ts = time.strftime("%H:%M:%S")
+        print(f"[{ts}] Eval läuft...")
+
+        try:
+            result = evaluation.run(PROJECT, trigger="watch")
+            print(evaluation.format_terminal(result))
+
+            if not result.skipped and not result.warned:
+                _close_resolved_auto_issues(result)
+
+                for failed in result.failed_tests:
+                    if failed.skipped:
+                        continue
+                    if _auto_issue_exists(failed.name):
+                        log.debug(f"[Auto]-Issue für '{failed.name}' bereits offen — kein Duplikat")
+                        continue
+
+                    try:
+                        commit = subprocess.check_output(
+                            ["git", "log", "-1", "--pretty=%h %s"],
+                            cwd=PROJECT, stderr=subprocess.DEVNULL
+                        ).decode().strip()
+                    except Exception:
+                        commit = "unbekannt"
+
+                    body = (
+                        f"## Score-Verlust erkannt\n\n"
+                        f"**Test:** {failed.name} (Gewicht {failed.weight})\n"
+                        f"**Fehler:** {failed.reason}\n"
+                        f"**Score:** {result.score:.0f}/{result.max_score} (Baseline: {result.baseline_score:.0f})\n\n"
+                        f"**Letzter Commit:** `{commit}`\n\n"
+                        f"> Automatisch erkannt durch Watch-Modus.\n"
+                        f"> Wird automatisch geschlossen wenn der Test wieder besteht."
+                    )
+                    issue = gitea.create_issue(
+                        title=f"[Auto] {failed.name} fehlgeschlagen — Score-Verlust erkannt",
+                        body=body,
+                        label=settings.LABEL_READY,
+                    )
+                    log.warning(f"Auto-Issue erstellt: #{issue['number']} für '{failed.name}'")
+                    print(f"[!] Auto-Issue erstellt: #{issue['number']} — {failed.name}")
+
+        except Exception as e:
+            log.error(f"Watch-Lauf Fehler: {e}")
+            print(f"[!] Fehler in Watch-Lauf: {e}")
+
+        print(f"    Nächster Lauf in {interval_minutes} Minute(n)...\n")
+        time.sleep(interval_minutes * 60)
 
 
 # ---------------------------------------------------------------------------
@@ -1008,6 +1100,8 @@ Ohne Argumente: automatischer Modus.
     parser.add_argument("--pr",        type=int,  metavar="NR",    help="PR erstellen (mit --branch)")
     parser.add_argument("--branch",    type=str,  metavar="BRANCH",help="Branch-Name für --pr")
     parser.add_argument("--summary",   type=str,  metavar="TEXT",  help="Zusammenfassung für Issue-Kommentar", default="")
+    parser.add_argument("--watch",     action="store_true",         help="Periodischer Eval-Loop mit Auto-Issues")
+    parser.add_argument("--interval",  type=int,  metavar="MIN",   help="Interval für --watch in Minuten (Standard: 60)", default=60)
     args = parser.parse_args()
 
     if args.list:
@@ -1018,6 +1112,8 @@ Ohne Argumente: automatischer Modus.
         cmd_implement(args.implement)
     elif args.fixup:
         cmd_fixup(args.fixup)
+    elif args.watch:
+        cmd_watch(args.interval)
     elif args.pr:
         if not args.branch:
             log.error("--pr benötigt --branch <branch-name>")

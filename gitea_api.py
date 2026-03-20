@@ -160,6 +160,33 @@ def get_issues(label: str | None = None, state: str = "open") -> list:
     return issues
 
 
+def create_issue(title: str, body: str, label: str | None = None) -> dict:
+    """
+    Erstellt ein neues Issue.
+
+    Args:
+        title: Issue-Titel
+        body:  Issue-Body (Markdown)
+        label: Optionales Label (Name) — wird per ID aufgelöst
+
+    Returns:
+        Issue-dict der neu erstellten Issue.
+    """
+    data: dict = {"title": title, "body": body}
+    if label:
+        all_labels = get_all_labels()
+        if label in all_labels:
+            data["labels"] = [all_labels[label]]
+    log.info(f"create_issue: {title[:60]}")
+    return _request("POST", f"/repos/{REPO}/issues", data=data) or {}
+
+
+def close_issue(number: int) -> None:
+    """Schließt ein Issue (state → closed)."""
+    log.info(f"close_issue: #{number}")
+    _request("PATCH", f"/repos/{REPO}/issues/{number}", data={"state": "closed"})
+
+
 def update_issue(number: int, *, state: str | None = None, body: str | None = None) -> dict:
     """
     Aktualisiert Status oder Body eines Issues.

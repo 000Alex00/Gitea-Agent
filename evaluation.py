@@ -13,6 +13,7 @@ Standalone:
 """
 
 import argparse
+import datetime
 import json
 import sys
 import time
@@ -22,10 +23,12 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
-EVAL_CONFIG  = "tests/agent_eval.json"
-BASELINE     = "tests/baseline.json"
-DEFAULT_CHAT = "/chat"
-TIMEOUT      = 10  # Sekunden pro Request
+EVAL_CONFIG    = "tests/agent_eval.json"
+BASELINE       = "tests/baseline.json"
+SCORE_HISTORY  = "tests/score_history.json"
+HISTORY_MAX    = 90
+DEFAULT_CHAT   = "/chat"
+TIMEOUT        = 10  # Sekunden pro Request
 
 
 # ---------------------------------------------------------------------------
@@ -177,27 +180,66 @@ def _save_baseline(project_root: Path, score: float) -> None:
         json.dump({"score": score}, f, indent=2)
 
 
+def _save_score_history(project_root: Path, result: "EvalResult", trigger: str) -> None:
+    """
+    Hängt einen Eintrag an tests/score_history.json an. Max HISTORY_MAX Einträge.
+
+    Args:
+        project_root: Pfad zum Zielprojekt
+        result:       EvalResult des aktuellen Laufs
+        trigger:      "pr", "watch" oder "manual"
+    """
+    hist_path = project_root / SCORE_HISTORY
+    hist_path.parent.mkdir(parents=True, exist_ok=True)
+
+    history = []
+    if hist_path.exists():
+        try:
+            with hist_path.open(encoding="utf-8") as f:
+                history = json.load(f)
+        except Exception:
+            history = []
+
+    entry = {
+        "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+        "trigger":   trigger,
+        "score":     result.score,
+        "max_score": result.max_score,
+        "baseline":  result.baseline_score,
+        "passed":    result.passed,
+        "failed":    [{"name": t.name, "reason": t.reason} for t in result.failed_tests],
+    }
+    history.append(entry)
+    history = history[-HISTORY_MAX:]  # nur die letzten 90 behalten
+
+    with hist_path.open("w", encoding="utf-8") as f:
+        json.dump(history, f, indent=2, ensure_ascii=False)
+
+
 # ---------------------------------------------------------------------------
 # Kern
 # ---------------------------------------------------------------------------
 
-def run(project_root: Path, update_baseline: bool = False) -> EvalResult:
+def run(project_root: Path, update_baseline: bool = False, trigger: str = "manual") -> EvalResult:
     """
     Führt alle Eval-Tests aus dem Zielprojekt aus.
 
     Aufgerufen von:
-        agent_start.py -> cmd_pr()
-        __main__ (standalone)
+        agent_start.py -> cmd_pr()   (trigger="pr")
+        agent_start.py -> cmd_watch() (trigger="watch")
+        __main__ (standalone)         (trigger="manual")
 
     Args:
         project_root:     Pfad zum Zielprojekt (PROJECT-Variable in agent_start.py)
         update_baseline:  Wenn True → aktuellen Score als neue Baseline speichern
+        trigger:          Auslöser des Laufs — "pr", "watch" oder "manual"
 
     Returns:
         EvalResult mit passed/skipped/warned/failed + Score-Details
 
     Seiteneffekte:
         Schreibt tests/baseline.json wenn nicht vorhanden oder --update-baseline
+        Schreibt tests/score_history.json (max 90 Einträge)
     """
     result = EvalResult()
 
@@ -286,6 +328,7 @@ def run(project_root: Path, update_baseline: bool = False) -> EvalResult:
         _save_baseline(project_root, result.score)
         result.baseline_raised = True
 
+    _save_score_history(project_root, result, trigger)
     return result
 
 
