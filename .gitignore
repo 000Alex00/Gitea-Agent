@@ -4,3 +4,5 @@ __pycache__/
 *.egg-info/
 .venv/
 tests/score_history.json
+contexts/
+gitea-agent.log
