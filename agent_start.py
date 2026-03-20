@@ -1157,7 +1157,7 @@ Ohne Argumente: automatischer Modus.
     parser.add_argument("--branch",    type=str,  metavar="BRANCH",help="Branch-Name für --pr")
     parser.add_argument("--summary",   type=str,  metavar="TEXT",  help="Zusammenfassung für Issue-Kommentar", default="")
     parser.add_argument("--watch",         action="store_true",         help="Periodischer Eval-Loop mit Auto-Issues")
-    parser.add_argument("--interval",      type=int,  metavar="MIN",   help="Interval für --watch in Minuten (Standard: 60)", default=60)
+    parser.add_argument("--interval",      type=int,  metavar="MIN",   help="Interval für --watch in Minuten (überschreibt watch_interval_minutes aus agent_eval.json)", default=None)
     args = parser.parse_args()
 
     if args.list:
@@ -1169,7 +1169,17 @@ Ohne Argumente: automatischer Modus.
     elif args.fixup:
         cmd_fixup(args.fixup)
     elif args.watch:
-        cmd_watch(args.interval)
+        # Interval: CLI-Arg > agent_eval.json > Fallback 60
+        interval = args.interval
+        if interval is None:
+            try:
+                cfg_path = PROJECT / "tests" / "agent_eval.json"
+                with cfg_path.open(encoding="utf-8") as f:
+                    cfg = json.load(f)
+                interval = cfg.get("watch_interval_minutes", 60)
+            except Exception:
+                interval = 60
+        cmd_watch(interval)
     elif args.pr:
         if not args.branch:
             log.error("--pr benötigt --branch <branch-name>")
