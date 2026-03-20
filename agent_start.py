@@ -946,14 +946,17 @@ def _neustart_required(changed_files: list[str]) -> str:
     return "Nein"
 
 
-def cmd_pr(number: int, branch: str, summary: str = "") -> None:
+def cmd_pr(number: int, branch: str, summary: str = "",
+           force: bool = False, restart_before_eval: bool = False) -> None:
     """
     Schritt 3: PR erstellen + Abschluss-Kommentar ins Issue posten.
 
     Args:
-        number:  Issue-Nummer
-        branch:  Feature-Branch
-        summary: Optionale Zusammenfassung was gemacht wurde
+        number:               Issue-Nummer
+        branch:               Feature-Branch
+        summary:              Optionale Zusammenfassung was gemacht wurde
+        force:                Staleness-Check überspringen (--force)
+        restart_before_eval:  Server neu starten vor Eval (--restart-before-eval)
     """
     # Maßnahme 1: Vorbedingungen prüfen (blockiert bei Prozess-Verletzung)
     _check_pr_preconditions(number, branch)
@@ -986,6 +989,12 @@ Implementierung für Issue #{number}.
             docs_warning = "\n> ⚠️ **Hinweis:** `Documentation/` wurde nicht aktualisiert — bitte vor dem Merge nachholen."
     except Exception:
         pass
+
+    # Server-Aktualitäts-Check: Commit neuer als Server-Start? (Issue #30)
+    if restart_before_eval:
+        _restart_server_for_eval()
+    else:
+        _check_server_staleness(branch, force=force)
 
     # Eval ausführen — blockiert PR bei FAIL
     # Risikostufe 1: Eval überspringen (kein Risk-Gate nötig)
@@ -1353,6 +1362,138 @@ def _last_chat_inactive_minutes(log_path: str | Path) -> float | None:
     return None
 
 
+def _server_start_time(log_path: str | Path) -> datetime.datetime | None:
+    """
+    Ermittelt den letzten Server-Start-Zeitpunkt anhand des log_path.
+
+    Sucht rückwärts nach typischen Startup-Mustern (uvicorn, FastAPI, custom).
+    Extrahiert den ISO-Timestamp aus der gefundenen Zeile.
+
+    Aufgerufen von:
+        _check_server_staleness()
+
+    Args:
+        log_path: Pfad zur Logdatei des Servers (aus agent_eval.json)
+
+    Returns:
+        datetime ohne Zeitzone oder None wenn nicht ermittelbar.
+    """
+    _STARTUP_PATTERNS = (
+        "application startup complete",
+        "uvicorn running on",
+        "started server process",
+        "started reloader process",
+        "server started",
+        "starting server",
+        "skynet online",
+        "started listening",
+    )
+
+    log_path = Path(log_path)
+    if not log_path.exists():
+        return None
+
+    import re
+    ts_re = re.compile(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}")
+
+    try:
+        lines = log_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except Exception:
+        return None
+
+    for line in reversed(lines):
+        if any(p in line.lower() for p in _STARTUP_PATTERNS):
+            m = ts_re.search(line)
+            if m:
+                try:
+                    return datetime.datetime.fromisoformat(m.group().replace("T", " "))
+                except Exception:
+                    pass
+    return None
+
+
+def _check_server_staleness(branch: str, force: bool = False) -> None:
+    """
+    Prüft ob der laufende Server den aktuellen Branch-Code hat.
+
+    Vergleicht Timestamp des letzten Commits auf branch mit dem Server-Start-Zeitpunkt
+    (aus log_path in agent_eval.json). Bei Commit neuer als Server-Start:
+    Warnung + SystemExit(1) — außer force=True.
+
+    Wird übersprungen wenn log_path nicht konfiguriert oder Server-Start nicht parsebar.
+
+    Aufgerufen von:
+        cmd_pr() — vor Eval
+
+    Args:
+        branch: Feature-Branch-Name
+        force:  True → Warnung ausgeben aber nicht abbrechen (--force)
+    """
+    eval_cfg = evaluation._load_config(PROJECT) or {}
+    log_path = eval_cfg.get("log_path")
+    if not log_path:
+        return  # Nicht konfiguriert → überspringen
+
+    server_start = _server_start_time(log_path)
+    if server_start is None:
+        log.info("Server-Start-Zeitpunkt nicht ermittelbar — Staleness-Check übersprungen")
+        return
+
+    try:
+        commit_ts_raw = subprocess.check_output(
+            ["git", "log", "-1", "--pretty=%cI", branch],
+            cwd=PROJECT, stderr=subprocess.DEVNULL
+        ).decode().strip()
+        # Zeitzone entfernen für Vergleich
+        commit_ts = datetime.datetime.fromisoformat(commit_ts_raw)
+        if commit_ts.tzinfo:
+            import datetime as _dt
+            commit_ts = commit_ts.replace(tzinfo=None) + commit_ts.utcoffset()
+            commit_ts = commit_ts.replace(tzinfo=None)
+    except Exception as e:
+        log.info(f"Commit-Timestamp nicht ermittelbar — Staleness-Check übersprungen ({e})")
+        return
+
+    if commit_ts <= server_start:
+        return  # Server ist aktuell
+
+    msg = (
+        f"\n[!] Server-Code veraltet\n"
+        f"    Letzter Commit: {commit_ts.strftime('%Y-%m-%d %H:%M')} ({branch[:60]})\n"
+        f"    Server gestartet: {server_start.strftime('%Y-%m-%d %H:%M')}\n\n"
+        f"    → Server neu starten, dann erneut --pr aufrufen.\n"
+        f"      Oder: --restart-before-eval (automatisch) / --force (überspringen)"
+    )
+    print(msg)
+    log.warning(f"Server-Code veraltet: commit {commit_ts} > server_start {server_start}")
+    if not force:
+        sys.exit(1)
+    print("[!] --force: Staleness-Check übersprungen — Eval läuft trotzdem.")
+
+
+def _restart_server_for_eval() -> None:
+    """
+    Startet den Server neu (via restart_script aus agent_eval.json) und wartet bis bereit.
+
+    Aufgerufen von:
+        cmd_pr() — bei --restart-before-eval
+
+    Seiteneffekte:
+        subprocess.run(restart_script), _wait_for_server()
+    """
+    eval_cfg = evaluation._load_config(PROJECT) or {}
+    restart_sc = eval_cfg.get("restart_script")
+    if not restart_sc:
+        print("[!] --restart-before-eval: kein restart_script in agent_eval.json konfiguriert")
+        log.warning("--restart-before-eval: restart_script fehlt in agent_eval.json")
+        return
+    print(f"[→] --restart-before-eval: Neustart via {restart_sc}...")
+    log.info(f"Neustart via {restart_sc}")
+    subprocess.run([restart_sc], check=False)
+    server_url = eval_cfg.get("server_url", settings.SERVER_URL)
+    _wait_for_server(url=server_url)
+
+
 def _has_new_commits_since_last_eval(project_root: Path) -> bool:
     """
     Gibt True zurück wenn seit dem letzten Eval-Lauf neue Commits existieren.
@@ -1713,7 +1854,9 @@ Ohne Argumente: automatischer Modus.
     parser.add_argument("--summary",   type=str,  metavar="TEXT",  help="Zusammenfassung für Issue-Kommentar", default="")
     parser.add_argument("--watch",              action="store_true",       help="Periodischer Eval-Loop mit Auto-Issues")
     parser.add_argument("--interval",           type=int,  metavar="MIN", help="Interval für --watch in Minuten (überschreibt watch_interval_minutes aus agent_eval.json)", default=None)
-    parser.add_argument("--eval-after-restart", type=int,  metavar="NR",  help="Nach Neustart: Eval ausführen + Score ins Issue (NR optional)", nargs="?", const=0)
+    parser.add_argument("--eval-after-restart",   type=int,  metavar="NR",  help="Nach Neustart: Eval ausführen + Score ins Issue (NR optional)", nargs="?", const=0)
+    parser.add_argument("--force",                action="store_true",       help="Staleness-Check vor Eval überspringen (--pr)")
+    parser.add_argument("--restart-before-eval",  action="store_true",       help="Server via restart_script neu starten vor Eval (--pr)")
     args = parser.parse_args()
 
     if args.eval_after_restart is not None:
@@ -1744,7 +1887,9 @@ Ohne Argumente: automatischer Modus.
             log.error("--pr benötigt --branch <branch-name>")
             print("[✗] --pr benötigt --branch <branch-name>")
             sys.exit(1)
-        cmd_pr(args.pr, args.branch, args.summary)
+        cmd_pr(args.pr, args.branch, args.summary,
+               force=args.force,
+               restart_before_eval=args.restart_before_eval)
     else:
         cmd_auto()
 
