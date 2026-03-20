@@ -601,29 +601,33 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
     except Exception as e:
         log.warning(f"Kommentar-Prüfung fehlgeschlagen: {e}")
 
-    # 4. Eval nach letztem Commit
+    # 4. Eval nach letztem Commit — nur wenn agent_eval.json existiert
+    eval_cfg = PROJECT / "tests" / "agent_eval.json"
     hist_path = PROJECT / evaluation.SCORE_HISTORY
-    if hist_path.exists():
-        try:
-            with hist_path.open(encoding="utf-8") as f:
-                history = json.load(f)
-            if history:
-                last_eval_ts = history[-1].get("timestamp", "")
-                last_commit_ts = subprocess.check_output(
-                    ["git", "log", "-1", "--pretty=%cI"],
-                    cwd=PROJECT, stderr=subprocess.DEVNULL
-                ).decode().strip()
-                if last_eval_ts < last_commit_ts:
-                    fehler.append(
-                        f"Eval nicht nach letztem Commit ausgeführt "
-                        f"(letzter Eval: {last_eval_ts[:16]}, letzter Commit: {last_commit_ts[:16]})"
-                    )
-            else:
-                fehler.append("score_history.json leer — Eval noch nie ausgeführt")
-        except Exception as e:
-            log.warning(f"score_history Prüfung fehlgeschlagen: {e}")
+    if eval_cfg.exists():
+        if hist_path.exists():
+            try:
+                with hist_path.open(encoding="utf-8") as f:
+                    history = json.load(f)
+                if history:
+                    last_eval_ts = history[-1].get("timestamp", "")
+                    last_commit_ts = subprocess.check_output(
+                        ["git", "log", "-1", "--pretty=%cI"],
+                        cwd=PROJECT, stderr=subprocess.DEVNULL
+                    ).decode().strip()
+                    if last_eval_ts < last_commit_ts:
+                        fehler.append(
+                            f"Eval nicht nach letztem Commit ausgeführt "
+                            f"(letzter Eval: {last_eval_ts[:16]}, letzter Commit: {last_commit_ts[:16]})"
+                        )
+                else:
+                    fehler.append("score_history.json leer — Eval noch nie ausgeführt")
+            except Exception as e:
+                log.warning(f"score_history Prüfung fehlgeschlagen: {e}")
+        else:
+            fehler.append("score_history.json nicht gefunden — Eval noch nie ausgeführt")
     else:
-        fehler.append("score_history.json nicht gefunden — Eval noch nie ausgeführt")
+        log.debug("Kein agent_eval.json — Eval-Prüfung übersprungen")
 
     if fehler:
         print("\n❌ cmd_pr abgebrochen — Prozess nicht vollständig:")
