@@ -1120,19 +1120,23 @@ def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
                 print(f"[✓] Auto-Issue #{issue['number']} geschlossen ({name} wieder OK)")
 
 
-def _build_metadata(branch: str = "", changed_paths: list[str] | None = None) -> str:
+def _build_metadata(
+    branch: str = "",
+    changed_paths: list[str] | None = None,
+    files_read: list[Path] | None = None,
+) -> str:
     """
-    Erzeugt einen Metadata-Block für Gitea-Kommentare (Plan + Abschluss).
+    Erzeugt einen aufklappbaren Metadata-Block für Gitea-Kommentare.
 
-    Gibt einen zusammengefassten Markdown-Block zurück mit:
-    Zeitstempel, Modell, Git-Branch, optional geänderte Dateien.
+    Inhalt: Modell, Dateien gelesen, Token-Schätzung, Branch, Commit, Zeitstempel.
 
     Args:
         branch:        Git-Branch-Name (leer = aktueller Branch via git)
-        changed_paths: Liste geänderter Dateipfade (optional)
+        changed_paths: Liste geänderter Dateipfade (optional, für Abschluss-Kommentar)
+        files_read:    Liste gelesener Path-Objekte für Token-Schätzung (optional)
 
     Returns:
-        Markdown-String für Gitea-Kommentar
+        Markdown-String mit <details>-Block für Gitea-Kommentar
     """
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     model = os.environ.get("CLAUDE_MODEL", os.environ.get("MODEL", settings.CLAUDE_MODEL))
@@ -1151,12 +1155,36 @@ def _build_metadata(branch: str = "", changed_paths: list[str] | None = None) ->
             ).decode().strip()
         except Exception:
             branch = "unbekannt"
-    files_line = ""
+
+    # Token-Schätzung (~10 Tokens/Wort)
+    file_count = len(files_read) if files_read else 0
+    if files_read:
+        words = 0
+        for f in files_read:
+            try:
+                words += len(f.read_text(encoding="utf-8", errors="ignore").split())
+            except Exception:
+                pass
+        estimated_tokens = words * 10
+        token_line = f"**Geschätzte Tokens:** ~{estimated_tokens:,} _(Schätzung: ~10 Tokens/Wort, kein offizielles Token-API)_"
+    else:
+        token_line = "**Geschätzte Tokens:** — _(keine Dateien übergeben)_"
+
+    files_changed_line = ""
     if changed_paths:
-        files_line = "\n| **Geänderte Dateien** | " + ", ".join(f"`{p}`" for p in changed_paths) + " |"
+        files_changed_line = f"\n**Geänderte Dateien:** " + ", ".join(f"`{p}`" for p in changed_paths)
+
     return (
-        f"\n---\n\n"
-        f"*{timestamp} | Commit: `{commit}` | Branch: `{branch}` | Modell: {model}{files_line}*"
+        f"\n\n<details>\n<summary>🤖 System-Infos</summary>\n\n"
+        f"**Modell:** {model}  \n"
+        f"**Dateien gelesen:** {file_count}  \n"
+        f"{token_line}  \n"
+        f"\n"
+        f"**Branch:** `{branch}`  \n"
+        f"**Commit:** `{commit}`  \n"
+        f"**Zeitstempel:** {timestamp}  \n"
+        f"{files_changed_line}\n"
+        f"\n</details>"
     )
 
 
