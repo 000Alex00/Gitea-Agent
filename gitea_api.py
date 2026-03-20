@@ -346,9 +346,34 @@ def swap_label(number: int, remove: str, add: str) -> None:
 # Pull Requests
 # ---------------------------------------------------------------------------
 
+def get_pr_for_branch(branch: str, base: str | None = None) -> dict | None:
+    """
+    Gibt den offenen PR für einen Branch zurück oder None wenn keiner existiert.
+
+    Args:
+        branch: Feature-Branch (head)
+        base:   Ziel-Branch (Standard aus settings.PR_BASE_BRANCH)
+
+    Returns:
+        PR als dict oder None.
+    """
+    base = base or settings.PR_BASE_BRANCH
+    try:
+        prs = _request("GET", f"/repos/{REPO}/pulls?state=open&base={base}&limit=50")
+        if not prs:
+            return None
+        for pr in prs:
+            if pr.get("head", {}).get("label", "").endswith(f":{branch}") or \
+               pr.get("head", {}).get("ref") == branch:
+                return pr
+    except Exception:
+        pass
+    return None
+
+
 def create_pr(branch: str, title: str, body: str, base: str | None = None) -> dict:
     """
-    Erstellt einen Pull Request.
+    Erstellt einen Pull Request. Falls bereits einer existiert (409), wird der bestehende zurückgegeben.
 
     Args:
         branch: Feature-Branch (head)
@@ -357,13 +382,22 @@ def create_pr(branch: str, title: str, body: str, base: str | None = None) -> di
         base:   Ziel-Branch (Standard aus settings.PR_BASE_BRANCH)
 
     Returns:
-        Erstellter PR als dict mit key: html_url
+        Erstellter oder bestehender PR als dict mit key: html_url
     """
+    import urllib.error as _ue
     base = base or settings.PR_BASE_BRANCH
     log.info(f"create_pr '{branch}' → '{base}': {title[:60]}")
-    return _request("POST", f"/repos/{REPO}/pulls", {
-        "title": title,
-        "body":  body,
-        "head":  branch,
-        "base":  base,
-    })
+    try:
+        return _request("POST", f"/repos/{REPO}/pulls", {
+            "title": title,
+            "body":  body,
+            "head":  branch,
+            "base":  base,
+        })
+    except _ue.HTTPError as e:
+        if e.code == 409:
+            existing = get_pr_for_branch(branch, base)
+            if existing:
+                log.info(f"PR bereits vorhanden: {existing.get('html_url', '?')}")
+                return existing
+        raise
