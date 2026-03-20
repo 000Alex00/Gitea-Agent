@@ -976,6 +976,7 @@ Implementierung für Issue #{number}.
         pass
 
     # Eval ausführen — blockiert PR bei FAIL
+    eval_result = None
     try:
         eval_result = evaluation.run(PROJECT, trigger="pr")
         print(evaluation.format_terminal(eval_result))
@@ -1006,8 +1007,30 @@ Implementierung für Issue #{number}.
     summary_block = f"## Was diese Änderung bewirkt\n{summary}" if summary else \
         "> ⚠️ Keine Zusammenfassung angegeben — beim nächsten Mal `--summary \"...\"` mitgeben."
     history_block = _format_history_block(PROJECT)
+
+    # Eval-Ergebnis für Abschluss-Kommentar (Änderung 1)
+    if eval_result is None or eval_result.skipped:
+        eval_line = "⏭️ Eval: übersprungen (kein agent_eval.json)"
+    elif eval_result.passed:
+        eval_line = f"✅ Eval: {eval_result.score}/{eval_result.max_score} PASS (Baseline: {eval_result.max_score})"
+    else:
+        eval_line = f"⚠️ Eval: {eval_result.score}/{eval_result.max_score} — teilweise bestanden"
+
+    # Session-Status (Änderung 3)
+    try:
+        session_data = _session_increment()
+        session_line = _session_status_line(session_data)
+    except Exception as e:
+        log.warning(f"Session-Tracking fehlgeschlagen: {e}")
+        session_line = "⚪ Session: unbekannt"
+
+    # Metadata-Block (Änderung 2)
+    metadata = _build_metadata(branch=branch)
+
     abschluss = (
         f"## Implementierung abgeschlossen\n\n"
+        f"{eval_line}\n\n"
+        f"{session_line}\n\n"
         f"**Branch:** `{branch}`\n"
         f"**PR:** {pr_url}\n"
         f"{docs_warning}\n\n"
@@ -1016,6 +1039,7 @@ Implementierung für Issue #{number}.
         f"**Neustart erforderlich:** Ja, falls server-seitige Code-Änderungen.\n\n"
         f"**Nächster Schritt:** {settings.COMPLETION_NEXT_STEP}\n"
         f"- Bei Revert: `Documentation/` synchron zurücksetzen"
+        f"{metadata}"
     )
     comment = gitea.post_comment(number, abschluss)
     _validate_comment(comment.get("body", ""), "completion", critical=True)
@@ -1094,6 +1118,103 @@ def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
                 gitea.close_issue(issue["number"])
                 log.info(f"[Auto]-Issue #{issue['number']} geschlossen — Test '{name}' besteht wieder")
                 print(f"[✓] Auto-Issue #{issue['number']} geschlossen ({name} wieder OK)")
+
+
+def _build_metadata(branch: str = "", changed_paths: list[str] | None = None) -> str:
+    """
+    Erzeugt einen Metadata-Block für Gitea-Kommentare (Plan + Abschluss).
+
+    Gibt einen zusammengefassten Markdown-Block zurück mit:
+    Zeitstempel, Modell, Git-Branch, optional geänderte Dateien.
+
+    Args:
+        branch:        Git-Branch-Name (leer = aktueller Branch via git)
+        changed_paths: Liste geänderter Dateipfade (optional)
+
+    Returns:
+        Markdown-String für Gitea-Kommentar
+    """
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    model = os.environ.get("CLAUDE_MODEL", os.environ.get("MODEL", settings.CLAUDE_MODEL))
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=PROJECT, stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except Exception:
+        commit = "unbekannt"
+    if not branch:
+        try:
+            branch = subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                cwd=PROJECT, stderr=subprocess.DEVNULL
+            ).decode().strip()
+        except Exception:
+            branch = "unbekannt"
+    files_line = ""
+    if changed_paths:
+        files_line = "\n| **Geänderte Dateien** | " + ", ".join(f"`{p}`" for p in changed_paths) + " |"
+    return (
+        f"\n---\n\n"
+        f"*{timestamp} | Commit: `{commit}` | Branch: `{branch}` | Modell: {model}{files_line}*"
+    )
+
+
+def _session_path() -> Path:
+    """Gibt den Pfad zu contexts/session.json zurück."""
+    return _HERE / "contexts" / "session.json"
+
+
+def _session_load() -> dict:
+    """
+    Liest session.json. Erstellt neu wenn fehlend oder nach SESSION_RESET_HOURS inaktiv.
+
+    Returns:
+        dict mit keys: started, issues_completed, last_activity
+    """
+    path = _session_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    now = datetime.datetime.now()
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            last = datetime.datetime.fromisoformat(data.get("last_activity", ""))
+            if (now - last).total_seconds() / 3600 < settings.SESSION_RESET_HOURS:
+                return data
+        except Exception:
+            pass
+    data = {"started": now.isoformat(), "issues_completed": 0, "last_activity": now.isoformat()}
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return data
+
+
+def _session_increment() -> dict:
+    """Erhöht issues_completed um 1 und aktualisiert last_activity."""
+    data = _session_load()
+    data["issues_completed"] = data.get("issues_completed", 0) + 1
+    data["last_activity"] = datetime.datetime.now().isoformat()
+    path = _session_path()
+    try:
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    except Exception as e:
+        log.warning(f"session.json schreiben fehlgeschlagen: {e}")
+    return data
+
+
+def _session_status_line(data: dict) -> str:
+    """
+    Gibt eine Statuszeile mit Ampel-Emoji zurück basierend auf issues_completed.
+
+    🟢 = unter Limit | 🟡 = am Limit | 🔴 = über Limit
+    """
+    count = data.get("issues_completed", 0)
+    limit = settings.SESSION_LIMIT
+    if count < limit:
+        return f"🟢 Session: Issue {count}/{limit} — OK"
+    elif count == limit:
+        return f"🟡 Session: Issue {count}/{limit} — Neue Session empfohlen"
+    else:
+        return f"🔴 Session: Issue {count}/{limit} — Kontext-Drift Risiko hoch"
 
 
 def _format_history_block(project_root: Path, n: int = 5) -> str:
