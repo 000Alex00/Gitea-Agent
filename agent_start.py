@@ -972,6 +972,7 @@ Implementierung für Issue #{number}.
 """
     # Prüfen ob Documentation/ seit Abzweig von main aktualisiert wurde
     docs_warning = ""
+    changed = []
     try:
         changed  = subprocess.check_output(
             ["git", "diff", "--name-only", f"main...{branch}"],
