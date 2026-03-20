@@ -168,6 +168,15 @@ SERVER_WAIT_TIMEOUT = _env_int("SERVER_WAIT_TIMEOUT", 300)   # Sekunden
 SERVER_WAIT_INTERVAL = _env_int("SERVER_WAIT_INTERVAL", 10)  # Sekunden
 
 # ---------------------------------------------------------------------------
+# Session-Tracking (Issue #13)
+# ---------------------------------------------------------------------------
+
+# Maximale abgeschlossene Issues pro Claude-Session bevor Drift-Warnung
+SESSION_LIMIT       = _env_int("SESSION_LIMIT",       2)
+# Stunden ohne Aktivität nach denen session.json zurückgesetzt wird
+SESSION_RESET_HOURS = _env_int("SESSION_RESET_HOURS", 4)
+
+# ---------------------------------------------------------------------------
 # Prozess-Enforcement (Issue #6)
 # ---------------------------------------------------------------------------
 
