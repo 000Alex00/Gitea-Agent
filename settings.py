@@ -159,6 +159,15 @@ COMPLETION_NEXT_STEP = _env(
 )
 
 # ---------------------------------------------------------------------------
+# Eval nach Neustart (Issue #10)
+# ---------------------------------------------------------------------------
+
+# URL des Servers der nach Neustart gepollt wird
+SERVER_URL          = _env("SERVER_URL",          "http://localhost:8000")
+SERVER_WAIT_TIMEOUT = _env_int("SERVER_WAIT_TIMEOUT", 300)   # Sekunden
+SERVER_WAIT_INTERVAL = _env_int("SERVER_WAIT_INTERVAL", 10)  # Sekunden
+
+# ---------------------------------------------------------------------------
 # Prozess-Enforcement (Issue #6)
 # ---------------------------------------------------------------------------
 

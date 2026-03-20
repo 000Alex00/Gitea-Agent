@@ -1133,6 +1133,106 @@ def _format_history_block(project_root: Path, n: int = 5) -> str:
     return "\n".join(lines)
 
 
+def _wait_for_server(url: str | None = None, timeout_sec: int | None = None,
+                     interval_sec: int | None = None) -> bool:
+    """
+    Pollt url bis der Server antwortet oder timeout_sec abgelaufen ist.
+
+    Werte kommen aus settings wenn nicht explizit übergeben.
+
+    Aufgerufen von:
+        cmd_eval_after_restart()
+
+    Args:
+        url:          Server-URL (Standard: settings.SERVER_URL)
+        timeout_sec:  Maximale Wartezeit in Sekunden (Standard: settings.SERVER_WAIT_TIMEOUT)
+        interval_sec: Polling-Intervall in Sekunden (Standard: settings.SERVER_WAIT_INTERVAL)
+
+    Returns:
+        True wenn Server erreichbar, False bei Timeout.
+    """
+    import time
+    import urllib.request
+    import urllib.error
+
+    url          = url          or settings.SERVER_URL
+    timeout_sec  = timeout_sec  if timeout_sec  is not None else settings.SERVER_WAIT_TIMEOUT
+    interval_sec = interval_sec if interval_sec is not None else settings.SERVER_WAIT_INTERVAL
+
+    elapsed = 0
+    while elapsed < timeout_sec:
+        try:
+            urllib.request.urlopen(url, timeout=5)
+            return True
+        except urllib.error.HTTPError:
+            return True  # Server antwortet mit HTTP-Fehler → trotzdem erreichbar
+        except Exception:
+            pass
+        time.sleep(interval_sec)
+        elapsed += interval_sec
+        print(f"  [{elapsed}s] Server noch nicht bereit...")
+    return False
+
+
+def cmd_eval_after_restart(number: int | None = None) -> None:
+    """
+    Führt Eval nach einem Server-Neustart aus und postet das Ergebnis ins Issue.
+
+    Ablauf:
+        1. _wait_for_server() — Polling bis Server bereit (settings.SERVER_WAIT_TIMEOUT)
+        2. evaluation.run(PROJECT, trigger="restart")
+        3. Falls number gesetzt: Kommentar mit Score ins Gitea-Issue posten
+
+    Szenario 1 (manuell, --eval-after-restart <NR>):
+        Nach manuellem Neustart des Servers — Score ins Issue posten.
+    Szenario 2 (ohne NR, --eval-after-restart):
+        Automatisch nach Neustart — nur Eval, kein Issue-Kommentar.
+
+    Aufgerufen von:
+        main() wenn --eval-after-restart gesetzt
+    """
+    import importlib.util
+
+    print(f"[eval-after-restart] Warte auf Server ({settings.SERVER_URL}, max {settings.SERVER_WAIT_TIMEOUT}s)...")
+    if not _wait_for_server():
+        print(f"[eval-after-restart] ❌ Timeout — Server nicht erreichbar nach {settings.SERVER_WAIT_TIMEOUT}s.")
+        sys.exit(1)
+    print("[eval-after-restart] ✅ Server bereit — starte Eval...")
+
+    eval_path = _HERE / "evaluation.py"
+    if not eval_path.exists():
+        print("[eval-after-restart] evaluation.py nicht gefunden — abgebrochen.")
+        sys.exit(1)
+
+    spec = importlib.util.spec_from_file_location("evaluation", eval_path)
+    ev   = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ev)
+
+    result = ev.run(PROJECT, trigger="restart")
+    print(ev.format_terminal(result))
+
+    if number:
+        status        = "✅ PASS" if result.passed else "❌ FAIL"
+        history_block = _format_history_block(PROJECT)
+        body          = (
+            f"## 🔄 Eval nach Neustart — {status}\n\n"
+            f"**Score:** {result.score:.0f}/{result.max_score} "
+            f"(Baseline: {result.baseline_score:.0f})\n"
+        )
+        if result.failed_tests:
+            body += "\n**Fehlgeschlagene Tests:**\n"
+            for t in result.failed_tests:
+                body += f"- {t.name}: {t.reason}\n"
+        if result.warn_reasons:
+            body += "\n**Warnungen:**\n"
+            for w in result.warn_reasons:
+                body += f"- {w}\n"
+        body += f"\n{history_block}"
+        gitea.post_comment(number, body)
+        log.info(f"[eval-after-restart] Kommentar gepostet → Issue #{number}")
+        print(f"[eval-after-restart] Kommentar gepostet → Issue #{number}")
+
+
 def cmd_watch(interval_minutes: int = 60) -> None:
     """
     Periodischer Eval-Loop: läuft alle interval_minutes Minuten.
@@ -1348,11 +1448,15 @@ Ohne Argumente: automatischer Modus.
     parser.add_argument("--pr",        type=int,  metavar="NR",    help="PR erstellen (mit --branch)")
     parser.add_argument("--branch",    type=str,  metavar="BRANCH",help="Branch-Name für --pr")
     parser.add_argument("--summary",   type=str,  metavar="TEXT",  help="Zusammenfassung für Issue-Kommentar", default="")
-    parser.add_argument("--watch",         action="store_true",         help="Periodischer Eval-Loop mit Auto-Issues")
-    parser.add_argument("--interval",      type=int,  metavar="MIN",   help="Interval für --watch in Minuten (überschreibt watch_interval_minutes aus agent_eval.json)", default=None)
+    parser.add_argument("--watch",              action="store_true",       help="Periodischer Eval-Loop mit Auto-Issues")
+    parser.add_argument("--interval",           type=int,  metavar="MIN", help="Interval für --watch in Minuten (überschreibt watch_interval_minutes aus agent_eval.json)", default=None)
+    parser.add_argument("--eval-after-restart", type=int,  metavar="NR",  help="Nach Neustart: Eval ausführen + Score ins Issue (NR optional)", nargs="?", const=0)
     args = parser.parse_args()
 
-    if args.list:
+    if args.eval_after_restart is not None:
+        nr = args.eval_after_restart if args.eval_after_restart != 0 else None
+        cmd_eval_after_restart(nr)
+    elif args.list:
         cmd_list()
     elif args.issue:
         cmd_plan(args.issue)
