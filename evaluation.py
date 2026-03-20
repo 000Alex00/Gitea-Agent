@@ -318,6 +318,7 @@ def run(project_root: Path, update_baseline: bool = False, trigger: str = "manua
         result.baseline_created = True
         result.baseline_score   = result.score
         result.passed           = True
+        _save_score_history(project_root, result, trigger)
         return result
 
     result.baseline_score = baseline

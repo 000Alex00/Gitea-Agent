@@ -935,6 +935,17 @@ def cmd_implement(number: int) -> None:
     print(f"[✓] Kontext: {_idir2.name if _idir2 else ''}/starter.md + files.md — bereit zur Implementierung")
 
 
+_RESTART_PATTERNS = ("server.py", "bot.js", "nanoclaw/", "whatsapp-bot/", "router.py", "analyst_worker.py")
+
+
+def _neustart_required(changed_files: list[str]) -> str:
+    """Gibt 'Ja' zurück wenn server-seitige Dateien geändert wurden, sonst 'Nein'."""
+    for f in changed_files:
+        if any(pat in f for pat in _RESTART_PATTERNS):
+            return "Ja"
+    return "Nein"
+
+
 def cmd_pr(number: int, branch: str, summary: str = "") -> None:
     """
     Schritt 3: PR erstellen + Abschluss-Kommentar ins Issue posten.
@@ -1018,9 +1029,9 @@ Implementierung für Issue #{number}.
     if eval_result is None or eval_result.skipped:
         eval_line = "⏭️ Eval: übersprungen (kein agent_eval.json)"
     elif eval_result.passed:
-        eval_line = f"✅ Eval: {eval_result.score}/{eval_result.max_score} PASS (Baseline: {eval_result.max_score})"
+        eval_line = f"✅ Eval: {eval_result.score}/{eval_result.max_score} PASS (Baseline: {eval_result.baseline_score})"
     else:
-        eval_line = f"⚠️ Eval: {eval_result.score}/{eval_result.max_score} — teilweise bestanden"
+        eval_line = f"⚠️ Eval: {eval_result.score}/{eval_result.max_score} — teilweise bestanden (Baseline: {eval_result.baseline_score})"
 
     # Session-Status (Änderung 3)
     try:
@@ -1042,7 +1053,7 @@ Implementierung für Issue #{number}.
         f"{docs_warning}\n\n"
         f"{summary_block}\n\n"
         f"{history_block}\n\n"
-        f"**Neustart erforderlich:** Ja, falls server-seitige Code-Änderungen.\n\n"
+        f"**Neustart erforderlich:** {_neustart_required(changed)}\n\n"
         f"**Nächster Schritt:** {settings.COMPLETION_NEXT_STEP}\n"
         f"- Bei Revert: `Documentation/` synchron zurücksetzen"
         f"{metadata}"
