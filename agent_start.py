@@ -1110,14 +1110,14 @@ def _format_history_block(project_root: Path, n: int = 5) -> str:
     """
     hist_path = project_root / evaluation.SCORE_HISTORY
     if not hist_path.exists():
-        return ""
+        return "**Verlauf:** keine Einträge"
     try:
         with hist_path.open(encoding="utf-8") as f:
             history = json.load(f)
     except Exception:
-        return ""
+        return "**Verlauf:** keine Einträge"
     if not history:
-        return ""
+        return "**Verlauf:** keine Einträge"
 
     recent = history[-n:][::-1]  # letzte n, neueste zuerst
     lines = ["**Verlauf (letzte 5):**", "```"]
