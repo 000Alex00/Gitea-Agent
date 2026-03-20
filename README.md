@@ -108,12 +108,19 @@ Nach der Implementierung:
 python3 agent_start.py --pr 21 --branch docs/issue-21-xyz --summary "- Docstrings ergänzt"
 ```
 
-Der Agent führt vor dem PR-Erstellen automatisch das Eval-System aus (falls `tests/agent_eval.json` im Zielprojekt vorhanden):
+Der Agent führt vor dem PR-Erstellen automatisch das Eval-System aus — **nur bei Risiko ≥ 2** (Docs-PRs sind bewusst ausgenommen, da sie kein Verhalten ändern):
+
+| Risiko | Eval |
+|---|---|
+| 1 — Docs/Cleanup | Übersprungen |
+| 2 — Enhancement | ✅ läuft |
+| 3 — Bug/Feature | ✅ läuft |
 
 | Ergebnis | Verhalten |
 |---|---|
 | Kein `agent_eval.json` | Übersprungen — PR wird normal erstellt |
 | server offline | Warnung — PR wird trotzdem erstellt |
+| Eval-Fehler (Bug in evaluation.py) | Warnung ins Issue — PR wird trotzdem erstellt |
 | PASS (score >= baseline) | PR wird erstellt |
 | FAIL (score < baseline) | PR blockiert, Kommentar ins Issue |
 
@@ -175,7 +182,7 @@ Im Zielprojekt muss eine `tests/agent_eval.json` existieren:
 | `message` | Nachricht an den Server |
 | `expected_keywords` | Alle Keywords müssen in der Antwort enthalten sein (case-insensitive). Leer `[]` = nur Antwort vorhanden prüfen |
 | `expect_stored` | `true` = Antwort darf `null` sein — prüft nur ob Server nicht abstürzt (z.B. beim Einschreiben von Fakten) |
-| `steps` | Mehrschrittige Tests: Schritte werden sequenziell mit derselben User-ID ausgeführt, alle müssen bestehen |
+| `steps` | Mehrschrittige Tests: Schritte werden sequenziell mit derselben User-ID ausgeführt, alle müssen bestehen. Zwischen Steps wird 2s gewartet (LLM-Cooldown) |
 
 ### Score-Berechnung
 
