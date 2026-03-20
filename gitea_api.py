@@ -227,16 +227,24 @@ def post_comment(number: int, body: str) -> dict:
     """
     Schreibt einen Kommentar als Bot-User (oder Admin-Fallback).
 
+    Validiert nach dem Post ob der Kommentar vollständig angekommen ist.
+
     Args:
         number: Issue-Nummer
         body:   Kommentar-Text (Markdown)
 
     Returns:
         Erstellter Kommentar als dict.
+
+    Raises:
+        RuntimeError: Wenn Kommentar leer oder nicht gepostet wurde.
     """
     log.info(f"post_comment #{number} ({len(body)} Zeichen)")
-    return _request("POST", f"/repos/{REPO}/issues/{number}/comments",
-                    {"body": body}, auth=_BOT_AUTH)
+    result = _request("POST", f"/repos/{REPO}/issues/{number}/comments",
+                      {"body": body}, auth=_BOT_AUTH)
+    if not result or not result.get("body", "").strip():
+        raise RuntimeError(f"Kommentar #{number} leer oder nicht gepostet")
+    return result
 
 
 def check_approval(number: int, blocked_label: str | None = None) -> bool:
