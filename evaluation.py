@@ -47,6 +47,7 @@ class EvalResult:
     skipped:          bool         = False  # kein agent_eval.json gefunden
     warned:           bool         = False  # Infrastruktur offline
     baseline_created: bool         = False  # erster Lauf, Baseline gespeichert
+    baseline_raised:  bool         = False  # Score > alter Baseline → auto-aktualisiert
     score:            float        = 0.0
     baseline_score:   float        = 0.0
     max_score:        int          = 0
@@ -279,6 +280,12 @@ def run(project_root: Path, update_baseline: bool = False) -> EvalResult:
 
     result.baseline_score = baseline
     result.passed         = (result.score >= baseline)
+
+    # Score verbessert → Baseline automatisch hochsetzen (nie runter)
+    if result.passed and result.score > baseline:
+        _save_baseline(project_root, result.score)
+        result.baseline_raised = True
+
     return result
 
 
@@ -298,6 +305,8 @@ def format_terminal(r: EvalResult) -> str:
         lines += [f"  ⚠  {w}" for w in r.warn_reasons]
     if r.baseline_created:
         lines.append("  ✓ Baseline angelegt (erster Lauf).")
+    if r.baseline_raised:
+        lines.append(f"  ✓ Baseline aktualisiert: {r.baseline_score:.0f} → {r.score:.0f}")
     if r.failed_tests:
         lines.append("  Fehlgeschlagen:")
         for t in r.failed_tests:
