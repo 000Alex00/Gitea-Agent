@@ -1027,8 +1027,10 @@ Implementierung für Issue #{number}.
     history_block = _format_history_block(PROJECT)
 
     # Eval-Ergebnis für Abschluss-Kommentar (Änderung 1)
-    if eval_result is None or eval_result.skipped:
-        eval_line = "⏭️ Eval: übersprungen (kein agent_eval.json)"
+    if eval_result is None:
+        eval_line = "⏭️ Eval: übersprungen (Risikostufe 1) — Score: n/a"
+    elif eval_result.skipped:
+        eval_line = "⏭️ Eval: übersprungen (kein agent_eval.json) — Score: n/a"
     elif eval_result.passed:
         eval_line = f"✅ Eval: {eval_result.score}/{eval_result.max_score} PASS (Baseline: {eval_result.baseline_score})"
     else:

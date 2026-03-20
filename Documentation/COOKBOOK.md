@@ -17,6 +17,7 @@ Referenzprojekt: Skynet (LLM WhatsApp-Bot, Jetson Nano + Raspberry Pi 5).
 8. [Systemd-Timer: Eval nach Nachtsync](#8-systemd-timer-eval-nach-nachtsync)
 9. [Eval nach Neustart (--eval-after-restart)](#9-eval-nach-neustart---eval-after-restart)
 10. [Auto-Issue manuell schließen](#10-auto-issue-manuell-schließen)
+11. [log_analyzer integrieren](#11-log_analyzer-integrieren)
 
 ---
 
@@ -154,6 +155,9 @@ mkdir -p /home/user/mein-projekt/tests
   "server_url": "http://localhost:8000",
   "chat_endpoint": "/chat",
   "watch_interval_minutes": 60,
+  "log_path": "/home/user/mein-projekt/logs/system.log",
+  "restart_script": "/home/user/mein-projekt/start_assistant.sh",
+  "inactivity_minutes": 5,
   "tests": [
     {
       "name": "Einfache Antwort",
@@ -172,6 +176,13 @@ mkdir -p /home/user/mein-projekt/tests
   ]
 }
 ```
+
+**Neue Felder:**
+| Feld | Beschreibung |
+|---|---|
+| `log_path` | Pfad zur Logdatei — für Watch Inaktivitätserkennung (Szenario 2) |
+| `restart_script` | Pfad zum Start-Skript — Watch startet Server automatisch neu |
+| `inactivity_minutes` | Schwellwert Chat-Inaktivität in Minuten (Standard: 5) |
 
 ```bash
 # Ersten Lauf — Baseline wird automatisch angelegt
@@ -331,11 +342,30 @@ tmux kill-session -t watch
 3. Score < Baseline → `[Auto] <test-name> fehlgeschlagen` Issue erstellt (Label: `bug`)
 4. Deduplication: gleiches Issue schon offen → kein Duplikat
 5. Test erholt sich → Auto-Issue wird automatisch geschlossen
+6. `tools/log_analyzer.py` vorhanden → wird ausgeführt, Ausgabe ins Terminal
+7. Szenario 2 Prüfung (wenn `restart_script` + `log_path` konfiguriert, siehe unten)
+
+**Szenario 2 — automatischer Neustart:**
+
+Pro Zyklus wird zusätzlich geprüft:
+- Chat inaktiv seit ≥ `inactivity_minutes` (aus `log_path` ermittelt)
+- Neue Commits seit letztem Eval-Eintrag in `score_history.json`
+
+→ Wenn beide Bedingungen erfüllt: `restart_script` starten + sofort Eval ausführen
+
+```json
+{
+  "log_path": "/home/user/myproject/logs/system.log",
+  "restart_script": "/home/user/myproject/start_assistant.sh",
+  "inactivity_minutes": 5
+}
+```
 
 **Pitfalls:**
 - tmux-Session überlebt SSH-Disconnect — wichtig bei Remote-Betrieb
 - `--interval 0` würde Endlosschleife ohne Pause erzeugen — nicht nutzen
 - Log landet in `gitea-agent.log` (konfigurierbar via `LOG_FILE` in `.env`)
+- Szenario 2 greift nicht wenn `log_path` oder `restart_script` fehlen
 
 ---
 
@@ -477,3 +507,81 @@ curl -X PATCH \
 **Pitfalls:**
 - Manuell geschlossenes Issue wird nicht neu erstellt wenn FAIL anhält (Deduplication by title)
 - Wenn echter Bug: Issue offen lassen → Watch-Modus tracked den Verlauf in score_history
+
+---
+
+## 11. log_analyzer integrieren
+
+**Kontext:** Du willst dass der Watch-Modus pro Zyklus auch Logdateien analysiert und Anomalien meldet — z.B. häufige Fehler, hohe Latenz, Verbindungsabbrüche.
+
+**Referenz:** Skynet-Projekt, `tools/log_analyzer.py`
+
+**Dateien:** `tools/log_analyzer.py` (im Zielprojekt), `agent_start.py`
+
+**Voraussetzung:**
+
+Watch-Modus sucht automatisch nach `{PROJECT_ROOT}/tools/log_analyzer.py`. Wenn vorhanden, wird es pro Zyklus ausgeführt. Das Modul muss zwei Funktionen exportieren:
+
+```python
+def run() -> object:
+    """Analysiert Logs und gibt ein Ergebnis-Objekt zurück."""
+    ...
+
+def format_terminal(result: object) -> str:
+    """Gibt eine kompakte Zusammenfassung für Terminal aus."""
+    ...
+```
+
+**Minimales Beispiel:**
+
+```python
+# tools/log_analyzer.py
+from dataclasses import dataclass, field
+from pathlib import Path
+
+LOG_PATH = Path("/home/user/myproject/logs/system.log")
+TAIL_LINES = 200
+
+@dataclass
+class AnalyzerResult:
+    errors: list[str] = field(default_factory=list)
+    warnings: int = 0
+
+def run() -> AnalyzerResult:
+    result = AnalyzerResult()
+    if not LOG_PATH.exists():
+        return result
+    lines = LOG_PATH.read_text(errors="replace").splitlines()[-TAIL_LINES:]
+    for line in lines:
+        if "ERROR" in line or "Exception" in line:
+            result.errors.append(line.strip())
+        elif "WARNING" in line:
+            result.warnings += 1
+    return result
+
+def format_terminal(r: AnalyzerResult) -> str:
+    if not r.errors and r.warnings == 0:
+        return "[LogAnalyzer] OK — keine Fehler"
+    parts = [f"[LogAnalyzer] {len(r.errors)} Fehler, {r.warnings} Warnungen"]
+    for e in r.errors[-3:]:  # max 3 anzeigen
+        parts.append(f"  ✗ {e[:120]}")
+    return "\n".join(parts)
+```
+
+**Integration:**
+
+Keine Konfiguration nötig — Watch-Modus erkennt `tools/log_analyzer.py` automatisch:
+
+```
+[Watch] Zyklus 1 (2026-03-20 14:00)
+[Eval] Score: 7/7 (Baseline: 7) ✓ PASS
+[LogAnalyzer] 2 Fehler, 5 Warnungen
+  ✗ 2026-03-20 13:58:01 ERROR analyst_worker — DuckDuckGo Timeout nach 23s
+  ✗ 2026-03-20 13:59:44 ERROR router — Pi5 nicht erreichbar
+    Nächster Lauf in 60 Minute(n)...
+```
+
+**Pitfalls:**
+- Exceptions in `log_analyzer.py` werden abgefangen — Watch läuft trotzdem weiter (nur Warnung im Log)
+- Kein Interface-Vertrag — `run()` kann beliebiges Objekt zurückgeben solange `format_terminal()` es verarbeitet
+- Log-Analyzer schreibt keine Gitea-Issues — nur Terminal-Output (Eval bleibt zuständig für Auto-Issues)
