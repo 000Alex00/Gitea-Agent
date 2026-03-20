@@ -559,7 +559,10 @@ def _has_detailed_plan(number: int) -> bool:
 
 def _check_pr_preconditions(number: int, branch: str) -> None:
     """
-    Maßnahme 1: Prüft Vorbedingungen vor cmd_pr(). Bricht mit klarer Meldung ab.
+    Maßnahme 1 (höchste Priorität): Technische Schranke vor cmd_pr().
+
+    Technische Schranken haben Vorrang vor Prompt-Regeln — diese Prüfung
+    kann nicht durch LLM-Kontext-Drift umgangen werden.
 
     Prüfungen (in Reihenfolge):
         1. Branch ist nicht main/master

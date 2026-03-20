@@ -165,6 +165,9 @@ COMPLETION_NEXT_STEP = _env(
 # Pflichtregeln-Block der in jede starter.md eingefügt wird (Maßnahme 2+3)
 STARTER_MD_PFLICHTREGELN = """\
 ## PFLICHTREGELN (bei Kontext-Drift: neue Session starten)
+> ⚠️ **Technische Schranken haben Vorrang vor Prompt-Regeln.**
+> `cmd_pr()` prüft Vorbedingungen automatisch — kein manueller Bypass möglich.
+
 - NIEMALS `curl` statt `agent_start.py` verwenden
 - NIEMALS Schritte überspringen
 - NIEMALS PR manuell erstellen
