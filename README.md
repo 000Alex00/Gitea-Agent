@@ -373,6 +373,9 @@ python3 agent_start.py --fixup 16                          # Nach Bugfix: Kommen
 python3 agent_start.py --pr 16 --branch fix/issue-16-xyz  # PR erstellen
 python3 agent_start.py --pr 16 --branch fix/issue-16-xyz \
   --summary "- X geändert\n- Doku aktualisiert"           # PR mit Zusammenfassung
+python3 agent_start.py --pr 16 --branch fix/... --force   # Staleness-Check überspringen
+python3 agent_start.py --pr 16 --branch fix/... \
+  --restart-before-eval                                    # Server neu starten, dann Eval
 
 # Watch-Modus (periodische Eval-Überwachung):
 python3 agent_start.py --watch                             # alle 60 Minuten (Standard)
@@ -432,6 +435,35 @@ Technische Schranken die Kontext-Drift verhindern — kein LLM kann sie umgehen:
 | Eval nach letztem Commit ausgeführt | `Eval nicht ausgeführt seit letztem Commit` |
 
 Bei Fehler: `SystemExit(1)` — PR wird nicht erstellt.
+
+### Server-Aktualitäts-Check (`_check_server_staleness()`)
+
+`--pr` prüft zusätzlich ob der laufende Server den aktuellen Branch-Code hat:
+
+1. Letzter Commit-Timestamp via `git log -1 --pretty=%cI`
+2. Server-Start-Zeitpunkt aus `log_path` (aus `agent_eval.json`) — sucht rückwärts nach Startup-Mustern
+3. Commit neuer als Server-Start → Warnung + `SystemExit(1)`
+
+**Ausgabe bei veraltetem Server:**
+```
+[!] Server-Code veraltet
+    Letzter Commit: 2026-03-20 22:45 (fix/issue-38-...)
+    Server gestartet: 2026-03-20 21:20
+
+    → Server neu starten, dann erneut --pr aufrufen.
+      Oder: --restart-before-eval (automatisch) / --force (überspringen)
+```
+
+**Flags:**
+
+| Flag | Verhalten |
+|---|---|
+| *(kein Flag)* | Warnung + Exit 1 wenn Server veraltet |
+| `--force` | Staleness-Check überspringen — Eval läuft trotzdem |
+| `--restart-before-eval` | `restart_script` aus `agent_eval.json` starten + warten, dann Eval |
+
+**Voraussetzung:** `log_path` in `agent_eval.json` konfiguriert + Server schreibt Startup-Message ins Log.
+Fehlt `log_path` oder ist Startup nicht parsebar → Check wird silent übersprungen (rückwärtskompatibel).
 
 ### Agent-Metadaten-Block
 

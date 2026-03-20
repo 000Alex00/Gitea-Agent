@@ -18,6 +18,7 @@ Referenzprojekt: Skynet (LLM WhatsApp-Bot, Jetson Nano + Raspberry Pi 5).
 9. [Eval nach Neustart (--eval-after-restart)](#9-eval-nach-neustart---eval-after-restart)
 10. [Auto-Issue manuell schließen](#10-auto-issue-manuell-schließen)
 11. [log_analyzer integrieren](#11-log_analyzer-integrieren)
+12. [PR mit veraltetem Server (Staleness-Check)](#12-pr-mit-veraltetem-server-staleness-check)
 
 ---
 
@@ -109,6 +110,7 @@ python3 agent_start.py --pr 61 --branch fix/issue-61-web-search-timeout \
 **Pitfalls:**
 - `--branch` muss exakt dem Branch-Namen entsprechen (`git branch` zeigt aktuellen)
 - `--summary` weglassen → Warnung im Kommentar (nicht blockierend)
+- Wenn Eval auf altem Server-Code lief: `--restart-before-eval` oder manueller Neustart + `--pr` wiederholen
 
 ---
 
@@ -585,3 +587,73 @@ Keine Konfiguration nötig — Watch-Modus erkennt `tools/log_analyzer.py` autom
 - Exceptions in `log_analyzer.py` werden abgefangen — Watch läuft trotzdem weiter (nur Warnung im Log)
 - Kein Interface-Vertrag — `run()` kann beliebiges Objekt zurückgeben solange `format_terminal()` es verarbeitet
 - Log-Analyzer schreibt keine Gitea-Issues — nur Terminal-Output (Eval bleibt zuständig für Auto-Issues)
+
+---
+
+## 12. PR mit veraltetem Server (Staleness-Check)
+
+**Kontext:** Du hast Code committed und rufst `--pr` auf — aber der Server läuft noch mit dem alten Code.
+Der Eval würde die alte Version testen, nicht den neuen Code.
+
+**Dateien:** `agent_start.py`, `tests/agent_eval.json`
+
+**Voraussetzung:** `log_path` in `agent_eval.json` konfiguriert, Server schreibt Startup-Message ins Log:
+
+```json
+{
+  "log_path": "/home/user/myproject/logs/system.log"
+}
+```
+
+**Was passiert automatisch:**
+
+```
+python3 agent_start.py --pr 61 --branch fix/issue-61-...
+→ [!] Server-Code veraltet
+      Letzter Commit: 2026-03-20 22:45 (fix/issue-61-...)
+      Server gestartet: 2026-03-20 21:20
+
+      → Server neu starten, dann erneut --pr aufrufen.
+        Oder: --restart-before-eval (automatisch) / --force (überspringen)
+```
+
+**Option A — Manueller Neustart:**
+
+```bash
+# Server neu starten (projektspezifisch)
+./start_assistant.sh
+
+# Dann PR erneut aufrufen
+python3 agent_start.py --pr 61 --branch fix/issue-61-... --summary "..."
+```
+
+**Option B — Automatischer Neustart:**
+
+```bash
+python3 agent_start.py --pr 61 --branch fix/issue-61-... \
+  --restart-before-eval \
+  --summary "..."
+# → Führt restart_script aus agent_eval.json aus
+# → Wartet bis Server antwortet (max SERVER_WAIT_TIMEOUT Sekunden)
+# → Eval + PR
+```
+
+Voraussetzung: `restart_script` in `agent_eval.json`:
+```json
+{
+  "restart_script": "/home/user/myproject/start_assistant.sh"
+}
+```
+
+**Option C — Check überspringen:**
+
+```bash
+python3 agent_start.py --pr 61 --branch fix/issue-61-... --force --summary "..."
+# → Warnung wird ausgegeben, aber Eval läuft trotzdem
+# → Sinnvoll wenn: Änderung betrifft nur Docs/Config (kein Neustart nötig)
+```
+
+**Pitfalls:**
+- Check wird silent übersprungen wenn `log_path` fehlt oder Startup-Muster nicht gefunden — kein Fehler
+- Startup-Muster die erkannt werden: `application startup complete`, `uvicorn running`, `server started`, u.a.
+- Zeitzone: Commit-Timestamp und Log-Timestamp werden auf naive datetime normalisiert für Vergleich
