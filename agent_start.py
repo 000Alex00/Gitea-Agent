@@ -1006,6 +1006,20 @@ def cmd_watch(interval_minutes: int = 60) -> None:
             log.error(f"Watch-Lauf Fehler: {e}")
             print(f"[!] Fehler in Watch-Lauf: {e}")
 
+        # Optionaler Log-Analyzer: wenn Projekt tools/log_analyzer.py hat
+        analyzer_path = PROJECT / "tools" / "log_analyzer.py"
+        if analyzer_path.exists():
+            try:
+                import importlib.util
+                spec = importlib.util.spec_from_file_location("log_analyzer", analyzer_path)
+                la   = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(la)
+                la_result = la.run()
+                print(la.format_terminal(la_result))
+            except Exception as e:
+                log.warning(f"Log-Analyzer Fehler: {e}")
+                print(f"[!] Log-Analyzer Fehler: {e}")
+
         print(f"    Nächster Lauf in {interval_minutes} Minute(n)...\n")
         time.sleep(interval_minutes * 60)
 
