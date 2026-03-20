@@ -1288,6 +1288,83 @@ def _format_history_block(project_root: Path, n: int = 5) -> str:
     return "\n".join(lines)
 
 
+def _last_chat_inactive_minutes(log_path: str | Path) -> float | None:
+    """
+    Liest log_path rückwärts und gibt Minuten seit letzter Nicht-Eval-Aktivität zurück.
+
+    Sucht nach Zeilen mit Zeitstempel-Muster (ISO8601 oder HH:MM), überspringt
+    Eval-Marker ("EVAL", "eval", "score_history"). Gibt None zurück wenn log_path
+    nicht existiert oder kein passender Eintrag gefunden wird.
+
+    Aufgerufen von:
+        cmd_watch() — Szenario 2
+    """
+    log_path = Path(log_path)
+    if not log_path.exists():
+        return None
+
+    import re
+    ts_pattern = re.compile(
+        r"(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2})"   # ISO: 2026-03-20T14:32 oder mit Leerzeichen
+        r"|(\d{2}:\d{2}:\d{2})"                   # HH:MM:SS
+    )
+    eval_markers = ("EVAL", "eval", "score_history", "agent_eval", "trigger")
+
+    try:
+        lines = log_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except Exception:
+        return None
+
+    for line in reversed(lines):
+        if any(m in line for m in eval_markers):
+            continue
+        m = ts_pattern.search(line)
+        if not m:
+            continue
+        raw = m.group(1) or m.group(2)
+        try:
+            if len(raw) > 8:  # ISO-Format
+                dt = datetime.datetime.fromisoformat(raw.replace("T", " "))
+            else:  # HH:MM:SS — heutiges Datum annehmen
+                today = datetime.date.today()
+                h, mi, s = raw.split(":")
+                dt = datetime.datetime(today.year, today.month, today.day, int(h), int(mi), int(s))
+            delta = datetime.datetime.now() - dt
+            return delta.total_seconds() / 60
+        except Exception:
+            continue
+    return None
+
+
+def _has_new_commits_since_last_eval(project_root: Path) -> bool:
+    """
+    Gibt True zurück wenn seit dem letzten Eval-Lauf neue Commits existieren.
+
+    Liest den Timestamp des letzten Eintrags aus score_history.json und prüft
+    via git log --after ob neue Commits vorhanden sind.
+
+    Aufgerufen von:
+        cmd_watch() — Szenario 2
+    """
+    hist_path = project_root / "tests" / "score_history.json"
+    if not hist_path.exists():
+        return False
+    try:
+        history = json.loads(hist_path.read_text(encoding="utf-8"))
+        if not history:
+            return False
+        last_ts = history[-1].get("timestamp", "")
+        if not last_ts:
+            return False
+        out = subprocess.check_output(
+            ["git", "log", "--oneline", f"--after={last_ts}"],
+            cwd=project_root, stderr=subprocess.DEVNULL
+        ).decode().strip()
+        return bool(out)
+    except Exception:
+        return False
+
+
 def _wait_for_server(url: str | None = None, timeout_sec: int | None = None,
                      interval_sec: int | None = None) -> bool:
     """
@@ -1466,6 +1543,20 @@ def cmd_watch(interval_minutes: int = 60) -> None:
             except Exception as e:
                 log.warning(f"Log-Analyzer Fehler: {e}")
                 print(f"[!] Log-Analyzer Fehler: {e}")
+
+        # Szenario 2: Automatischer Neustart bei Chat-Inaktivität + neuen Commits
+        eval_cfg   = evaluation._load_config(PROJECT) or {}
+        restart_sc = eval_cfg.get("restart_script")
+        log_path   = eval_cfg.get("log_path")
+        threshold  = eval_cfg.get("inactivity_minutes", 5)
+        if restart_sc and log_path:
+            inactive = _last_chat_inactive_minutes(log_path)
+            if inactive is not None and inactive >= threshold:
+                if _has_new_commits_since_last_eval(PROJECT):
+                    print(f"[Watch] Chat inaktiv {inactive:.1f}min + neue Commits → Neustart")
+                    log.info(f"Szenario 2: Neustart via {restart_sc}")
+                    subprocess.run([restart_sc], check=False)
+                    cmd_eval_after_restart()
 
         print(f"    Nächster Lauf in {interval_minutes} Minute(n)...\n")
         time.sleep(interval_minutes * 60)
