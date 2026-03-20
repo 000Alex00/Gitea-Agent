@@ -1029,7 +1029,7 @@ Implementierung für Issue #{number}.
 
     abschluss = (
         f"## Implementierung abgeschlossen\n\n"
-        f"{eval_line}\n"
+        f"{eval_line}\n\n"
         f"{session_line}\n\n"
         f"**Branch:** `{branch}`\n"
         f"**PR:** {pr_url}\n"
