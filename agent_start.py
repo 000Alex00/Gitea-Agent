@@ -1112,50 +1112,6 @@ def cmd_fixup(number: int) -> None:
     print(f"    {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
 
 
-def _build_metadata(branch: str = "", changed_paths: list[str] | None = None) -> str:
-    """
-    Erzeugt einen aufklappbaren Metadata-Block für Gitea-Kommentare.
-
-    Portiert von gitea-agent/agent_start.py (Issue #74).
-
-    Args:
-        branch:        Git-Branch-Name (leer = aktueller Branch via git)
-        changed_paths: Liste geänderter Dateipfade (optional)
-
-    Returns:
-        Markdown-String mit <details>-Block für Gitea-Kommentar
-    """
-    import datetime as _dt
-    timestamp = _dt.datetime.now().strftime("%Y-%m-%d %H:%M")
-    model = os.environ.get("CLAUDE_MODEL", os.environ.get("MODEL", settings.CLAUDE_MODEL))
-    try:
-        commit = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=PROJECT, stderr=subprocess.DEVNULL
-        ).decode().strip()
-    except Exception:
-        commit = "unbekannt"
-    if not branch:
-        try:
-            branch = subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                cwd=PROJECT, stderr=subprocess.DEVNULL
-            ).decode().strip()
-        except Exception:
-            branch = "unbekannt"
-    files_changed_line = ""
-    if changed_paths:
-        files_changed_line = "\n**Geänderte Dateien:** " + ", ".join(f"`{p}`" for p in changed_paths)
-    return (
-        f"\n\n<details>\n<summary>🤖 Agent-Metadaten</summary>\n\n"
-        f"**Modell:** {model}  \n"
-        f"**Branch:** `{branch}`  \n"
-        f"**Commit:** `{commit}`  \n"
-        f"**Zeitstempel:** {timestamp}  \n"
-        f"{files_changed_line}\n"
-        f"\n</details>"
-    )
-
 
 # ---------------------------------------------------------------------------
 # Watch-Modus
@@ -1238,7 +1194,7 @@ def _build_metadata(
         files_changed_line = f"\n**Geänderte Dateien:** " + ", ".join(f"`{p}`" for p in changed_paths)
 
     return (
-        f"\n\n<details>\n<summary>🤖 System-Infos</summary>\n\n"
+        f"\n\n<details>\n<summary>🤖 Agent-Metadaten</summary>\n\n"
         f"**Modell:** {model}  \n"
         f"**Dateien gelesen:** {file_count}  \n"
         f"{token_line}  \n"
