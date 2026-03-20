@@ -15,6 +15,7 @@ Standalone:
 import argparse
 import json
 import sys
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -127,6 +128,9 @@ def _run_steps(server_url: str, endpoint: str, steps: list[dict], eval_user: str
         Tuple (passed: bool, reason: str)
     """
     for i, step in enumerate(steps, start=1):
+        if i > 1:
+            time.sleep(2)  # Jetson Zeit geben zwischen Steps (LLM-Inferenz-Cooldown)
+
         message  = step.get("message", "")
         keywords = step.get("expected_keywords", [])
         stored   = step.get("expect_stored", False)
