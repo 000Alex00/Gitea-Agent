@@ -902,6 +902,61 @@ def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
                 print(f"[✓] Auto-Issue #{issue['number']} geschlossen ({name} wieder OK)")
 
 
+def cmd_score_history(project_root: Path) -> None:
+    """
+    Zeigt den Eval-Verlauf aus tests/score_history.json als Tabelle.
+
+    Aufgerufen von:
+        main() wenn --score-history gesetzt
+
+    Args:
+        project_root: Pfad zum Zielprojekt
+    """
+    hist_path = project_root / evaluation.SCORE_HISTORY
+    if not hist_path.exists():
+        print(f"[!] Keine score_history.json gefunden in: {hist_path}")
+        return
+
+    try:
+        with hist_path.open(encoding="utf-8") as f:
+            history = json.load(f)
+    except Exception as e:
+        print(f"[!] Fehler beim Lesen: {e}")
+        return
+
+    if not history:
+        print("[!] score_history.json ist leer.")
+        return
+
+    # Neueste zuerst
+    history = list(reversed(history))
+
+    col_date    = 21
+    col_score   =  5
+    col_max     =  3
+    col_trigger =  7
+    header = (
+        f"{'Datum':<{col_date}} | {'Score':>{col_score}} | {'Max':>{col_max}} | "
+        f"{'Trigger':<{col_trigger}} | Fehlgeschlagen"
+    )
+    sep = "-" * len(header)
+    print(f"\n{header}\n{sep}")
+
+    for entry in history:
+        ts      = entry.get("timestamp", "?")[:19].replace("T", " ")
+        score   = int(entry.get("score", 0))
+        max_s   = int(entry.get("max_score", 0))
+        trigger = entry.get("trigger", "?")
+        failed  = entry.get("failed", [])
+        failed_str = ", ".join(f["name"] for f in failed) if failed else "—"
+        print(
+            f"{ts:<{col_date}} | {score:>{col_score}} | {max_s:>{col_max}} | "
+            f"{trigger:<{col_trigger}} | {failed_str}"
+        )
+
+    print(f"\n{len(history)} Einträge (neueste zuerst)\n")
+
+
 def cmd_watch(interval_minutes: int = 60) -> None:
     """
     Periodischer Eval-Loop: läuft alle interval_minutes Minuten.
@@ -1100,8 +1155,9 @@ Ohne Argumente: automatischer Modus.
     parser.add_argument("--pr",        type=int,  metavar="NR",    help="PR erstellen (mit --branch)")
     parser.add_argument("--branch",    type=str,  metavar="BRANCH",help="Branch-Name für --pr")
     parser.add_argument("--summary",   type=str,  metavar="TEXT",  help="Zusammenfassung für Issue-Kommentar", default="")
-    parser.add_argument("--watch",     action="store_true",         help="Periodischer Eval-Loop mit Auto-Issues")
-    parser.add_argument("--interval",  type=int,  metavar="MIN",   help="Interval für --watch in Minuten (Standard: 60)", default=60)
+    parser.add_argument("--watch",         action="store_true",         help="Periodischer Eval-Loop mit Auto-Issues")
+    parser.add_argument("--interval",      type=int,  metavar="MIN",   help="Interval für --watch in Minuten (Standard: 60)", default=60)
+    parser.add_argument("--score-history", type=str,  metavar="PATH",  help="Eval-Verlauf anzeigen (Pfad zum Zielprojekt)")
     args = parser.parse_args()
 
     if args.list:
@@ -1114,6 +1170,8 @@ Ohne Argumente: automatischer Modus.
         cmd_fixup(args.fixup)
     elif args.watch:
         cmd_watch(args.interval)
+    elif args.score_history:
+        cmd_score_history(Path(args.score_history))
     elif args.pr:
         if not args.branch:
             log.error("--pr benötigt --branch <branch-name>")
