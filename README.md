@@ -191,6 +191,31 @@ Gewichtetes Binär — kein LLM-Judgement:
 - Test nicht bestanden → 0 Punkte
 - `max_score` = Summe aller Gewichte
 
+### Baseline
+
+`tests/baseline.json` enthält den Referenz-Score. Regeln:
+- Erster Lauf → Baseline wird automatisch angelegt
+- Score ≥ Baseline → PR erlaubt
+- Score < Baseline → PR blockiert
+- Score > Baseline → Baseline wird **automatisch hochgesetzt** (nie runter)
+- `--update-baseline` → manuelle Neusetzung (z.B. nach bewusstem Score-Wechsel durch neuen Test)
+
+`baseline.json` sollte in `.gitignore` stehen — maschinenspezifisch, nicht versionieren.
+
+### Score-History
+
+Jeder Eval-Lauf wird in `tests/score_history.json` protokolliert (max. 90 Einträge). Ältere Einträge werden automatisch verworfen. Feld `trigger` zeigt den Auslöser:
+
+| trigger | Auslöser |
+|---|---|
+| `pr` | Vor einem PR (`--pr`) |
+| `watch` | Watch-Modus (`--watch`) |
+| `manual` | Manueller Aufruf (`evaluation.py` direkt) |
+
+Die letzten 5 Einträge werden automatisch an jeden `--pr` Gitea-Kommentar und an jeden Auto-Issue aus dem Watch-Modus angehängt.
+
+`score_history.json` sollte in `.gitignore` stehen — maschinenspezifisch, nicht versionieren.
+
 ### Verhalten bei Infrastruktur-Problemen
 
 | Situation | Verhalten |
@@ -199,20 +224,33 @@ Gewichtetes Binär — kein LLM-Judgement:
 | `pi5_url` offline | Pi5-Tests übersprungen, Rest läuft durch |
 | Score < Baseline | PR blockiert + Kommentar ins Issue |
 | Kein `agent_eval.json` | Eval übersprungen |
+| Fehler in `evaluation.py` | Warnung ins Issue — PR wird trotzdem erstellt |
 
 ### Baseline verwalten
 
 ```bash
-cd /home/user/gitea-agent
-
-# Baseline setzen / zurücksetzen (nach bewusster Score-Änderung)
-python3 evaluation.py --project /path/to/project --update-baseline
-
 # Manuell testen ohne PR
 python3 evaluation.py --project /path/to/project
+
+# Baseline neu setzen (nur nach bewusstem Score-Wechsel, z.B. neuer Test hinzugefügt)
+python3 evaluation.py --project /path/to/project --update-baseline
 ```
 
-`baseline.json` liegt im Zielprojekt unter `tests/baseline.json` und sollte in `.gitignore` stehen — sie ist maschinenspezifisch und wird beim ersten Lauf automatisch angelegt.
+### Watch-Modus
+
+`--watch` startet eine periodische Eval-Schleife (Standard: alle 60 Minuten):
+
+```bash
+python3 agent_start.py --watch               # alle 60 Minuten
+python3 agent_start.py --watch --interval 30 # alle 30 Minuten
+```
+
+Verhalten:
+- Score ≥ Baseline → kein Issue, nur Log
+- Score < Baseline → Gitea Issue mit Label `bug` wird erstellt (Titel: `[Auto] <test-name>`)
+- Deduplication: kein Duplikat wenn Issue mit gleichem Titel bereits offen
+- Test besteht wieder → Issue wird automatisch geschlossen
+- Jedes Auto-Issue enthält die letzten 5 History-Einträge im Body
 
 ---
 
@@ -293,6 +331,10 @@ python3 agent_start.py --fixup 16                          # Nach Bugfix: Kommen
 python3 agent_start.py --pr 16 --branch fix/issue-16-xyz  # PR erstellen
 python3 agent_start.py --pr 16 --branch fix/issue-16-xyz \
   --summary "- X geändert\n- Doku aktualisiert"           # PR mit Zusammenfassung
+
+# Watch-Modus (periodische Eval-Überwachung):
+python3 agent_start.py --watch                             # alle 60 Minuten (Standard)
+python3 agent_start.py --watch --interval 30               # alle 30 Minuten
 ```
 
 ---
