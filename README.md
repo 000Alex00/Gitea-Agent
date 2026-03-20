@@ -178,7 +178,9 @@ Im Zielprojekt muss eine `tests/agent_eval.json` existieren:
 | `chat_endpoint` | HTTP-POST Endpunkt — wird aus dem Zielprojekt gelesen, nicht hardcodiert |
 | `pi5_url` | Optionaler Backend-Worker — wird vorab auf Erreichbarkeit geprüft |
 | `watch_interval_minutes` | Interval für `--watch` in Minuten (Standard: 60) — wird von `--interval` CLI-Arg überschrieben |
-| `log_path` | Optionaler Pfad zur Logdatei für `--watch` Inaktivitätserkennung |
+| `log_path` | Pfad zur Logdatei — von `--watch` für Inaktivitätserkennung (Szenario 2) genutzt |
+| `restart_script` | Pfad zum Start-Skript — Watch startet Server automatisch neu bei Inaktivität + neuen Commits |
+| `inactivity_minutes` | Schwellwert für Chat-Inaktivität in Minuten, ab dem Neustart getriggert wird (Standard: 5) |
 | `log_analysis_interval_minutes` | Interval für Log-Analyse in Watch-Zyklen (projektspezifisch) |
 | `weight` | Gewichtung im Score (1–3) |
 | `pi5_required` | Bei `true`: Test wird übersprungen wenn Pi5 offline |
@@ -252,18 +254,38 @@ python3 agent_start.py --watch --interval 30 # explizit 30 Minuten (überschreib
 **Empfohlen:** Interval in `agent_eval.json` konfigurieren:
 ```json
 {
-  "watch_interval_minutes": 60
+  "watch_interval_minutes": 60,
+  "log_path": "/home/user/mein-projekt/logs/system.log",
+  "restart_script": "/home/user/mein-projekt/start_assistant.sh",
+  "inactivity_minutes": 5
 }
 ```
 
 Priorität: `--interval` CLI-Arg > `watch_interval_minutes` in `agent_eval.json` > Fallback 60 min.
 
-Verhalten:
+**Was passiert pro Zyklus:**
 - Score ≥ Baseline → kein Issue, nur Log
 - Score < Baseline → Gitea Issue mit Label `bug` wird erstellt (Titel: `[Auto] <test-name>`)
 - Deduplication: kein Duplikat wenn Issue mit gleichem Titel bereits offen
 - Test besteht wieder → Issue wird automatisch geschlossen
 - Jedes Auto-Issue enthält die letzten 5 History-Einträge im Body
+- Wenn `tools/log_analyzer.py` im Zielprojekt vorhanden → wird automatisch ausgeführt + Ausgabe ins Terminal
+
+**Szenario 2 — automatischer Neustart:**
+
+Pro Zyklus wird zusätzlich geprüft ob ein Neustart notwendig ist:
+1. Chat inaktiv seit ≥ `inactivity_minutes` (aus `log_path` gelesen)
+2. Neue Commits seit letztem Eval (git log vs. score_history.json)
+
+→ Wenn beide Bedingungen: `restart_script` starten + sofort Eval
+
+Konfiguration in `agent_eval.json`:
+```json
+{
+  "restart_script": "/home/user/mein-projekt/start_assistant.sh",
+  "inactivity_minutes": 5
+}
+```
 
 **tmux empfohlen** für Dauerbetrieb:
 ```bash
@@ -355,6 +377,8 @@ python3 agent_start.py --pr 16 --branch fix/issue-16-xyz \
 # Watch-Modus (periodische Eval-Überwachung):
 python3 agent_start.py --watch                             # alle 60 Minuten (Standard)
 python3 agent_start.py --watch --interval 30               # alle 30 Minuten
+python3 agent_start.py --eval-after-restart                # Eval nach Neustart (ohne Issue-Kommentar)
+python3 agent_start.py --eval-after-restart 61             # Eval nach Neustart + Score in Issue #61
 ```
 
 ---
@@ -389,6 +413,58 @@ Der Agent stuft jedes Issue automatisch ein:
 **Docs-Check:** `--pr` prüft automatisch ob `Documentation/` seit Abzweig von main geändert wurde. Warnung im Terminal + Gitea-Kommentar wenn nicht. Abschluss-Kommentar enthält immer Revert-Hinweis.
 
 **Auto-Cleanup:** Beim Start verschiebt der Agent automatisch Kontext-Ordner geschlossener Issues nach `contexts/done/`.
+
+---
+
+## Prozess-Enforcement
+
+Technische Schranken die Kontext-Drift verhindern — kein LLM kann sie umgehen:
+
+### `_check_pr_preconditions()` — vor jedem PR
+
+`--pr` prüft automatisch vor der PR-Erstellung:
+
+| Prüfung | Fehlermeldung |
+|---|---|
+| Branch ≠ main/master | `Branch ist 'main' — PR von main verboten` |
+| Plan-Kommentar vorhanden | `Kein Plan-Kommentar im Issue gefunden` |
+| Agent-Metadaten-Block im Plan | `Plan-Kommentar ohne Metadata-Block` |
+| Eval nach letztem Commit ausgeführt | `Eval nicht ausgeführt seit letztem Commit` |
+
+Bei Fehler: `SystemExit(1)` — PR wird nicht erstellt.
+
+### Agent-Metadaten-Block
+
+Jeder Plan-Kommentar und Abschluss-Kommentar enthält einen `<details>`-Block:
+
+```
+<details>
+<summary>🤖 Agent-Metadaten</summary>
+
+**Modell:** claude-sonnet-4-6
+**Branch:** fix/issue-61-...
+**Commit:** abc1234
+**Zeitstempel:** 2026-03-20T14:23:00
+**Token-Schätzung:** ~4200 (Kontext: files.md, starter.md)
+**Gelesene Dateien:** nanoclaw/server.py, nanoclaw/router.py
+</details>
+```
+
+### Session-Tracking
+
+`contexts/session.json` zählt abgeschlossene Issues pro Claude-Session:
+
+- `SESSION_LIMIT` (Standard: 2) → Warnung bei Überschreitung (Drift-Risiko)
+- `SESSION_RESET_HOURS` (Standard: 4) → session.json wird nach Inaktivität zurückgesetzt
+- Status (🟢/🟡/🔴) erscheint im Abschluss-Kommentar jedes PR
+
+### PFLICHTREGELN in starter.md
+
+Jede starter.md enthält automatisch einen PFLICHTREGELN-Block:
+- NIEMALS `curl` statt `agent_start.py` verwenden
+- NIEMALS Schritte überspringen
+- NIEMALS PR manuell erstellen
+- Selbst-Check-Checkliste vor jedem Schritt
 
 ---
 
