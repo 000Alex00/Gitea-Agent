@@ -683,6 +683,30 @@ def _validate_pr_completion(number: int, branch: str, pr_url: str, idir_moved: b
             log.warning(f"Abschluss-Validierung Kommentar fehlgeschlagen: {e}")
 
 
+def _validate_comment(body: str, comment_type: str, *, critical: bool = False) -> None:
+    """
+    Prüft ob ein Kommentar alle Pflichtfelder enthält (Output-Validierung, Issue #8).
+
+    Aufgerufen von:
+        cmd_plan(), cmd_pr() nach jedem post_comment()
+
+    Args:
+        body:         Kommentar-Body der geprüft werden soll
+        comment_type: Typ aus settings.COMMENT_REQUIRED_FIELDS (z.B. "plan", "completion")
+        critical:     True → sys.exit(1) bei fehlenden Feldern, False → Warnung + weiter
+    """
+    required = settings.COMMENT_REQUIRED_FIELDS.get(comment_type, [])
+    missing  = [f for f in required if f.lower() not in body.lower()]
+    if not missing:
+        return
+    msg = f"[!] Kommentar-Validierung '{comment_type}': fehlende Felder: {', '.join(missing)}"
+    log.warning(msg)
+    print(msg)
+    if critical:
+        print("→ Kommentar unvollständig — Prozess abgebrochen. Bitte erneut ausführen.")
+        sys.exit(1)
+
+
 def _update_discussion(issue: dict, starter_path: Path) -> None:
     """Liest Gitea-Kommentarhistorie und aktualisiert die starter.md.
 
@@ -803,7 +827,9 @@ def cmd_plan(number: int) -> None:
 
     log.info(f"Poste Plan-Kommentar für Issue #{number}")
     print("\n[→] Poste Plan-Kommentar auf Gitea...")
-    gitea.post_comment(number, build_plan_comment(issue) + metadata)
+    plan_body = build_plan_comment(issue) + metadata
+    comment   = gitea.post_comment(number, plan_body)
+    _validate_comment(comment.get("body", ""), "plan")
     gitea.swap_label(number, settings.LABEL_READY, settings.LABEL_PROPOSED)
 
     out = save_plan_context(issue)
@@ -958,7 +984,9 @@ Implementierung für Issue #{number}.
         elif eval_result.warned and not eval_result.all_tests:
             log.warning("Eval: Infrastruktur offline — PR wird trotzdem erstellt")
         elif not eval_result.passed:
-            gitea.post_comment(number, evaluation.format_gitea_comment(eval_result))
+            eval_comment = evaluation.format_gitea_comment(eval_result)
+            gitea.post_comment(number, eval_comment)
+            _validate_comment(eval_comment, "eval_fail", critical=True)
             gitea.swap_label(number, settings.LABEL_REVIEW, settings.LABEL_PROGRESS)
             log.error(f"Eval FAIL — PR blockiert (Score {eval_result.score}/{eval_result.max_score})")
             print(f"[✗] PR blockiert. Kommentar in Issue #{number} gepostet.")
@@ -978,18 +1006,19 @@ Implementierung für Issue #{number}.
     summary_block = f"## Was diese Änderung bewirkt\n{summary}" if summary else \
         "> ⚠️ Keine Zusammenfassung angegeben — beim nächsten Mal `--summary \"...\"` mitgeben."
     history_block = _format_history_block(PROJECT)
-    gitea.post_comment(number, f"""## Implementierung abgeschlossen
-
-**Branch:** `{branch}`
-**PR:** {pr_url}
-{docs_warning}
-
-{summary_block}
-
-{history_block}
-
-**Nächster Schritt:** {settings.COMPLETION_NEXT_STEP}
-- Bei Revert: `Documentation/` synchron zurücksetzen""")
+    abschluss = (
+        f"## Implementierung abgeschlossen\n\n"
+        f"**Branch:** `{branch}`\n"
+        f"**PR:** {pr_url}\n"
+        f"{docs_warning}\n\n"
+        f"{summary_block}\n\n"
+        f"{history_block}\n\n"
+        f"**Neustart erforderlich:** Ja, falls server-seitige Code-Änderungen.\n\n"
+        f"**Nächster Schritt:** {settings.COMPLETION_NEXT_STEP}\n"
+        f"- Bei Revert: `Documentation/` synchron zurücksetzen"
+    )
+    comment = gitea.post_comment(number, abschluss)
+    _validate_comment(comment.get("body", ""), "completion", critical=True)
 
     idir = _find_issue_dir(number)
     idir_moved = False
@@ -1156,6 +1185,7 @@ def cmd_watch(interval_minutes: int = 60) -> None:
                         f"> Automatisch erkannt durch Watch-Modus.\n"
                         f"> Wird automatisch geschlossen wenn der Test wieder besteht."
                     )
+                    _validate_comment(body, "auto_issue")
                     issue = gitea.create_issue(
                         title=f"[Auto] {failed.name} fehlgeschlagen — Score-Verlust erkannt",
                         body=body,

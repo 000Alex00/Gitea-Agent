@@ -185,3 +185,15 @@ Wenn Checkbox offen → **STOPP**. Schritt nachholen oder neue Session.
 
 ---
 """
+
+# ---------------------------------------------------------------------------
+# Output-Validierung (Issue #8)
+# ---------------------------------------------------------------------------
+
+# Pflichtfelder pro Kommentar-Typ — _validate_comment() prüft ob alle enthalten
+COMMENT_REQUIRED_FIELDS: dict[str, list[str]] = {
+    "plan":       ["Risikostufe", "Betroffene Dateien", "OK zum Implementieren?"],
+    "completion": ["Implementierung abgeschlossen", "Verlauf", "Neustart erforderlich"],
+    "eval_fail":  ["Eval FAIL", "Score", "Fehlgeschlagene Tests"],
+    "auto_issue": ["Auto", "Score", "Verlauf"],
+}
