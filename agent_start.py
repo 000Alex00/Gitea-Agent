@@ -820,6 +820,7 @@ Implementierung für Issue #{number}.
 
     summary_block = f"## Was diese Änderung bewirkt\n{summary}" if summary else \
         "> ⚠️ Keine Zusammenfassung angegeben — beim nächsten Mal `--summary \"...\"` mitgeben."
+    history_block = _format_history_block(PROJECT)
     gitea.post_comment(number, f"""## Implementierung abgeschlossen
 
 **Branch:** `{branch}`
@@ -827,6 +828,8 @@ Implementierung für Issue #{number}.
 {docs_warning}
 
 {summary_block}
+
+{history_block}
 
 **Nächster Schritt:** {settings.COMPLETION_NEXT_STEP}
 - Bei Revert: `Documentation/` synchron zurücksetzen""")
@@ -902,59 +905,41 @@ def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
                 print(f"[✓] Auto-Issue #{issue['number']} geschlossen ({name} wieder OK)")
 
 
-def cmd_score_history(project_root: Path) -> None:
+def _format_history_block(project_root: Path, n: int = 5) -> str:
     """
-    Zeigt den Eval-Verlauf aus tests/score_history.json als Tabelle.
-
-    Aufgerufen von:
-        main() wenn --score-history gesetzt
+    Liest die letzten n Einträge aus score_history.json und gibt
+    einen Markdown-Block für Gitea-Kommentare zurück.
 
     Args:
         project_root: Pfad zum Zielprojekt
+        n:            Anzahl Einträge (Standard: 5)
+
+    Returns:
+        Markdown-String oder leer wenn keine History vorhanden.
     """
     hist_path = project_root / evaluation.SCORE_HISTORY
     if not hist_path.exists():
-        print(f"[!] Keine score_history.json gefunden in: {hist_path}")
-        return
-
+        return ""
     try:
         with hist_path.open(encoding="utf-8") as f:
             history = json.load(f)
-    except Exception as e:
-        print(f"[!] Fehler beim Lesen: {e}")
-        return
-
+    except Exception:
+        return ""
     if not history:
-        print("[!] score_history.json ist leer.")
-        return
+        return ""
 
-    # Neueste zuerst
-    history = list(reversed(history))
-
-    col_date    = 21
-    col_score   =  5
-    col_max     =  3
-    col_trigger =  7
-    header = (
-        f"{'Datum':<{col_date}} | {'Score':>{col_score}} | {'Max':>{col_max}} | "
-        f"{'Trigger':<{col_trigger}} | Fehlgeschlagen"
-    )
-    sep = "-" * len(header)
-    print(f"\n{header}\n{sep}")
-
-    for entry in history:
-        ts      = entry.get("timestamp", "?")[:19].replace("T", " ")
-        score   = int(entry.get("score", 0))
-        max_s   = int(entry.get("max_score", 0))
-        trigger = entry.get("trigger", "?")
-        failed  = entry.get("failed", [])
+    recent = history[-n:][::-1]  # letzte n, neueste zuerst
+    lines = ["**Verlauf (letzte 5):**", "```"]
+    for e in recent:
+        ts      = e.get("timestamp", "?")[:16].replace("T", " ")
+        score   = int(e.get("score", 0))
+        max_s   = int(e.get("max_score", 0))
+        trigger = e.get("trigger", "?")
+        failed  = e.get("failed", [])
         failed_str = ", ".join(f["name"] for f in failed) if failed else "—"
-        print(
-            f"{ts:<{col_date}} | {score:>{col_score}} | {max_s:>{col_max}} | "
-            f"{trigger:<{col_trigger}} | {failed_str}"
-        )
-
-    print(f"\n{len(history)} Einträge (neueste zuerst)\n")
+        lines.append(f"{ts} | {score}/{max_s} | {trigger:<6} | {failed_str}")
+    lines.append("```")
+    return "\n".join(lines)
 
 
 def cmd_watch(interval_minutes: int = 60) -> None:
@@ -998,12 +983,14 @@ def cmd_watch(interval_minutes: int = 60) -> None:
                     except Exception:
                         commit = "unbekannt"
 
+                    history_block = _format_history_block(PROJECT)
                     body = (
                         f"## Score-Verlust erkannt\n\n"
                         f"**Test:** {failed.name} (Gewicht {failed.weight})\n"
                         f"**Fehler:** {failed.reason}\n"
                         f"**Score:** {result.score:.0f}/{result.max_score} (Baseline: {result.baseline_score:.0f})\n\n"
                         f"**Letzter Commit:** `{commit}`\n\n"
+                        f"{history_block}\n\n"
                         f"> Automatisch erkannt durch Watch-Modus.\n"
                         f"> Wird automatisch geschlossen wenn der Test wieder besteht."
                     )
@@ -1157,7 +1144,6 @@ Ohne Argumente: automatischer Modus.
     parser.add_argument("--summary",   type=str,  metavar="TEXT",  help="Zusammenfassung für Issue-Kommentar", default="")
     parser.add_argument("--watch",         action="store_true",         help="Periodischer Eval-Loop mit Auto-Issues")
     parser.add_argument("--interval",      type=int,  metavar="MIN",   help="Interval für --watch in Minuten (Standard: 60)", default=60)
-    parser.add_argument("--score-history", type=str,  metavar="PATH",  help="Eval-Verlauf anzeigen (Pfad zum Zielprojekt)")
     args = parser.parse_args()
 
     if args.list:
@@ -1170,8 +1156,6 @@ Ohne Argumente: automatischer Modus.
         cmd_fixup(args.fixup)
     elif args.watch:
         cmd_watch(args.interval)
-    elif args.score_history:
-        cmd_score_history(Path(args.score_history))
     elif args.pr:
         if not args.branch:
             log.error("--pr benötigt --branch <branch-name>")
