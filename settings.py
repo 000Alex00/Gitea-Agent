@@ -201,6 +201,16 @@ Kontext-Drift Symptome: curl statt agent_start.py, fehlende Metadata, übersprun
 
 Wenn Checkbox offen → **STOPP**. Schritt nachholen oder neue Session.
 
+## Kontext
+
+Die relevanten Dateien wurden automatisch erkannt:
+- Backtick-Erwähnungen im Issue-Text
+- Import-Analyse (AST)
+- Keyword-Suche (grep)
+
+⚠️ **NICHT selbst im Repo suchen** — der Kontext ist vollständig.
+Falls etwas fehlt: im Issue nachfragen, nicht raten.
+
 ---
 """
 

@@ -79,6 +79,7 @@ python3 agent_start.py --list
 # Schritt 1: Issue schreiben
 # In Gitea: Neue Issue → Body mit betroffenen Dateien in Backticks:
 # "Bitte Timeout in `nanoclaw/plugins/web_search.py` auf 8s setzen."
+# Der Agent ergänzt automatisch via Import-Analyse (AST) + Keyword-Suche (grep).
 # Label: ready-for-agent
 
 # Schritt 2: Plan generieren

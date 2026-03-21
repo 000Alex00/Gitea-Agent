@@ -25,7 +25,7 @@ Keine zusätzlichen Abhängigkeiten — nur Python 3.10+ Stdlib.
 
 ### 1. Issue schreiben
 
-In Gitea ein neues Issue anlegen. Im Body die betroffenen Dateien in Backticks erwähnen — der Agent erkennt sie automatisch:
+In Gitea ein neues Issue anlegen. Im Body die betroffenen Dateien in Backticks erwähnen — der Agent erkennt sie automatisch und ergänzt zusätzlich via Import-Analyse (AST) und Keyword-Suche (grep):
 
 ```
 Bitte Docstrings in `nanoclaw/fact_extractor.py` ergänzen.
@@ -523,7 +523,7 @@ gitea-agent/
 ├── contexts/           # Kontext-Dateien pro Issue (auto-erstellt)
 │   ├── 21-docs/        # Ein Unterordner pro Issue: {num}-{typ}
 │   │   ├── starter.md  # Metadaten, Plan, Checkliste, Kommentarhistorie
-│   │   ├── files.md    # Quellcode (max MAX_FILE_LINES pro Datei)
+│   │   ├── files.md    # Quellcode — Backticks + Import-Analyse + Keyword-Suche (max MAX_FILE_LINES pro Datei)
 │   │   └── plan.md     # Plan-Draft (Stufe 2/3, lokal befüllen)
 │   └── done/           # Nach PR: ganzer Ordner wird hierher verschoben
 │       └── 21-docs/
