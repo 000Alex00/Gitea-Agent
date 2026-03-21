@@ -17,7 +17,7 @@ Issue analysieren → Plan posten → Freigabe einholen → Branch + Implementie
 
 **Typischer Einsatz:**
 - Selbst-hosting auf einem Raspberry Pi / Server neben dem Gitea-Service
-- Claude Code Session läuft lokal, Script läuft auf dem Server
+- LLM-Session (z.B. Claude Code, Aider, Gemini CLI) läuft lokal, Script läuft auf dem Server
 - Keine Cloud-Abhängigkeit — nur Python 3.10+ Stdlib + Gitea API
 
 ---
@@ -201,12 +201,12 @@ ready-for-agent → agent-proposed → in-progress → needs-review
 ---
 
 ### Session-Tracking
-`contexts/session.json` zählt abgeschlossene Issues pro Claude-Session. Ab `SESSION_LIMIT` (Standard: 2) erscheint eine Warnung im PR-Kommentar — LLM-Kontext-Drift wird wahrscheinlicher je mehr Issues in einer Session bearbeitet wurden.
+`contexts/session.json` zählt abgeschlossene Issues pro LLM-Session. Ab `SESSION_LIMIT` (Standard: 2) erscheint eine Warnung im PR-Kommentar — LLM-Kontext-Drift wird wahrscheinlicher je mehr Issues in einer Session bearbeitet wurden.
 
 ```
 🟢 Session 1/2 — Kontext frisch
 🟡 Session 2/2 — neue Session empfohlen
-🔴 Session 3/2 — Drift-Risiko: neue Claude-Session starten
+🔴 Session 3/2 — Drift-Risiko: neue LLM-Session starten
 ```
 
 ---
@@ -353,13 +353,13 @@ Der Agent erkennt die Freigabe und gibt aus:
 [✓] Branch 'docs/issue-21-...' erstellt.
 ```
 
-**In der Claude Code Chat-Session** (oder beliebigem LLM) eintippen:
+**In der LLM-Session** (Claude Code, Aider, Gemini CLI, …) eintippen:
 
 ```
 prüf Issues / starte Agent / run agent_start.py
 ```
 
-Claude führt das Script über sein Bash-Tool aus, liest den Output und startet die Implementierung — ohne weiteren manuellen Eingriff.
+Das LLM führt das Script aus, liest den Output und startet die Implementierung — ohne weiteren manuellen Eingriff.
 
 ---
 
@@ -609,8 +609,8 @@ cp .env.example .env
 | `GITEA_BOT_USER` | Bot-User für Kommentare (optional) | `working-bot` |
 | `GITEA_BOT_TOKEN` | API-Token des Bot-Users (optional) | `xyz789...` |
 | `PROJECT_ROOT` | Pfad zum Projekt-Repo | `/home/user/myproject` |
-| `CLAUDE_API_ENABLED` | Claude API aktivieren | `false` |
-| `ANTHROPIC_API_KEY` | Claude API-Key | `sk-ant-...` |
+| `LLM_API_ENABLED` | LLM-API aktivieren (Vollautomatik) | `false` |
+| `ANTHROPIC_API_KEY` | API-Key (Beispiel: Claude/Anthropic) | `sk-ant-...` |
 
 **Token-Scopes:** `issue` (read+write), `repository` (read+write)
 
@@ -747,7 +747,7 @@ Jeder Plan-Kommentar und Abschluss-Kommentar enthält einen `<details>`-Block:
 
 ### Session-Tracking
 
-`contexts/session.json` zählt abgeschlossene Issues pro Claude-Session:
+`contexts/session.json` zählt abgeschlossene Issues pro LLM-Session:
 
 - `SESSION_LIMIT` (Standard: 2) → Warnung bei Überschreitung (Drift-Risiko)
 - `SESSION_RESET_HOURS` (Standard: 4) → session.json wird nach Inaktivität zurückgesetzt
@@ -828,20 +828,20 @@ mein-projekt/
 
 ## LLM-Anbindung: Manuell vs. Vollautomatisch
 
-Der Agent produziert strukturierten Output (starter.md, files.md, Gitea-Kommentare) — wer den Code dann tatsächlich schreibt, ist austauschbar.
+Der Agent produziert strukturierten Output (starter.md, files.md, Gitea-Kommentare) — welches LLM den Code dann tatsächlich schreibt, ist vollständig austauschbar. Das Script ist LLM-agnostisch: es kümmert sich um Gitea, Git und Kontext — das LLM kümmert sich nur um den Code.
 
 ### Modus 1: Halb-manuell (aktueller Stand)
 
-Claude Code läuft als interaktive Session im Terminal. Der Mensch triggert den nächsten Schritt durch einen Satz im Chat:
+Ein LLM-Agent (z.B. Claude Code, Gemini CLI, Aider, …) läuft als interaktive Session im Terminal. Der Mensch triggert den nächsten Schritt durch einen Satz im Chat:
 
 ```
 # Terminal 1 — Agent (Script)
 python3 agent_start.py
 # → [✓] Branch erstellt. starter.md + files.md bereit.
 
-# Terminal 2 — Claude Code Session
+# Terminal 2 — LLM-Session (z.B. Claude Code, Aider, Gemini CLI)
 > starte agent / prüf issues / run agent_start.py
-# Claude liest Output, öffnet starter.md, implementiert, committet
+# LLM liest Output, öffnet starter.md, implementiert, committet
 ```
 
 **Vorteil:** Volle Kontrolle, Änderungen sind vor dem Commit sichtbar.
@@ -849,55 +849,62 @@ python3 agent_start.py
 
 ---
 
-### Modus 2: Vollautomatisch via Claude API *(vorbereitet, nicht aktiv)*
+### Modus 2: Vollautomatisch via LLM-API *(vorbereitet, nicht aktiv)*
 
-Das Script hat eine eingebaute Claude-API-Anbindung. Mit `CLAUDE_API_ENABLED=true` und einem API-Key läuft der gesamte Workflow ohne menschliche Interaktion:
+Das Script hat eine eingebaute API-Anbindung. Mit `LLM_API_ENABLED=true` und einem API-Key läuft der gesamte Workflow ohne menschliche Interaktion. Aktuell ist Claude (Anthropic) als erster Anbieter vorbereitet — die Struktur ist so ausgelegt, dass weitere Anbieter (OpenAI-kompatible APIs, Gemini, lokale Modelle via Ollama) ergänzt werden können.
 
 ```bash
-# .env
-CLAUDE_API_ENABLED=true
+# .env — Beispiel mit Claude
+LLM_API_ENABLED=true
 ANTHROPIC_API_KEY=sk-ant-...
+
+# alternativ: OpenAI-kompatible API (z.B. Ollama, LM Studio, Mistral)
+# LLM_API_BASE=http://localhost:11434/v1
+# LLM_API_KEY=...
+# LLM_MODEL=llama3
 ```
 
 ```bash
 # Dauerbetrieb (empfohlen: tmux oder systemd)
 python3 agent_start.py
 # → Issue erkannt → Plan gepostet → Freigabe abgewartet
-# → Branch erstellt → Claude API implementiert → PR erstellt
+# → Branch erstellt → LLM implementiert → PR erstellt
 # → Alles ohne manuellen Eingriff
 ```
 
 **Ablauf intern:**
 1. Script liest Issue + baut Kontext (starter.md, files.md)
-2. Schickt Kontext als System-Prompt + Dateiinhalte an Claude API
-3. Claude antwortet mit Diff / Code
+2. Schickt Kontext als System-Prompt + Dateiinhalte an LLM-API
+3. LLM antwortet mit Diff / Code
 4. Script wendet Änderungen an, committet, erstellt PR
 
 **Vorteil:** Vollständig autonom — kann nachts laufen, Issues aus der Queue abarbeiten.
 **Nachteil:** Kein Live-Review vor dem Commit. Freigabe-Pflicht (`ok`-Kommentar) bleibt trotzdem erhalten — der Mensch entscheidet weiterhin *ob* implementiert wird, nicht *wann*.
 
-> **Status:** Im Code vorbereitet (`CLAUDE_API_ENABLED`-Flag + Grundstruktur vorhanden). Implementierung der vollständigen API-Schleife steht noch aus.
+> **Status:** Im Code vorbereitet (API-Flag + Grundstruktur vorhanden). Vollständige Implementierung der Edit-Loop + Commit-Logik steht noch aus.
 
 ---
 
-### Modus 3: Anderes LLM via CLI
+### Modus 3: Beliebiges LLM via CLI-Pipe
 
 ```bash
 python3 agent_start.py --implement 21
 cat agent/data/contexts/open/21-docs/starter.md | llm "Implementiere das Issue"
+# oder: | aider --message "..."
+# oder: | ollama run llama3
 ```
 
-Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für Recherche oder Plan-Kommentare, nicht für Code-Änderungen.
+Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für Recherche oder Plan-Kommentare, nicht für vollständige Code-Änderungen.
 
 ---
 
 ### Vergleich
 
-| Modus | Autonomie | Mensch muss... | Status |
-|-------|-----------|----------------|--------|
-| Claude Code Session | Halb-manuell | Trigger-Satz tippen | ✅ aktiv |
-| Claude API | Vollständig autonom | Issue schreiben + freigeben | 🔧 vorbereitet |
-| CLI (`\| llm`) | Text-only | Output manuell anwenden | ⚙️ möglich |
+| Modus | LLM-Beispiele | Autonomie | Mensch muss... | Status |
+|-------|--------------|-----------|----------------|--------|
+| Interaktive Session | Claude Code, Aider, Gemini CLI | Halb-manuell | Trigger-Satz tippen | ✅ aktiv |
+| LLM-API | Claude, GPT-4, Gemini, Ollama | Vollständig autonom | Issue schreiben + freigeben | 🔧 vorbereitet |
+| CLI-Pipe | ollama, llm, aider | Text-only | Output manuell anwenden | ⚙️ möglich |
 
 ---
 
@@ -905,14 +912,14 @@ Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für 
 
 ### Geplant / In Arbeit
 
-- **Claude API Vollimplementierung** — automatische Implementierungsschleife über Anthropic SDK (Grundstruktur vorhanden, fehlt: Datei-Edit-Loop + Commit-Logik)
+- **LLM-API Vollimplementierung** — automatische Implementierungsschleife über konfigurierbare API (Anthropic, OpenAI-kompatibel, Ollama); Grundstruktur vorhanden, fehlt: Datei-Edit-Loop + Commit-Logik
 - **Webhook-Integration** — Gitea sendet Event bei `ready-for-agent` → Agent wird direkt getriggert, kein Cron/manueller Aufruf nötig
 - **Stufe-1 Auto-Implement** — Docs/Cleanup-Issues (Risiko 1) ohne Freigabe direkt implementieren (opt-in via `.env`: `AUTO_IMPLEMENT_LEVEL1=true`)
 
 ### Ideen / Offen
 
+- **Multi-LLM-Routing** — je nach Issue-Risikostufe unterschiedliche Modelle einsetzen (z.B. kleines Modell für Docs, starkes Modell für Bugs)
 - **Multi-Repo-Support** — eine Agent-Instanz verwaltet mehrere Repos, `.env` pro Repo in `~/.gitea-agent/repos/`
-- **Google Gemini** — `GEMINI_API_KEY` analog zu Claude API als alternativer Vollautomatik-Modus
 - **Gitea Webhook-Server** — kleiner HTTP-Server der Gitea-Webhooks empfängt und `agent_start.py` direkt triggert
 - **PR-Review-Kommentar-Loop** — Agent liest Review-Kommentare aus dem PR und reagiert automatisch auf Änderungswünsche
 - **Parallelisierung** — mehrere Issues gleichzeitig auf separaten Branches bearbeiten (aktuell sequenziell)
