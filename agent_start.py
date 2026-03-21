@@ -449,6 +449,8 @@ _EXCLUDE_DIRS = {
     "dist", "build",
 }
 
+_KEYWORD_SEARCH_EXTENSIONS = {".py", ".js", ".ts", ".sh", ".yaml", ".yml", ".json"}
+
 
 def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:
     """
@@ -518,13 +520,12 @@ def _search_keywords(issue_text: str, repo_path: Path) -> list[Path]:
     if not keywords:
         return []
 
-    exts = tuple(settings.CODE_EXTENSIONS)
     found = []
 
     for path in repo_path.rglob("*"):
         if not path.is_file():
             continue
-        if path.suffix not in exts:
+        if path.suffix not in _KEYWORD_SEARCH_EXTENSIONS:
             continue
         if any(ex in path.parts for ex in _EXCLUDE_DIRS):
             continue
