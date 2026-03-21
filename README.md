@@ -10,7 +10,7 @@ Issue analysieren → Plan posten → Freigabe einholen → Branch + Implementie
 ## Schnellstart
 
 ```bash
-git clone http://your-gitea/gitea-agent
+git clone http://your-gitea/gitea-agent <---noch kein offizielles Git, da lokal auf giteaserver
 cd gitea-agent
 cp .env.example .env
 # .env befüllen (GITEA_URL, GITEA_USER, GITEA_TOKEN, GITEA_REPO)
