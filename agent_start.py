@@ -276,15 +276,22 @@ def _context_dir() -> Path:
 def _issue_dir(issue: dict) -> Path:
     """Gibt den Issue-Unterordner zurück und erstellt ihn falls nötig.
 
-    Format: contexts/{num}-{typ}/  z.B. contexts/32-feature_request/
+    Format: contexts/open/{num}-{typ}/  z.B. contexts/open/32-feature_request/
     """
-    d = _context_dir() / f"{issue['number']}-{issue_type(issue)}"
+    d = _context_dir() / "open" / f"{issue['number']}-{issue_type(issue)}"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 def _find_issue_dir(number: int) -> Path | None:
-    """Findet den Issue-Ordner anhand der Nummer (Typ unbekannt → glob)."""
+    """Findet den Issue-Ordner anhand der Nummer (Typ unbekannt → glob).
+
+    Sucht zuerst in contexts/open/, dann direkt in contexts/ (Fallback für alte Struktur).
+    """
+    matches = list((_context_dir() / "open").glob(f"{number}-*"))
+    if matches:
+        return matches[0]
+    # Fallback: alte Struktur ohne open/
     matches = list(_context_dir().glob(f"{number}-*"))
     return matches[0] if matches else None
 
@@ -443,7 +450,7 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
 # Kontext-Loader: Import-Analyse + Keyword-Suche
 # ---------------------------------------------------------------------------
 
-_EXCLUDE_DIRS = {
+_EXCLUDE_DIRS_DEFAULT = {
     "node_modules", ".git", "__pycache__", "venv", ".venv",
     "Backup", "backup",
     "vendor", "llama-cpp-python-build",
@@ -452,6 +459,29 @@ _EXCLUDE_DIRS = {
     ".mypy_cache", ".pytest_cache",
     "dist", "build",
 }
+
+
+def _get_exclude_dirs(project: Path) -> set[str]:
+    """
+    Gibt die kombinierten Exclude-Verzeichnisse zurück.
+
+    Lädt project/agent/config/agent_eval.json und liest context_loader.exclude_dirs
+    falls vorhanden. Kombiniert mit _EXCLUDE_DIRS_DEFAULT.
+    Bei Fehler: nur Default zurückgeben.
+
+    Args:
+        project: Projekt-Root-Pfad
+
+    Returns:
+        Set von Verzeichnisnamen die beim Keyword-Scan ignoriert werden.
+    """
+    try:
+        cfg_path = Path(project) / "agent" / "config" / "agent_eval.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        extra = cfg.get("context_loader", {}).get("exclude_dirs", [])
+        return _EXCLUDE_DIRS_DEFAULT | set(extra)
+    except Exception:
+        return _EXCLUDE_DIRS_DEFAULT
 
 _KEYWORD_SEARCH_EXTENSIONS = {".py", ".js", ".ts", ".sh", ".yaml", ".yml", ".json"}
 
@@ -548,7 +578,7 @@ def _search_keywords(issue_text: str, repo_path: Path) -> list[Path]:
             continue
         if path.suffix not in _KEYWORD_SEARCH_EXTENSIONS:
             continue
-        if any(ex in path.parts for ex in _EXCLUDE_DIRS):
+        if any(ex in path.parts for ex in _get_exclude_dirs(repo_path)):
             continue
         if path.name in _EXCLUDE_FILES or any(
             path.name.endswith(p.replace("*", "")) for p in _EXCLUDE_FILES if "*" in p
