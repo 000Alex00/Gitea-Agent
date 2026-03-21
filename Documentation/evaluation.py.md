@@ -116,3 +116,32 @@ python3 evaluation.py --project /home/user/myproject --update-baseline
 
 Pro Eval-Lauf wird eine einmalige `eval-<uuid>`-User-ID generiert.
 Verhindert dass Tests sich gegenseitig über den Chat-Kontext (ChromaDB, History) beeinflussen.
+
+## TestResult-Felder
+
+| Feld | Typ | Beschreibung |
+|---|---|---|
+| `name` | str | Testname aus agent_eval.json |
+| `weight` | int | Gewichtung |
+| `passed` | bool | Ergebnis |
+| `skipped` | bool | Pi5-Test übersprungen |
+| `reason` | str | Fehlergrund (menschenlesbar) |
+| `category` | str | Regelbasierte Fehler-Kategorie (s.u.) |
+| `actual_response` | str | Tatsächliche LLM-Antwort (leer bei None) |
+| `step_details` | list | Bei steps-Tests: Liste von `{msg, expected, actual, passed, stored}` |
+
+## Fehler-Kategorien (`_categorize`)
+
+Objektiv — kein LLM, nur regelbasiert:
+
+| Kategorie | Bedingung |
+|---|---|
+| `timeout` | `response is None` |
+| `server_error` | Antwort enthält HTTP-Fehlercode (500/502/503/504) |
+| `empty_response` | Antwort leer nach strip() |
+| `keyword_miss` | Antwort vorhanden, aber `expected_keywords` fehlen |
+| `pi5_offline` | Test wegen Pi5-Offline übersprungen |
+
+## Änderungshistorie
+
+- 2026-03-21 | #29: `TestResult` + `category`/`actual_response`/`step_details`; `_categorize()` helper; `_run_steps()` gibt Step-Details zurück (closes #29)
