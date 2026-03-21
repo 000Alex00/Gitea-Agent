@@ -19,7 +19,7 @@ cmd_pr()
 
 ## Konfiguration im Zielprojekt
 
-`tests/agent_eval.json` — liegt im Zielprojekt, nicht im gitea-agent:
+`agent/config/agent_eval.json` — liegt im Zielprojekt unter `agent/config/` (neu seit #35), Fallback: `tests/agent_eval.json`:
 
 ```json
 {
@@ -72,7 +72,7 @@ Für Tests die mehrere Nachrichten sequenziell brauchen (z.B. Fakt schreiben →
 
 ## Baseline
 
-`tests/baseline.json` — wird **automatisch** beim ersten Lauf angelegt:
+`agent/data/baseline.json` — wird **automatisch** beim ersten Lauf angelegt (Fallback: `tests/baseline.json`):
 
 ```json
 {"score": 8.0}
@@ -144,4 +144,6 @@ Objektiv — kein LLM, nur regelbasiert:
 
 ## Änderungshistorie
 
+- 2026-03-21 | fix: `_resolve_path()` + `_resolve_config()` — `Path()` fehlte bei str `project_root` (TypeError)
+- 2026-03-21 | #35: Pfade auf `agent/config/` + `agent/data/` umgestellt via `_resolve_path()` / `_resolve_config()` (closes #35)
 - 2026-03-21 | #29: `TestResult` + `category`/`actual_response`/`step_details`; `_categorize()` helper; `_run_steps()` gibt Step-Details zurück (closes #29)

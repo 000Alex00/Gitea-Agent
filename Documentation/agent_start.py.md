@@ -80,15 +80,21 @@ Bei Erholung (Test besteht wieder) schließt `_close_resolved_auto_issues()` das
 | Import-Analyse | `_find_imports()` | AST-Walk über Python-Dateien → `from x import y` → Kandidaten |
 | Keyword-Suche | `_search_keywords()` | grep über Backtick-Wörter (≥4 Zeichen) im Repo |
 
-**`_find_imports(files)`** — stdlib, nur `.py`:
+**`_find_imports(files, depth=1)`** — stdlib, nur `.py`:
 - Parsed jede Datei mit `ast.parse()`
 - Sucht `ImportFrom`-Nodes → löst Pfad relativ zu `PROJECT` auf
+- `depth=1` — nur direkte Imports, keine transitive Kette
 - Gibt nur existierende Dateien zurück die nicht bereits in `files` sind
 
 **`_search_keywords(issue_text, repo_path)`** — stdlib (`re` + `Path.read_text`):
 - Extrahiert Wörter aus Backtick-Spans (≥4 Zeichen, alphanumerisch)
-- Durchsucht alle `CODE_EXTENSIONS`-Dateien im Repo
-- Ignoriert: `node_modules`, `.git`, `__pycache__`, `venv`, `.venv`
+- Durchsucht alle `_KEYWORD_SEARCH_EXTENSIONS`-Dateien (`.py .js .ts .sh .yaml .yml .json`)
+- Ignoriert Verzeichnisse in `_EXCLUDE_DIRS`: `node_modules`, `.git`, `__pycache__`, `venv`, `.venv`, `Backup`, `vendor`, `agent`, `contexts`, `.claude`, `Documentation`, `dist`, `build`
+- Ignoriert Dateien in `_EXCLUDE_FILES`: `package-lock.json`, `yarn.lock`, `output.json`, Lock-Dateien, `*.min.js`, `*.map`
+
+**Größen-Cap in `save_implement_context()`:**
+- Dateien > `_MAX_FILE_SIZE_KB` (50KB) werden auf 500 Zeilen gekürzt mit `[GEKÜRZT: N Zeilen, XKB]`-Hinweis
+- Dateien > `MAX_FILE_LINES` (300) werden zeilenbasiert gekürzt
 
 **files.md Header** signalisiert dem LLM Vollständigkeit:
 ```
@@ -100,5 +106,11 @@ Bei Erholung (Test besteht wieder) schließt `_close_resolved_auto_issues()` das
 
 ## Änderungshistorie
 
+- 2026-03-21 | fix: `_EXCLUDE_FILES` Blacklist + `_MAX_FILE_SIZE_KB` 50KB-Cap in `save_implement_context()`
+- 2026-03-21 | fix: `_EXCLUDE_DIRS` erweitert (Backup, vendor, Documentation, contexts, .claude)
+- 2026-03-21 | fix: `_find_imports()` depth=1 — keine transitive Import-Kette mehr
+- 2026-03-21 | fix: `_KEYWORD_SEARCH_EXTENSIONS` statt `CODE_EXTENSIONS` — .md-Dateien aus Keyword-Suche raus
+- 2026-03-21 | fix: `branch_name()` — Sonderzeichen robust filtern via `re.sub(r'[^a-z0-9-]', '-', slug)`
+- 2026-03-21 | fix: `import time` fehlte — Watch-Modus crashed mit NameError
 - 2026-03-21 | #33: `_find_imports()` + `_search_keywords()` — Kontext-Loader für files.md (closes #33)
 - 2026-03-21 | #29: `_build_auto_issue_body()` — strukturierter Auto-Issue Body mit Tabelle, Step-Tracking, Kategorie, 3 Scores (closes #29)
