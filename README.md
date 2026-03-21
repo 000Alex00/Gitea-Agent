@@ -7,6 +7,48 @@ Issue analysieren → Plan posten → Freigabe einholen → Branch + Implementie
 
 ---
 
+## Was ist das und wozu?
+
+`gitea-agent` ist ein Python-Script (`agent_start.py`), das einen strukturierten Entwicklungs-Workflow zwischen einem Gitea Issue-Tracker und einem LLM-Agenten vermittelt.
+
+**Problem das es löst:** LLM-Agenten (Claude Code, Gemini, …) sind leistungsfähig, aber ohne Struktur fehlt die Rückkopplung zur tatsächlichen Codebasis — sie erfinden Dateipfade, überspringen Tests oder pushen direkt auf main. `gitea-agent` löst das durch technische Schranken statt Prompt-Regeln.
+
+**Kernprinzip:** Das Script übernimmt die gesamte Infrastruktur-Arbeit (Issue lesen, Dateien finden, Branch erstellen, Tests laufen, PR öffnen). Der LLM-Agent schreibt nur Code — und nur nach expliziter Freigabe.
+
+**Typischer Einsatz:**
+- Selbst-hosting auf einem Raspberry Pi / Server neben dem Gitea-Service
+- Claude Code Session läuft lokal, Script läuft auf dem Server
+- Keine Cloud-Abhängigkeit — nur Python 3.10+ Stdlib + Gitea API
+
+---
+
+## Feature-Übersicht
+
+| Feature | Datei/Funktion | Zweck |
+|---------|---------------|-------|
+| **Auto-Modus** | `agent_start.py` (kein Arg) | Scannt alle Issues automatisch, führt den passenden nächsten Schritt aus |
+| **Kontext-Loader** | `save_implement_context()` | Sucht betroffene Dateien (Backticks, AST-Import-Analyse, grep) — schreibt `starter.md` + `files.md` |
+| **Diskussion im Kontext** | `save_implement_context()` | Lädt Gitea-Kommentare (ohne Bot-Kommentare) in `starter.md` → LLM sieht die ganze Vorgeschichte |
+| **Risiko-Klassifikation** | `risk_level()` | Stuft Issues 1–4 ein (Docs → Breaking Change) → bestimmt ob Plan-Pflicht, `help wanted`, Eval |
+| **Plan-Kommentar** | `cmd_issue()` | Postet automatisch einen Implementierungsplan mit Metadaten-Block ins Issue |
+| **Freigabe-Pflicht** | `_has_approval()` | `--implement` läuft nur nach explizitem `ok`/`ja`/`✅` im Issue — kein Auto-Start |
+| **Branch-Management** | `cmd_implement()` | Erstellt Feature-Branch nach Schema `typ/issue-{N}-{slug}`, setzt Label `in-progress` |
+| **Eval-System** | `evaluation.py` | Führt HTTP-Tests gegen den laufenden Server aus, berechnet gewichteten Score, blockiert PR bei Regression |
+| **Baseline-Tracking** | `evaluation.py` | Speichert Referenz-Score lokal, steigt automatisch mit — fällt nie |
+| **Server-Aktualitäts-Check** | `_check_server_staleness()` | Verhindert Eval gegen veralteten Server — prüft ob letzter Commit neuer als letzter Server-Start |
+| **Prozess-Enforcement** | `_check_pr_preconditions()` | Blockiert PR wenn: Plan fehlt, kein Metadaten-Block, Eval nach letztem Commit nicht gelaufen, Branch = main |
+| **Watch-Modus** | `cmd_watch()` | Periodische Eval-Schleife — erstellt automatisch Bug-Issues bei Regression, schließt sie bei Erholung |
+| **Auto-Neustart** | `cmd_watch()` | Startet den Server automatisch neu wenn Chat inaktiv + neue Commits vorhanden |
+| **Label-Lifecycle** | überall | Labels spiegeln den exakten Workflow-Zustand: `ready-for-agent` → `agent-proposed` → `in-progress` → `needs-review` |
+| **Session-Tracking** | `contexts/session.json` | Zählt Issues pro Claude-Session, warnt bei Kontext-Drift-Risiko |
+| **PFLICHTREGELN in starter.md** | `settings.STARTER_MD_PFLICHTREGELN` | Jede starter.md enthält technische Schranken die LLM-Drift verhindern (kein curl, kein manueller PR) |
+| **Kontext-Kommentar** | `cmd_implement()` | Postet nach Kontextaufbau eine Zusammenfassung der gefundenen Dateien + Kommentare ins Issue |
+| **Score-History** | `score_history.json` | Protokolliert jeden Eval-Lauf (max. 90 Einträge), letzten 5 werden an PR-Kommentar angehängt |
+| **Docs-Check** | `cmd_pr()` | Warnt wenn `Documentation/` seit Branch-Abzweig nicht aktualisiert wurde |
+| **Auto-Cleanup** | Auto-Scan | Verschiebt Kontext-Ordner geschlossener Issues automatisch nach `contexts/done/` |
+
+---
+
 ## Schnellstart
 
 ```bash
