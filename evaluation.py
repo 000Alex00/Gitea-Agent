@@ -209,6 +209,7 @@ def _resolve_path(project_root: Path, new_rel: str, legacy_rel: str) -> Path:
     Returns:
         Erster existierender Pfad, sonst der Legacy-Pfad (für Neuanlage).
     """
+    project_root = Path(project_root)
     new_path    = project_root / "agent" / "data" / new_rel
     legacy_path = project_root / legacy_rel
     return new_path if new_path.exists() else legacy_path
@@ -216,6 +217,7 @@ def _resolve_path(project_root: Path, new_rel: str, legacy_rel: str) -> Path:
 
 def _resolve_config(project_root: Path) -> Path:
     """Gibt den Pfad zu agent_eval.json zurück (neue Struktur oder Legacy)."""
+    project_root = Path(project_root)
     new_path    = project_root / "agent" / "config" / "agent_eval.json"
     legacy_path = project_root / EVAL_CONFIG
     return new_path if new_path.exists() else legacy_path
