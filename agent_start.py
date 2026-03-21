@@ -1116,6 +1116,39 @@ def cmd_implement(number: int) -> None:
     _idir2 = _find_issue_dir(num)
     print(f"[✓] Kontext: {_idir2.name if _idir2 else ''}/starter.md + files.md — bereit zur Implementierung")
 
+    # Kontext-Zusammenfassung als Gitea-Kommentar posten
+    context_summary_parts = []
+
+    if user_comments:
+        from_comments: set[str] = set()
+        for comment in user_comments:
+            words  = re.findall(r'`([^`]+)`', comment)
+            words += re.findall(r'\b([A-Za-z_][A-Za-z0-9_]{3,})\b', comment)
+            from_comments.update(w.lower() for w in words if len(w) >= 4)
+        if from_comments:
+            context_summary_parts.append(
+                f"**Keywords aus Kommentaren:** {', '.join(sorted(from_comments)[:10])}"
+            )
+
+    if files_dict:
+        file_list = list(files_dict.keys())[:15]
+        context_summary_parts.append(
+            f"**Erkannte Dateien ({len(files_dict)}):**\n" + "\n".join(f"- `{f}`" for f in file_list)
+        )
+        if len(files_dict) > 15:
+            context_summary_parts.append(f"  _... und {len(files_dict) - 15} weitere_")
+
+    if user_comments:
+        context_summary_parts.append(f"**Diskussion:** {len(user_comments)} Kommentar(e) einbezogen")
+
+    if context_summary_parts:
+        context_comment = (
+            "## 📎 Kontext-Loader\n\n"
+            + "\n\n".join(context_summary_parts)
+            + "\n\n---\n_Kontext bereit in `starter.md` + `files.md`_"
+        )
+        gitea.post_comment(number, context_comment)
+
 
 _RESTART_PATTERNS = ("server.py", "bot.js", "nanoclaw/", "whatsapp-bot/", "router.py", "analyst_worker.py")
 
