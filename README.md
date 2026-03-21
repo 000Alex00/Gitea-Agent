@@ -24,28 +24,249 @@ Issue analysieren → Plan posten → Freigabe einholen → Branch + Implementie
 
 ## Feature-Übersicht
 
-| Feature | Datei/Funktion | Zweck |
-|---------|---------------|-------|
-| **Auto-Modus** | `agent_start.py` (kein Arg) | Scannt alle Issues automatisch, führt den passenden nächsten Schritt aus |
-| **Kontext-Loader** | `save_implement_context()` | Sucht betroffene Dateien (Backticks, AST-Import-Analyse, grep) — schreibt `starter.md` + `files.md` |
-| **Diskussion im Kontext** | `save_implement_context()` | Lädt Gitea-Kommentare (ohne Bot-Kommentare) in `starter.md` → LLM sieht die ganze Vorgeschichte |
-| **Risiko-Klassifikation** | `risk_level()` | Stuft Issues 1–4 ein (Docs → Breaking Change) → bestimmt ob Plan-Pflicht, `help wanted`, Eval |
-| **Plan-Kommentar** | `cmd_issue()` | Postet automatisch einen Implementierungsplan mit Metadaten-Block ins Issue |
-| **Freigabe-Pflicht** | `_has_approval()` | `--implement` läuft nur nach explizitem `ok`/`ja`/`✅` im Issue — kein Auto-Start |
-| **Branch-Management** | `cmd_implement()` | Erstellt Feature-Branch nach Schema `typ/issue-{N}-{slug}`, setzt Label `in-progress` |
-| **Eval-System** | `evaluation.py` | Führt HTTP-Tests gegen den laufenden Server aus, berechnet gewichteten Score, blockiert PR bei Regression |
-| **Baseline-Tracking** | `evaluation.py` | Speichert Referenz-Score lokal, steigt automatisch mit — fällt nie |
-| **Server-Aktualitäts-Check** | `_check_server_staleness()` | Verhindert Eval gegen veralteten Server — prüft ob letzter Commit neuer als letzter Server-Start |
-| **Prozess-Enforcement** | `_check_pr_preconditions()` | Blockiert PR wenn: Plan fehlt, kein Metadaten-Block, Eval nach letztem Commit nicht gelaufen, Branch = main |
-| **Watch-Modus** | `cmd_watch()` | Periodische Eval-Schleife — erstellt automatisch Bug-Issues bei Regression, schließt sie bei Erholung |
-| **Auto-Neustart** | `cmd_watch()` | Startet den Server automatisch neu wenn Chat inaktiv + neue Commits vorhanden |
-| **Label-Lifecycle** | überall | Labels spiegeln den exakten Workflow-Zustand: `ready-for-agent` → `agent-proposed` → `in-progress` → `needs-review` |
-| **Session-Tracking** | `contexts/session.json` | Zählt Issues pro Claude-Session, warnt bei Kontext-Drift-Risiko |
-| **PFLICHTREGELN in starter.md** | `settings.STARTER_MD_PFLICHTREGELN` | Jede starter.md enthält technische Schranken die LLM-Drift verhindern (kein curl, kein manueller PR) |
-| **Kontext-Kommentar** | `cmd_implement()` | Postet nach Kontextaufbau eine Zusammenfassung der gefundenen Dateien + Kommentare ins Issue |
-| **Score-History** | `score_history.json` | Protokolliert jeden Eval-Lauf (max. 90 Einträge), letzten 5 werden an PR-Kommentar angehängt |
-| **Docs-Check** | `cmd_pr()` | Warnt wenn `Documentation/` seit Branch-Abzweig nicht aktualisiert wurde |
-| **Auto-Cleanup** | Auto-Scan | Verschiebt Kontext-Ordner geschlossener Issues automatisch nach `contexts/done/` |
+---
+
+### Auto-Modus
+`agent_start.py` ohne Argumente scannt alle Gitea-Issues und führt automatisch den jeweils passenden nächsten Schritt aus — Plan posten, Branch erstellen oder Status anzeigen.
+
+```bash
+python3 agent_start.py
+# → [→] Issue #21 ready-for-agent — poste Plan...
+# → [✓] Kommentar gepostet
+```
+
+---
+
+### Kontext-Loader
+Vor der Implementierung sucht `save_implement_context()` automatisch alle relevanten Dateien — ohne manuelles Angeben. Drei Quellen werden kombiniert:
+1. Dateinamen in Backticks im Issue-Text (`\`server.py\``)
+2. AST-Import-Analyse: welche Module importieren die genannten Dateien?
+3. Keyword-Grep: welche anderen Dateien enthalten die gleichen Begriffe?
+
+Das Ergebnis landet in `starter.md` (Auftrag + Checkliste) und `files.md` (Quellcode der betroffenen Dateien) — fertig für den LLM-Agenten.
+
+```
+contexts/open/21-docs/
+├── starter.md   ← Auftrag, Checkliste, Commit-Template, PR-Befehl
+└── files.md     ← Quellcode aller relevanten Dateien
+```
+
+---
+
+### Diskussion im Kontext
+Gitea-Kommentare (nur von echten Nutzern, Bot-Kommentare gefiltert) werden in `starter.md` unter `## Diskussion` eingebunden. Der LLM sieht so die vollständige Vorgeschichte des Issues.
+
+```markdown
+## Diskussion
+**Alex:** Das betrifft auch analyst_worker.py, nicht nur server.py
+**Robin:** ok, beide Dateien anpassen
+```
+
+---
+
+### Risiko-Klassifikation
+Jedes Issue wird anhand seiner Labels automatisch eingestuft. Die Stufe bestimmt den Workflow: Stufe 1 direkt umsetzen, Stufe 2/3 erst planen und `help wanted` setzen, Stufe 4 gar nicht automatisieren.
+
+| Stufe | Label | Vorgehen |
+|-------|-------|---------|
+| 1 | `docs`, `cleanup` | Plan → Freigabe → Implementierung |
+| 2 | `enhancement` | Plan + offene Fragen → `help wanted` → Freigabe |
+| 3 | `bug`, `feature_request` | wie Stufe 2, mit Analyse-Kommentar |
+| 4 | Breaking Change | kein Auto-Workflow |
+
+---
+
+### Plan-Kommentar
+`--issue <NR>` oder Auto-Modus postet einen strukturierten Plan ins Gitea-Issue — mit Implementierungsvorschlag, betroffenen Dateien und einem `<details>`-Metadaten-Block (Modell, Branch, Commit, Zeitstempel, Token-Schätzung).
+
+```
+[Agent-Analyse] Stufe 2/4 — Enhancement
+Vorgeschlagene Änderung: ...
+Betroffene Dateien: server.py, router.py
+→ Mit 'ok' oder 'ja' kommentieren um zu starten.
+```
+
+---
+
+### Freigabe-Pflicht
+`--implement` prüft ob ein Gitea-Kommentar mit `ok`, `ja` oder `✅` vorhanden ist. Ohne explizite Freigabe startet nichts.
+
+```bash
+python3 agent_start.py --implement 21
+# Ohne "ok"-Kommentar: [!] Keine Freigabe — abgebrochen.
+# Mit "ok"-Kommentar:  [✓] Freigabe erkannt — Branch erstellen...
+```
+
+---
+
+### Branch-Management
+Nach Freigabe wird automatisch ein Feature-Branch erstellt, der Branch-Name aus Issue-Typ und -Titel abgeleitet. Label wechselt zu `in-progress`.
+
+```
+fix/issue-21-server-crash-bei-leerem-body
+docs/issue-14-filter-strings-settings
+feat/issue-6-statusmanager
+```
+
+---
+
+### Eval-System
+`evaluation.py` schickt HTTP-Requests an den laufenden Server und prüft ob die Antworten die erwarteten Keywords enthalten. Tests sind gewichtet — ein kritischer Test zählt mehr als ein Smoke-Test. Schlägt ein Test fehl, wird der PR blockiert.
+
+```json
+// agent/config/agent_eval.json
+{
+  "tests": [
+    { "name": "Grundfunktion", "weight": 2, "message": "Was ist 2+2?", "expected_keywords": ["4"] },
+    { "name": "Fakten-Speichern", "weight": 1, "steps": [
+        { "message": "Mein Name ist Max", "expect_stored": true },
+        { "message": "Wie heiße ich?", "expected_keywords": ["Max"] }
+    ]}
+  ]
+}
+```
+
+---
+
+### Baseline-Tracking
+Nach dem ersten Eval-Lauf wird der Score als Referenz gespeichert (`baseline.json`). Jeder folgende PR muss mindestens diesen Score erreichen. Verbessert sich das System, steigt die Baseline automatisch mit — sinkt aber nie.
+
+```
+[Eval] Score: 7/7 (Baseline: 6)  → Baseline auf 7 erhöht
+[Eval] Score: 5/7 (Baseline: 7)  → PR blockiert
+```
+
+---
+
+### Server-Aktualitäts-Check
+Vor dem Eval prüft `_check_server_staleness()` ob der laufende Server überhaupt den aktuellen Code hat — anhand Commit-Zeitstempel vs. Startup-Zeitpunkt im Log. Veraltet → Abbruch mit Anweisung.
+
+```
+[!] Server-Code veraltet
+    Letzter Commit: 2026-03-20 22:45
+    Server gestartet: 2026-03-20 21:20
+    → Server neu starten oder --restart-before-eval verwenden.
+```
+
+---
+
+### Prozess-Enforcement
+`_check_pr_preconditions()` läuft vor jedem PR und prüft 4 Bedingungen technisch — nicht als Prompt-Regel. Schlägt eine fehl, wird der Prozess mit Exit 1 abgebrochen.
+
+| Prüfung | Fehler wenn... |
+|---------|---------------|
+| Branch ≠ main/master | PR von main verboten |
+| Plan-Kommentar vorhanden | kein Plan im Issue |
+| Metadaten-Block im Plan | Plan ohne `🤖 Agent-Metadaten` |
+| Eval nach letztem Commit | Eval veraltet oder fehlend |
+
+---
+
+### Watch-Modus
+`--watch` startet eine periodische Eval-Schleife im Hintergrund (empfohlen: tmux). Bei Regression → automatisches Bug-Issue in Gitea. Erholt sich der Score → Issue wird automatisch geschlossen.
+
+```bash
+tmux new -s watch
+python3 agent_start.py --watch --interval 30  # alle 30 Minuten
+# Ctrl+B, D zum Detachen
+```
+
+Auto-Issues enthalten: Erwartung vs. Realität, Step-Tabelle mit ✅/❌, Fehler-Kategorie, letzte 3 Scores. Duplikate werden verhindert (gleicher Titel + offen = kein neues Issue).
+
+---
+
+### Auto-Neustart (Watch)
+Zusätzlich zur Eval-Schleife prüft Watch ob ein Neustart sinnvoll ist:
+- Chat seit ≥ `inactivity_minutes` inaktiv (aus Log gelesen)
+- Neue Commits seit letztem Eval vorhanden
+
+Beide Bedingungen erfüllt → `restart_script` wird ausgeführt, danach sofort Eval.
+
+```json
+// agent_eval.json
+{ "restart_script": "/home/user/projekt/start.sh", "inactivity_minutes": 5 }
+```
+
+---
+
+### Label-Lifecycle
+Alle Labels werden vom Script gesetzt und entfernt — kein manuelles Label-Management nötig (außer `help wanted` entfernen bei Stufe 2/3 nach Klärung).
+
+```
+ready-for-agent → agent-proposed → in-progress → needs-review
+                      ↓ (Stufe 2/3)
+                  help wanted (offene Fragen) → agent-proposed (nach Klärung)
+```
+
+---
+
+### Session-Tracking
+`contexts/session.json` zählt abgeschlossene Issues pro Claude-Session. Ab `SESSION_LIMIT` (Standard: 2) erscheint eine Warnung im PR-Kommentar — LLM-Kontext-Drift wird wahrscheinlicher je mehr Issues in einer Session bearbeitet wurden.
+
+```
+🟢 Session 1/2 — Kontext frisch
+🟡 Session 2/2 — neue Session empfohlen
+🔴 Session 3/2 — Drift-Risiko: neue Claude-Session starten
+```
+
+---
+
+### PFLICHTREGELN in starter.md
+Jede `starter.md` enthält automatisch einen unveränderlichen Regelblock am Anfang. Ziel: LLM-Agenten die per Drift anfangen `curl` statt `agent_start.py` zu benutzen oder Schritte zu überspringen, werden durch explizite Checklisten gebremst.
+
+```markdown
+⚠️ NIEMALS `curl` statt `agent_start.py` verwenden
+⚠️ NIEMALS Schritte überspringen
+⚠️ NIEMALS PR manuell erstellen
+- [ ] Vorheriger Schritt vollständig abgeschlossen?
+- [ ] agent_start.py verwendet (nicht curl)?
+```
+
+---
+
+### Kontext-Kommentar
+Nach `--implement` postet der Agent eine Zusammenfassung des aufgebauten Kontexts als Gitea-Kommentar — welche Dateien gefunden wurden, wie viele Diskussions-Kommentare einbezogen wurden, welche Keywords aus Kommentaren extrahiert wurden.
+
+```
+## 📎 Kontext-Loader
+**Erkannte Dateien (5):**
+- `nanoclaw/server.py`
+- `nanoclaw/router.py`
+**Diskussion:** 2 Kommentar(e) einbezogen
+---
+_Kontext bereit in starter.md + files.md_
+```
+
+---
+
+### Score-History
+Jeder Eval-Lauf (PR, Watch, manuell, nach Neustart) wird in `score_history.json` protokolliert (max. 90 Einträge). Die letzten 5 Einträge werden automatisch an den PR-Kommentar angehängt.
+
+```
+| Datum       | Score | Trigger |
+|-------------|-------|---------|
+| 2026-03-20  | 7/7   | pr      |
+| 2026-03-19  | 6/7   | watch   |
+| 2026-03-18  | 7/7   | restart |
+```
+
+---
+
+### Docs-Check
+`--pr` prüft automatisch ob Dateien unter `Documentation/` seit dem Branch-Abzweig von main geändert wurden. Falls nicht → Warnung im Terminal und Gitea-Kommentar. Kein Hard-Block — nur Hinweis.
+
+```
+[!] Warnung: Code geändert aber keine Documentation/*.md aktualisiert.
+```
+
+---
+
+### Auto-Cleanup
+Beim jedem Auto-Scan vergleicht der Agent die lokalen `contexts/open/`-Ordner mit den tatsächlich offenen Gitea-Issues. Geschlossene Issues werden automatisch nach `contexts/done/` verschoben — kein manuelles Aufräumen.
+
+```
+contexts/open/13-enhancement/  →  contexts/done/13-enhancement/
+```
 
 ---
 
