@@ -89,7 +89,7 @@ Bei Erholung (Test besteht wieder) schließt `_close_resolved_auto_issues()` das
 **`_search_keywords(issue_text, repo_path)`** — stdlib (`re` + `Path.read_text`):
 - Extrahiert Wörter aus Backtick-Spans (≥4 Zeichen, alphanumerisch)
 - Durchsucht alle `_KEYWORD_SEARCH_EXTENSIONS`-Dateien (`.py .js .ts .sh .yaml .yml .json`)
-- Ignoriert Verzeichnisse in `_EXCLUDE_DIRS`: `node_modules`, `.git`, `__pycache__`, `venv`, `.venv`, `Backup`, `vendor`, `agent`, `contexts`, `.claude`, `Documentation`, `dist`, `build`
+- Ignoriert Verzeichnisse via `_get_exclude_dirs(repo_path)`: Default aus `_EXCLUDE_DIRS_DEFAULT` + projektspezifische Einträge aus `agent/config/agent_eval.json → context_loader.exclude_dirs`
 - Ignoriert Dateien in `_EXCLUDE_FILES`: `package-lock.json`, `yarn.lock`, `output.json`, Lock-Dateien, `*.min.js`, `*.map`
 
 **Größen-Cap in `save_implement_context()`:**
@@ -106,6 +106,8 @@ Bei Erholung (Test besteht wieder) schließt `_close_resolved_auto_issues()` das
 
 ## Änderungshistorie
 
+- 2026-03-21 | feat: `_get_exclude_dirs(project)` — konfigurierbare Excludes aus `agent_eval.json → context_loader.exclude_dirs`; `_EXCLUDE_DIRS` → `_EXCLUDE_DIRS_DEFAULT`
+- 2026-03-21 | feat: `_issue_dir()` → `contexts/open/`; `_find_issue_dir()` mit Fallback auf alte Struktur
 - 2026-03-21 | fix: `_EXCLUDE_FILES` Blacklist + `_MAX_FILE_SIZE_KB` 50KB-Cap in `save_implement_context()`
 - 2026-03-21 | fix: `_EXCLUDE_DIRS` erweitert (Backup, vendor, Documentation, contexts, .claude)
 - 2026-03-21 | fix: `_find_imports()` depth=1 — keine transitive Import-Kette mehr

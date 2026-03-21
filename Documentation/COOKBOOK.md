@@ -77,6 +77,10 @@ python3 agent_start.py --list
 **Schritte:**
 
 ```bash
+# Optional: Projektspezifische Excludes konfigurieren
+# agent/config/agent_eval.json → context_loader.exclude_dirs:
+# { "context_loader": { "exclude_dirs": ["Backup", "Documentation"] } }
+
 # Schritt 1: Issue schreiben
 # In Gitea: Neue Issue → Body mit betroffenen Dateien in Backticks:
 # "Bitte Timeout in `nanoclaw/plugins/web_search.py` auf 8s setzen."
