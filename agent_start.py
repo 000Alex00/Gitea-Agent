@@ -386,11 +386,13 @@ def save_implement_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:
 
     # Issue-Kommentare laden (ohne Bot-Kommentare)
     comments = gitea.get_comments(num)
+    bot_user = getattr(settings, "GITEA_BOT_USER", None) or "working-bot"
     discussion_parts = []
     for c in comments:
-        c_body = c.get("body", "")
-        if any(skip in c_body for skip in ["Agent-Analyse", "Agent-Metadaten", "Implementierung gestartet"]):
+        # Bot-Kommentare überspringen (nach Username, nicht Inhalt)
+        if c.get("user", {}).get("login") == bot_user:
             continue
+        c_body = c.get("body", "")
         user = c.get("user", {}).get("login", "?")
         text = c_body[:500] + ("..." if len(c_body) > 500 else "")
         discussion_parts.append(f"**{user}:** {text}")
