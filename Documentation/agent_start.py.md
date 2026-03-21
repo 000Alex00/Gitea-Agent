@@ -70,6 +70,35 @@ Pro fehlgeschlagenem Test wird nur **ein** offenes `[Auto]`-Issue gehalten.
 
 Bei Erholung (Test besteht wieder) schließt `_close_resolved_auto_issues()` das Issue automatisch.
 
+## Kontext-Loader (`cmd_implement`)
+
+`cmd_implement()` kombiniert drei Quellen um `files.md` möglichst vollständig zu befüllen:
+
+| Quelle | Funktion | Beschreibung |
+|---|---|---|
+| Backtick-Erwähnungen | `relevant_files()` | Dateipfade direkt im Issue-Text |
+| Import-Analyse | `_find_imports()` | AST-Walk über Python-Dateien → `from x import y` → Kandidaten |
+| Keyword-Suche | `_search_keywords()` | grep über Backtick-Wörter (≥4 Zeichen) im Repo |
+
+**`_find_imports(files)`** — stdlib, nur `.py`:
+- Parsed jede Datei mit `ast.parse()`
+- Sucht `ImportFrom`-Nodes → löst Pfad relativ zu `PROJECT` auf
+- Gibt nur existierende Dateien zurück die nicht bereits in `files` sind
+
+**`_search_keywords(issue_text, repo_path)`** — stdlib (`re` + `Path.read_text`):
+- Extrahiert Wörter aus Backtick-Spans (≥4 Zeichen, alphanumerisch)
+- Durchsucht alle `CODE_EXTENSIONS`-Dateien im Repo
+- Ignoriert: `node_modules`, `.git`, `__pycache__`, `venv`, `.venv`
+
+**files.md Header** signalisiert dem LLM Vollständigkeit:
+```
+> Automatisch erkannt via Backtick-Erwähnungen, Import-Analyse (AST) und Keyword-Suche (grep).
+> Zusätzliche Suche im Repo ist nicht nötig — der Kontext ist vollständig.
+```
+
+**starter.md** enthält zusätzlich einen `## Kontext`-Block mit der Anweisung, nicht selbst im Repo zu suchen.
+
 ## Änderungshistorie
 
+- 2026-03-21 | #33: `_find_imports()` + `_search_keywords()` — Kontext-Loader für files.md (closes #33)
 - 2026-03-21 | #29: `_build_auto_issue_body()` — strukturierter Auto-Issue Body mit Tabelle, Step-Tracking, Kategorie, 3 Scores (closes #29)
