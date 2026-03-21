@@ -1365,6 +1365,11 @@ def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
                 gitea.close_issue(issue["number"])
                 log.info(f"[Auto]-Issue #{issue['number']} geschlossen — Test '{name}' besteht wieder")
                 print(f"[✓] Auto-Issue #{issue['number']} geschlossen ({name} wieder OK)")
+                idir = _find_issue_dir(issue["number"])
+                if idir and idir.exists():
+                    dest = _done_dir() / idir.name
+                    shutil.move(str(idir), str(dest))
+                    log.info(f"Context verschoben: {idir.name} → done/")
 
 
 def _build_metadata(
