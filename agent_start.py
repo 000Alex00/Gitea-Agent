@@ -1097,7 +1097,15 @@ def cmd_implement(number: int) -> None:
 
     base_files   = relevant_files(issue)
     import_files = _find_imports(base_files)
-    kw_files     = _search_keywords(issue.get("body", "") or "", PROJECT)
+    # Kommentare für Keyword-Suche einbeziehen
+    comments = gitea.get_comments(issue["number"])
+    bot_user = getattr(settings, "GITEA_BOT_USER", None) or "working-bot"
+    user_comments = [
+        c.get("body", "") for c in comments
+        if c.get("user", {}).get("login") != bot_user
+    ]
+    full_text = (issue.get("body", "") or "") + "\n" + "\n".join(user_comments)
+    kw_files     = _search_keywords(full_text, PROJECT)
 
     all_files = list(dict.fromkeys(base_files + import_files + kw_files))
     files_dict = {
