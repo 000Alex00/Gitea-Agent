@@ -341,7 +341,10 @@ tmux kill-session -t watch
 **Was passiert pro Zyklus:**
 1. Eval läuft gegen `server_url`
 2. Score ≥ Baseline → nur Log, kein Issue
-3. Score < Baseline → `[Auto] <test-name> fehlgeschlagen` Issue erstellt (Label: `bug`)
+3. Score < Baseline → strukturiertes `[Auto]`-Issue erstellt (Label: `bug`) mit:
+   - Tabelle Erwartung vs. Realität (einfache Tests) oder Step-Tabelle mit ✅/❌ (steps-Tests)
+   - Regelbasierte Fehler-Kategorie (`timeout` / `keyword_miss` / `empty_response` / `server_error` / `pi5_offline`)
+   - Letzte 3 Scores aus `score_history.json`
 4. Deduplication: gleiches Issue schon offen → kein Duplikat
 5. Test erholt sich → Auto-Issue wird automatisch geschlossen
 6. `tools/log_analyzer.py` vorhanden → wird ausgeführt, Ausgabe ins Terminal
