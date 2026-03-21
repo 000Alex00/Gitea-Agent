@@ -160,10 +160,10 @@ def branch_name(issue: dict) -> str:
         prefix = settings.PREFIX_DOCS
 
     slug = title
-    for ch in " /()→.:,äöüß":
-        slug = slug.replace(ch, "-")
     slug = slug.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
-    slug = "-".join(w for w in slug.split("-") if w)[:35]
+    slug = re.sub(r"[^a-z0-9-]", "-", slug)
+    slug = re.sub(r"-+", "-", slug)
+    slug = slug[:35].strip("-")
     return f"{prefix}/issue-{num}-{slug}"
 
 
