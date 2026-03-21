@@ -1352,6 +1352,34 @@ def _auto_issue_exists(test_name: str) -> bool:
     return any(marker in i.get("title", "") for i in issues)
 
 
+def _sync_closed_contexts() -> None:
+    """Verschiebt Context-Ordner von open/ nach done/ für bereits geschlossene Issues.
+
+    Läuft beim Watch-Start, um Drift zu korrigieren wenn Issues außerhalb des Agents
+    geschlossen wurden und der Context-Ordner liegen geblieben ist.
+    Prüft jede Issue-Nummer einzeln per API statt alle geschlossenen Issues zu laden.
+    """
+    open_dir = _context_dir() / "open"
+    if not open_dir.exists():
+        return
+    moved = 0
+    for d in open_dir.iterdir():
+        if not d.is_dir():
+            continue
+        try:
+            num = int(d.name.split("-")[0])
+        except ValueError:
+            continue
+        issue = gitea.get_issue(num)
+        if issue and issue.get("state") == "closed":
+            dest = _done_dir() / d.name
+            shutil.move(str(d), str(dest))
+            log.info(f"_sync_closed_contexts: {d.name} → done/")
+            moved += 1
+    if moved:
+        print(f"[✓] {moved} verwaiste Context(s) nach done/ verschoben")
+
+
 def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
     """Schließt [Auto]-Issues deren Test jetzt wieder besteht."""
     passed_names = {t.name for t in result.all_tests if t.passed}
@@ -1956,6 +1984,7 @@ def cmd_watch(interval_minutes: int = 60) -> None:
     print(f"[→] Watch-Modus gestartet — Interval: {interval_minutes} Minuten")
     print(f"    Abbrechen mit Ctrl+C\n")
     log.info(f"Watch-Modus gestartet (Interval: {interval_minutes}min)")
+    _sync_closed_contexts()
 
     while True:
         ts = time.strftime("%H:%M:%S")
