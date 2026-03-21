@@ -1363,6 +1363,11 @@ def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
         for name in passed_names:
             if name in title:
                 gitea.close_issue(issue["number"])
+                for lbl in [settings.LABEL_READY, settings.LABEL_PROPOSED, settings.LABEL_PROGRESS]:
+                    try:
+                        gitea.remove_label(issue["number"], lbl)
+                    except Exception:
+                        pass
                 log.info(f"[Auto]-Issue #{issue['number']} geschlossen — Test '{name}' besteht wieder")
                 print(f"[✓] Auto-Issue #{issue['number']} geschlossen ({name} wieder OK)")
                 idir = _find_issue_dir(issue["number"])
