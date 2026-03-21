@@ -384,6 +384,18 @@ def save_implement_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:
     file_list  = "\n".join(f"- {name}" for name in files_dict) \
                  or "- keine erkannt"
 
+    # Issue-Kommentare laden (ohne Bot-Kommentare)
+    comments = gitea.get_comments(num)
+    discussion_parts = []
+    for c in comments:
+        c_body = c.get("body", "")
+        if any(skip in c_body for skip in ["Agent-Analyse", "Agent-Metadaten", "Implementierung gestartet"]):
+            continue
+        user = c.get("user", {}).get("login", "?")
+        text = c_body[:500] + ("..." if len(c_body) > 500 else "")
+        discussion_parts.append(f"**{user}:** {text}")
+    discussion = "\n\n".join(discussion_parts) if discussion_parts else "— keine —"
+
     ctx_content = f"""{settings.STARTER_MD_PFLICHTREGELN}# Issue #{num} — {title}
 Status: 🔧 READY — Implementierung starten
 Risiko: {stufe}/4 — {desc}
@@ -391,6 +403,9 @@ Branch: {branch}
 
 ## Ziel
 {body_short}
+
+## Diskussion
+{discussion}
 
 ## Dateien
 {file_list}
