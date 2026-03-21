@@ -826,23 +826,94 @@ mein-projekt/
 
 ---
 
-## Optimierungsansätze / Roadmap
+## LLM-Anbindung: Manuell vs. Vollautomatisch
 
-### LLM-Anbindung
+Der Agent produziert strukturierten Output (starter.md, files.md, Gitea-Kommentare) — wer den Code dann tatsächlich schreibt, ist austauschbar.
 
-Der Agent gibt strukturierten Output aus — wer ihn verarbeitet ist austauschbar:
+### Modus 1: Halb-manuell (aktueller Stand)
 
-| Ansatz | Autonomie | Voraussetzung |
-|--------|-----------|---------------|
-| **Claude Code Session** | Halb-manuell (Trigger-Satz im Chat) | Aktive Session |
-| **Claude API** | Vollständig autonom | `ANTHROPIC_API_KEY` in `.env` |
-| **`\| llm` CLI** | Text-only (kein Datei-Edit) | `pip install llm` + API-Key |
+Claude Code läuft als interaktive Session im Terminal. Der Mensch triggert den nächsten Schritt durch einen Satz im Chat:
 
-Claude API ist im Script vorbereitet (`CLAUDE_API_ENABLED=true`) — sobald ein Key vorhanden ist, läuft alles vollständig autonom.
+```
+# Terminal 1 — Agent (Script)
+python3 agent_start.py
+# → [✓] Branch erstellt. starter.md + files.md bereit.
 
-### Weitere Ideen
+# Terminal 2 — Claude Code Session
+> starte agent / prüf issues / run agent_start.py
+# Claude liest Output, öffnet starter.md, implementiert, committet
+```
 
-- **Webhook-Integration:** Gitea Event bei `ready-for-agent` → Agent direkt triggern (kein manueller Aufruf)
-- **Multi-Repo:** Eine Agent-Instanz für mehrere Repos (`.env` per Repo)
-- **Google Gemini:** `GEMINI_API_KEY` analog zu Claude API einbauen
-- **Stufe-1 Auto-Implement:** Docs/Cleanup ohne Freigabe direkt implementieren (opt-in via `.env`)
+**Vorteil:** Volle Kontrolle, Änderungen sind vor dem Commit sichtbar.
+**Nachteil:** Mensch muss aktiv sein — kein Nacht-/Hintergrund-Betrieb.
+
+---
+
+### Modus 2: Vollautomatisch via Claude API *(vorbereitet, nicht aktiv)*
+
+Das Script hat eine eingebaute Claude-API-Anbindung. Mit `CLAUDE_API_ENABLED=true` und einem API-Key läuft der gesamte Workflow ohne menschliche Interaktion:
+
+```bash
+# .env
+CLAUDE_API_ENABLED=true
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+```bash
+# Dauerbetrieb (empfohlen: tmux oder systemd)
+python3 agent_start.py
+# → Issue erkannt → Plan gepostet → Freigabe abgewartet
+# → Branch erstellt → Claude API implementiert → PR erstellt
+# → Alles ohne manuellen Eingriff
+```
+
+**Ablauf intern:**
+1. Script liest Issue + baut Kontext (starter.md, files.md)
+2. Schickt Kontext als System-Prompt + Dateiinhalte an Claude API
+3. Claude antwortet mit Diff / Code
+4. Script wendet Änderungen an, committet, erstellt PR
+
+**Vorteil:** Vollständig autonom — kann nachts laufen, Issues aus der Queue abarbeiten.
+**Nachteil:** Kein Live-Review vor dem Commit. Freigabe-Pflicht (`ok`-Kommentar) bleibt trotzdem erhalten — der Mensch entscheidet weiterhin *ob* implementiert wird, nicht *wann*.
+
+> **Status:** Im Code vorbereitet (`CLAUDE_API_ENABLED`-Flag + Grundstruktur vorhanden). Implementierung der vollständigen API-Schleife steht noch aus.
+
+---
+
+### Modus 3: Anderes LLM via CLI
+
+```bash
+python3 agent_start.py --implement 21
+cat agent/data/contexts/open/21-docs/starter.md | llm "Implementiere das Issue"
+```
+
+Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für Recherche oder Plan-Kommentare, nicht für Code-Änderungen.
+
+---
+
+### Vergleich
+
+| Modus | Autonomie | Mensch muss... | Status |
+|-------|-----------|----------------|--------|
+| Claude Code Session | Halb-manuell | Trigger-Satz tippen | ✅ aktiv |
+| Claude API | Vollständig autonom | Issue schreiben + freigeben | 🔧 vorbereitet |
+| CLI (`\| llm`) | Text-only | Output manuell anwenden | ⚙️ möglich |
+
+---
+
+## Roadmap
+
+### Geplant / In Arbeit
+
+- **Claude API Vollimplementierung** — automatische Implementierungsschleife über Anthropic SDK (Grundstruktur vorhanden, fehlt: Datei-Edit-Loop + Commit-Logik)
+- **Webhook-Integration** — Gitea sendet Event bei `ready-for-agent` → Agent wird direkt getriggert, kein Cron/manueller Aufruf nötig
+- **Stufe-1 Auto-Implement** — Docs/Cleanup-Issues (Risiko 1) ohne Freigabe direkt implementieren (opt-in via `.env`: `AUTO_IMPLEMENT_LEVEL1=true`)
+
+### Ideen / Offen
+
+- **Multi-Repo-Support** — eine Agent-Instanz verwaltet mehrere Repos, `.env` pro Repo in `~/.gitea-agent/repos/`
+- **Google Gemini** — `GEMINI_API_KEY` analog zu Claude API als alternativer Vollautomatik-Modus
+- **Gitea Webhook-Server** — kleiner HTTP-Server der Gitea-Webhooks empfängt und `agent_start.py` direkt triggert
+- **PR-Review-Kommentar-Loop** — Agent liest Review-Kommentare aus dem PR und reagiert automatisch auf Änderungswünsche
+- **Parallelisierung** — mehrere Issues gleichzeitig auf separaten Branches bearbeiten (aktuell sequenziell)
+- **Web-UI** — minimales Dashboard für Issue-Queue, Score-History und Watch-Status
