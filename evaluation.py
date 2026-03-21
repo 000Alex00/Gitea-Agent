@@ -194,9 +194,36 @@ def _run_steps(server_url: str, endpoint: str, steps: list[dict], eval_user: str
     return True, "", step_details
 
 
+def _resolve_path(project_root: Path, new_rel: str, legacy_rel: str) -> Path:
+    """
+    Löst einen Dateipfad auf — neue Struktur hat Vorrang vor Legacy.
+
+    Neue Struktur:  project_root/agent/data/<new_rel>
+    Legacy:         project_root/<legacy_rel>
+
+    Args:
+        project_root: Wurzel des Zielprojekts
+        new_rel:      Pfad relativ zu agent/data/ (neue Struktur)
+        legacy_rel:   Pfad relativ zu project_root (Legacy)
+
+    Returns:
+        Erster existierender Pfad, sonst der Legacy-Pfad (für Neuanlage).
+    """
+    new_path    = project_root / "agent" / "data" / new_rel
+    legacy_path = project_root / legacy_rel
+    return new_path if new_path.exists() else legacy_path
+
+
+def _resolve_config(project_root: Path) -> Path:
+    """Gibt den Pfad zu agent_eval.json zurück (neue Struktur oder Legacy)."""
+    new_path    = project_root / "agent" / "config" / "agent_eval.json"
+    legacy_path = project_root / EVAL_CONFIG
+    return new_path if new_path.exists() else legacy_path
+
+
 def _load_config(project_root: Path) -> dict | None:
     """Lädt agent_eval.json aus dem Zielprojekt. None wenn nicht vorhanden."""
-    cfg_path = project_root / EVAL_CONFIG
+    cfg_path = _resolve_config(project_root)
     if not cfg_path.exists():
         return None
     with cfg_path.open(encoding="utf-8") as f:
@@ -205,7 +232,7 @@ def _load_config(project_root: Path) -> dict | None:
 
 def _load_baseline(project_root: Path) -> float | None:
     """Lädt den gespeicherten Baseline-Score. None wenn nicht vorhanden."""
-    bl_path = project_root / BASELINE
+    bl_path = _resolve_path(project_root, "baseline.json", BASELINE)
     if not bl_path.exists():
         return None
     with bl_path.open(encoding="utf-8") as f:
@@ -215,7 +242,7 @@ def _load_baseline(project_root: Path) -> float | None:
 
 def _save_baseline(project_root: Path, score: float) -> None:
     """Speichert aktuellen Score als neue Baseline."""
-    bl_path = project_root / BASELINE
+    bl_path = _resolve_path(project_root, "baseline.json", BASELINE)
     bl_path.parent.mkdir(parents=True, exist_ok=True)
     with bl_path.open("w", encoding="utf-8") as f:
         json.dump({"score": score}, f, indent=2)
@@ -230,7 +257,7 @@ def _save_score_history(project_root: Path, result: "EvalResult", trigger: str) 
         result:       EvalResult des aktuellen Laufs
         trigger:      "pr", "watch" oder "manual"
     """
-    hist_path = project_root / SCORE_HISTORY
+    hist_path = _resolve_path(project_root, "score_history.json", SCORE_HISTORY)
     hist_path.parent.mkdir(parents=True, exist_ok=True)
 
     history = []

@@ -42,7 +42,10 @@ def setup(log_file: str = "gitea-agent.log", level: str = "INFO") -> None:
     console.setFormatter(fmt)
 
     # File: INFO+ (vollständiger Audit-Trail)
-    log_path = Path(__file__).parent / log_file
+    # Absoluter Pfad → direkt nutzen; relativer Pfad → relativ zum Skript-Verzeichnis
+    _p = Path(log_file)
+    log_path = _p if _p.is_absolute() else Path(__file__).parent / log_file
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     file_h   = logging.FileHandler(log_path, encoding="utf-8")
     file_h.setLevel(numeric)
     file_h.setFormatter(fmt)

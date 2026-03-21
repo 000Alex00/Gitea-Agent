@@ -126,8 +126,39 @@ AUTO_APPROVE = _env_bool("AUTO_APPROVE", False)
 # Projekt-Root (überschreibt Elternverzeichnis von agent_start.py)
 PROJECT_ROOT = _env("PROJECT_ROOT", "")
 
-# Verzeichnis für Kontext-Dateien (relativ zu agent_start.py oder absolut)
+# Verzeichnis für Kontext-Dateien (relativ zu agent_start.py oder absolut) — Legacy
 CONTEXT_DIR = _env("CONTEXT_DIR", "contexts")
+
+# ---------------------------------------------------------------------------
+# Pfad-Auflösung: zentrale Agent-Instanz vs. Submodul-Modus
+#
+# Neue Struktur (wenn PROJECT_ROOT/agent/ existiert):
+#   agent/config/  ← versioniert (agent_eval.json, log_analyzer.py)
+#   agent/data/    ← .gitignore (contexts/, logs, session, baseline, history)
+#   agent/.env     ← .gitignore (Secrets)
+#
+# Fallback (alte Submodul-Struktur): Pfade relativ zu agent_start.py
+# ---------------------------------------------------------------------------
+
+_HERE_SETTINGS = Path(__file__).parent
+_AGENT_DIR: "Path | None" = None
+
+if PROJECT_ROOT:
+    _candidate = Path(PROJECT_ROOT) / "agent"
+    if _candidate.exists():
+        _AGENT_DIR = _candidate
+
+if _AGENT_DIR:
+    CONTEXT_DIR_PATH  = _AGENT_DIR / "data" / "contexts"
+    LOG_FILE_PATH     = _AGENT_DIR / "data" / "gitea-agent.log"
+    SESSION_FILE_PATH = _AGENT_DIR / "data" / "session.json"
+    LOG_ANALYZER_PATH = _AGENT_DIR / "config" / "log_analyzer.py"
+else:
+    # Fallback: alte Pfade relativ zum Skript-Verzeichnis
+    CONTEXT_DIR_PATH  = _HERE_SETTINGS / _env("CONTEXT_DIR", "contexts")
+    LOG_FILE_PATH     = _HERE_SETTINGS / _env("LOG_FILE", "gitea-agent.log")
+    SESSION_FILE_PATH = _HERE_SETTINGS / "contexts" / "session.json"
+    LOG_ANALYZER_PATH = None  # agent_start.py prüft PROJECT/tools/ als Fallback
 
 # Freigabe-Aufforderung am Ende des Plan-Kommentars
 APPROVAL_PROMPT = _env(
