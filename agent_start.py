@@ -439,7 +439,11 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
 # Kontext-Loader: Import-Analyse + Keyword-Suche
 # ---------------------------------------------------------------------------
 
-_EXCLUDE_DIRS = {"node_modules", ".git", "__pycache__", "venv", ".venv"}
+_EXCLUDE_DIRS = {
+    "node_modules", ".git", "__pycache__", "venv", ".venv",
+    "Backup", "backup", "llama-cpp-python-build", "vendor",
+    "agent", ".claude",
+}
 
 
 def _find_imports(files: list[Path]) -> list[Path]:
