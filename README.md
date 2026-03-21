@@ -511,23 +511,52 @@ Jede starter.md enthält automatisch einen PFLICHTREGELN-Block:
 
 ## Dateistruktur
 
+### gitea-agent (zentraler Clone)
+
 ```
 gitea-agent/
 ├── agent_start.py      # CLI + Workflow-Logik
-├── evaluation.py       # Eval-System: liest tests/agent_eval.json, HTTP-Tests gegen server
+├── evaluation.py       # Eval-System
 ├── gitea_api.py        # Gitea REST API Wrapper
-├── settings.py         # Alle konfigurierbaren Werte (Labels, Texte, Limits)
+├── settings.py         # Alle konfigurierbaren Werte (Labels, Texte, Limits, Pfade)
 ├── log.py              # Logging-Konfiguration (Console + File)
 ├── .env.example        # Konfigurationsvorlage
-├── .env                # Secrets (nicht im Git!)
-├── contexts/           # Kontext-Dateien pro Issue (auto-erstellt)
-│   ├── 21-docs/        # Ein Unterordner pro Issue: {num}-{typ}
-│   │   ├── starter.md  # Metadaten, Plan, Checkliste, Kommentarhistorie
-│   │   ├── files.md    # Quellcode — Backticks + Import-Analyse + Keyword-Suche (max MAX_FILE_LINES pro Datei)
-│   │   └── plan.md     # Plan-Draft (Stufe 2/3, lokal befüllen)
-│   └── done/           # Nach PR: ganzer Ordner wird hierher verschoben
-│       └── 21-docs/
 └── README.md
+```
+
+### Projektstruktur (empfohlen — zentrale Instanz)
+
+```
+mein-projekt/
+└── agent/
+    ├── config/                ← versioniert
+    │   ├── agent_eval.json    # Test-Definitionen
+    │   └── log_analyzer.py    # Optionaler Log-Analyzer (Watch-Modus)
+    ├── data/                  ← .gitignore
+    │   ├── baseline.json      # Referenz-Score (maschinenspezifisch)
+    │   ├── score_history.json # Score-Verlauf
+    │   ├── session.json       # Session-Tracking
+    │   ├── contexts/          # Kontext-Ordner pro Issue
+    │   └── gitea-agent.log    # Log-Datei
+    └── .env                   ← .gitignore (Secrets + PROJECT_ROOT)
+```
+
+Der Agent erkennt die neue Struktur automatisch wenn `PROJECT_ROOT/agent/` existiert.
+Fallback: alte Submodul-Struktur (`tests/`, `tools/`, `contexts/` neben agent_start.py).
+
+### Legacy-Struktur (Submodul / Rückwärtskompatibilität)
+
+```
+mein-projekt/
+├── Helper-tools/        # gitea-agent als Submodul
+│   ├── contexts/        # Kontext-Dateien (Laufzeit)
+│   └── gitea-agent.log  # Log-Datei (Laufzeit)
+├── tests/
+│   ├── agent_eval.json
+│   ├── baseline.json
+│   └── score_history.json
+└── tools/
+    └── log_analyzer.py
 ```
 
 **Typen** (aus Gitea-Label): `bug`, `feature_request`, `enhancement`, `docs`, `task`

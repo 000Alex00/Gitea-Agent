@@ -269,8 +269,7 @@ def _context_dir() -> Path:
     Returns:
         Absoluter Pfad zum Kontext-Verzeichnis.
     """
-    p = Path(settings.CONTEXT_DIR)
-    return p if p.is_absolute() else _HERE / p
+    return settings.CONTEXT_DIR_PATH
 
 
 def _issue_dir(issue: dict) -> Path:
@@ -685,8 +684,8 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
         log.warning(f"Kommentar-Prüfung fehlgeschlagen: {e}")
 
     # 4. Eval nach letztem Commit — nur wenn agent_eval.json existiert
-    eval_cfg = PROJECT / "tests" / "agent_eval.json"
-    hist_path = PROJECT / evaluation.SCORE_HISTORY
+    eval_cfg  = evaluation._resolve_config(PROJECT)
+    hist_path = evaluation._resolve_path(PROJECT, "score_history.json", evaluation.SCORE_HISTORY)
     if eval_cfg.exists():
         if hist_path.exists():
             try:
@@ -1306,8 +1305,8 @@ def _build_metadata(
 
 
 def _session_path() -> Path:
-    """Gibt den Pfad zu contexts/session.json zurück."""
-    return _HERE / "contexts" / "session.json"
+    """Gibt den Pfad zur session.json zurück (neu: agent/data/, Fallback: contexts/)."""
+    return settings.SESSION_FILE_PATH
 
 
 def _session_load() -> dict:
@@ -1374,7 +1373,7 @@ def _format_history_block(project_root: Path, n: int = 5) -> str:
     Returns:
         Markdown-String oder leer wenn keine History vorhanden.
     """
-    hist_path = project_root / evaluation.SCORE_HISTORY
+    hist_path = evaluation._resolve_path(project_root, "score_history.json", evaluation.SCORE_HISTORY)
     if not hist_path.exists():
         return "**Verlauf:** keine Einträge"
     try:
@@ -1777,7 +1776,7 @@ def _build_auto_issue_body(
         lines.append("")
 
     # Letzte 3 Scores (kompakter als der 5er-Block)
-    hist_path = PROJECT / evaluation.SCORE_HISTORY
+    hist_path = evaluation._resolve_path(PROJECT, "score_history.json", evaluation.SCORE_HISTORY)
     if hist_path.exists():
         try:
             with hist_path.open(encoding="utf-8") as f:
@@ -1857,8 +1856,12 @@ def cmd_watch(interval_minutes: int = 60) -> None:
             log.error(f"Watch-Lauf Fehler: {e}")
             print(f"[!] Fehler in Watch-Lauf: {e}")
 
-        # Optionaler Log-Analyzer: wenn Projekt tools/log_analyzer.py hat
-        analyzer_path = PROJECT / "tools" / "log_analyzer.py"
+        # Optionaler Log-Analyzer: neue Struktur (agent/config/) oder Legacy (tools/)
+        analyzer_path = (
+            settings.LOG_ANALYZER_PATH
+            if settings.LOG_ANALYZER_PATH and settings.LOG_ANALYZER_PATH.exists()
+            else PROJECT / "tools" / "log_analyzer.py"
+        )
         if analyzer_path.exists():
             try:
                 import importlib.util
@@ -1998,7 +2001,7 @@ def _apply_auto_approve() -> None:
 
 def main():
     from log import setup as log_setup
-    log_setup(log_file=settings.LOG_FILE, level=settings.LOG_LEVEL)
+    log_setup(log_file=str(settings.LOG_FILE_PATH), level=settings.LOG_LEVEL)
     _apply_auto_approve()
 
     parser = argparse.ArgumentParser(
