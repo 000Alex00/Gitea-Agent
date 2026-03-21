@@ -409,7 +409,11 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
     parts = []
     for name, text in files_dict.items():
         lines = text.splitlines()
-        if len(lines) > limit:
+        size_kb = len(text.encode("utf-8")) / 1024
+        if size_kb > _MAX_FILE_SIZE_KB:
+            code = "\n".join(lines[:500])
+            code += f"\n\n# [GEKÜRZT: {len(lines)} Zeilen, {size_kb:.0f}KB — nur erste 500 Zeilen]"
+        elif len(lines) > limit:
             code = "\n".join(lines[:limit])
             code += f"\n\n[... gekürzt — {len(lines) - limit} Zeilen weggelassen ...]"
         else:
@@ -450,6 +454,23 @@ _EXCLUDE_DIRS = {
 }
 
 _KEYWORD_SEARCH_EXTENSIONS = {".py", ".js", ".ts", ".sh", ".yaml", ".yml", ".json"}
+
+_EXCLUDE_FILES = {
+    # Lock-Dateien
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "poetry.lock",
+    "Pipfile.lock",
+    # Laufzeit-Output
+    "output.json",
+    # Generierte Dateien (Glob-Muster)
+    "*.min.js",
+    "*.min.css",
+    "*.map",
+}
+
+_MAX_FILE_SIZE_KB = 50
 
 
 def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:
@@ -528,6 +549,10 @@ def _search_keywords(issue_text: str, repo_path: Path) -> list[Path]:
         if path.suffix not in _KEYWORD_SEARCH_EXTENSIONS:
             continue
         if any(ex in path.parts for ex in _EXCLUDE_DIRS):
+            continue
+        if path.name in _EXCLUDE_FILES or any(
+            path.name.endswith(p.replace("*", "")) for p in _EXCLUDE_FILES if "*" in p
+        ):
             continue
         try:
             content = path.read_text(encoding="utf-8", errors="ignore")
