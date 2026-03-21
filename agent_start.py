@@ -1623,6 +1623,100 @@ def cmd_eval_after_restart(number: int | None = None) -> None:
         print(f"[eval-after-restart] Kommentar gepostet → Issue #{number}")
 
 
+def _build_auto_issue_body(
+    failed: "evaluation.TestResult",
+    result: "evaluation.EvalResult",
+    commit: str,
+    history_block: str,
+) -> str:
+    """
+    Erstellt den strukturierten Body für ein Auto-Issue aus dem Watch-Modus.
+
+    Enthält:
+    - Erwartung vs. Realität (Tabelle für einfache Tests)
+    - Step-Tabelle für steps-Tests (alle Steps mit Status)
+    - Fehler-Kategorie (regelbasiert, kein LLM)
+    - Letzte 3 Scores aus History
+
+    Args:
+        failed:        TestResult des fehlgeschlagenen Tests
+        result:        Gesamtergebnis des Eval-Laufs
+        commit:        Letzter Commit-Hash + Subject
+        history_block: Formatierter Verlaufs-Block (_format_history_block)
+
+    Returns:
+        Markdown-String für Gitea Issue Body
+    """
+    lines = [
+        f"## [Auto] {failed.name} fehlgeschlagen",
+        "",
+        f"**Test:** {failed.name} (Gewicht {failed.weight})",
+        f"**Score:** {result.score:.0f}/{result.max_score} (Baseline: {result.baseline_score:.0f})",
+        f"**Letzter Commit:** `{commit}`",
+        "",
+    ]
+
+    # Step-Details (multi-step Tests)
+    if failed.step_details:
+        total = len(failed.step_details)
+        failed_step_idx = next(
+            (i + 1 for i, s in enumerate(failed.step_details) if not s.get("passed")), total
+        )
+        lines.append(f"**Step {failed_step_idx}/{total} fehlgeschlagen**")
+        lines.append("")
+        lines.append("| Schritt | Nachricht | Erwartet | Ergebnis |")
+        lines.append("|---------|-----------|----------|----------|")
+        for i, s in enumerate(failed.step_details, start=1):
+            msg      = s.get("msg", "")[:60]
+            stored   = s.get("stored", False)
+            expected = ", ".join(s.get("expected", [])) if s.get("expected") else "(gespeichert)"
+            actual   = s.get("actual") or "—"
+            actual   = str(actual)[:80]
+            icon     = "✅" if s.get("passed") else "❌"
+            if stored:
+                lines.append(f"| {i} | `{msg}` | (gespeichert) | {icon} OK |")
+            else:
+                lines.append(f"| {i} | `{msg}` | `{expected}` | {icon} `{actual}` |")
+        lines.append("")
+    else:
+        # Einfacher Test: Erwartung vs. Realität
+        lines.append("| Erwartet | Ergebnis |")
+        lines.append("|----------|----------|")
+        actual = failed.actual_response[:100] if failed.actual_response else "—"
+        lines.append(f"| `{failed.reason}` | `{actual}` |")
+        lines.append("")
+
+    # Fehler-Kategorie
+    if failed.category:
+        lines.append(f"**Kategorie:** `{failed.category}`")
+        lines.append("")
+
+    # Letzte 3 Scores (kompakter als der 5er-Block)
+    hist_path = PROJECT / evaluation.SCORE_HISTORY
+    if hist_path.exists():
+        try:
+            with hist_path.open(encoding="utf-8") as f:
+                hist = json.load(f)
+            recent3 = hist[-3:][::-1]
+            lines.append("**Letzte 3 Scores:**")
+            lines.append("```")
+            for e in recent3:
+                ts      = e.get("timestamp", "?")[:16].replace("T", " ")
+                score   = int(e.get("score", 0))
+                max_s   = int(e.get("max_score", 0))
+                trigger = e.get("trigger", "?")
+                passed  = "✓" if e.get("passed") else "✗"
+                lines.append(f"{ts} | {score}/{max_s} | {trigger:<6} | {passed}")
+            lines.append("```")
+            lines.append("")
+        except Exception:
+            pass
+
+    lines.append("> Automatisch erkannt durch Watch-Modus.")
+    lines.append("> Wird automatisch geschlossen wenn der Test wieder besteht.")
+    return "\n".join(lines)
+
+
 def cmd_watch(interval_minutes: int = 60) -> None:
     """
     Periodischer Eval-Loop: läuft alle interval_minutes Minuten.
@@ -1664,17 +1758,7 @@ def cmd_watch(interval_minutes: int = 60) -> None:
                     except Exception:
                         commit = "unbekannt"
 
-                    history_block = _format_history_block(PROJECT)
-                    body = (
-                        f"## Score-Verlust erkannt\n\n"
-                        f"**Test:** {failed.name} (Gewicht {failed.weight})\n"
-                        f"**Fehler:** {failed.reason}\n"
-                        f"**Score:** {result.score:.0f}/{result.max_score} (Baseline: {result.baseline_score:.0f})\n\n"
-                        f"**Letzter Commit:** `{commit}`\n\n"
-                        f"{history_block}\n\n"
-                        f"> Automatisch erkannt durch Watch-Modus.\n"
-                        f"> Wird automatisch geschlossen wenn der Test wieder besteht."
-                    )
+                    body = _build_auto_issue_body(failed, result, commit, "")
                     _validate_comment(body, "auto_issue")
                     issue = gitea.create_issue(
                         title=f"[Auto] {failed.name} fehlgeschlagen — Score-Verlust erkannt",

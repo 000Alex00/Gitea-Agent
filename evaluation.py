@@ -37,11 +37,14 @@ TIMEOUT        = 10  # Sekunden pro Request
 
 @dataclass
 class TestResult:
-    name:    str
-    weight:  int
-    passed:  bool
-    skipped: bool   = False
-    reason:  str    = ""
+    name:            str
+    weight:          int
+    passed:          bool
+    skipped:         bool       = False
+    reason:          str        = ""
+    category:        str        = ""   # timeout | server_error | empty_response | keyword_miss | pi5_offline
+    actual_response: str        = ""   # tatsächliche LLM-Antwort (leer bei None)
+    step_details:    list       = field(default_factory=list)  # bei steps-Tests: [{msg, expected, actual, passed}]
 
 
 @dataclass
@@ -112,7 +115,38 @@ def _keywords_match(text: str, keywords: list[str]) -> bool:
     return all(kw.lower() in text_lower for kw in keywords)
 
 
-def _run_steps(server_url: str, endpoint: str, steps: list[dict], eval_user: str) -> tuple[bool, str]:
+def _categorize(response: str | None, keywords: list[str], pi5_skipped: bool = False) -> str:
+    """
+    Klassifiziert einen Testfehler objektiv — kein LLM, nur regelbasiert.
+
+    Kategorien:
+        pi5_offline   — Pi5 nicht erreichbar (Test übersprungen)
+        timeout       — keine Antwort von server.py (response is None)
+        server_error  — HTTP 5xx erkannt in Antwort
+        empty_response — leere Antwort
+        keyword_miss  — Antwort vorhanden, aber Keywords fehlen
+
+    Args:
+        response:    Antworttext oder None
+        keywords:    Erwartete Keywords
+        pi5_skipped: True wenn Test wegen Pi5-Offline übersprungen wurde
+
+    Returns:
+        str: Kategorie-Bezeichner
+    """
+    if pi5_skipped:
+        return "pi5_offline"
+    if response is None:
+        return "timeout"
+    if not response.strip():
+        return "empty_response"
+    if any(code in response for code in ("500", "502", "503", "504")):
+        # Heuristik: HTTP-Fehlercodes in Antworttext → server_error
+        return "server_error"
+    return "keyword_miss"
+
+
+def _run_steps(server_url: str, endpoint: str, steps: list[dict], eval_user: str) -> tuple[bool, str, list]:
     """
     Führt einen mehrstufigen Test sequenziell aus.
 
@@ -127,10 +161,13 @@ def _run_steps(server_url: str, endpoint: str, steps: list[dict], eval_user: str
         server_url: Basis-URL von server.py
         endpoint:   Chat-Endpunkt (z.B. "/chat")
         steps:      Liste von Step-Dicts aus agent_eval.json
+        eval_user:  Eindeutige User-ID pro Eval-Lauf
 
     Returns:
-        Tuple (passed: bool, reason: str)
+        Tuple (passed: bool, reason: str, step_details: list)
+        step_details: Liste von Dicts mit {msg, expected, actual, passed, stored}
     """
+    step_details = []
     for i, step in enumerate(steps, start=1):
         if i > 1:
             time.sleep(2)  # Jetson Zeit geben zwischen Steps (LLM-Inferenz-Cooldown)
@@ -141,16 +178,20 @@ def _run_steps(server_url: str, endpoint: str, steps: list[dict], eval_user: str
 
         response = _chat(server_url, endpoint, message, eval_user)
         if response is None:
-            return False, f"Step {i}: Keine Antwort von server.py"
+            step_details.append({"msg": message, "expected": keywords, "actual": None, "passed": False, "stored": stored})
+            return False, f"Step {i}: Keine Antwort von server.py", step_details
 
         if stored:
-            # Nur prüfen ob server geantwortet hat — kein Keyword-Check
+            step_details.append({"msg": message, "expected": [], "actual": response, "passed": True, "stored": True})
             continue
 
-        if keywords and not _keywords_match(response, keywords):
-            return False, f"Step {i}: Keywords {keywords!r} nicht in Antwort"
+        step_passed = not keywords or _keywords_match(response, keywords)
+        step_details.append({"msg": message, "expected": keywords, "actual": response, "passed": step_passed, "stored": False})
 
-    return True, ""
+        if not step_passed:
+            return False, f"Step {i}: Keywords {keywords!r} nicht in Antwort", step_details
+
+    return True, "", step_details
 
 
 def _load_config(project_root: Path) -> dict | None:
@@ -283,25 +324,34 @@ def run(project_root: Path, update_baseline: bool = False, trigger: str = "manua
 
         if pi5_req and not pi5_ok:
             tr = TestResult(name=name, weight=weight, passed=False, skipped=True,
-                            reason="Pi5 offline")
+                            reason="Pi5 offline", category="pi5_offline")
             result.all_tests.append(tr)
             continue
 
         steps = t.get("steps")
         if steps:
-            passed, reason = _run_steps(server_url, endpoint, steps, eval_user)
+            passed, reason, step_details = _run_steps(server_url, endpoint, steps, eval_user)
+            # Kategorie aus letztem fehlgeschlagenen Step ableiten
+            last_actual = None
+            if not passed and step_details:
+                last_actual = step_details[-1].get("actual")
+            category = _categorize(last_actual, keywords) if not passed else ""
+            tr = TestResult(name=name, weight=weight, passed=passed, reason=reason,
+                            category=category, step_details=step_details)
         else:
             response = _chat(server_url, endpoint, message, eval_user)
             if response is None:
                 tr = TestResult(name=name, weight=weight, passed=False,
-                                reason="Keine Antwort von server.py")
+                                reason="Keine Antwort von server.py",
+                                category="timeout", actual_response="")
                 result.all_tests.append(tr)
                 result.failed_tests.append(tr)
                 continue
             passed = _keywords_match(response, keywords)
             reason = "" if passed else f"Keywords {keywords!r} nicht in Antwort"
-
-        tr = TestResult(name=name, weight=weight, passed=passed, reason=reason)
+            category = "" if passed else _categorize(response, keywords)
+            tr = TestResult(name=name, weight=weight, passed=passed, reason=reason,
+                            category=category, actual_response=response)
         result.all_tests.append(tr)
         if passed:
             earned_weight += weight
