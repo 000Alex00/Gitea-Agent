@@ -19,6 +19,7 @@ Referenzprojekt: Skynet (LLM WhatsApp-Bot, Jetson Nano + Raspberry Pi 5).
 10. [Auto-Issue manuell schließen](#10-auto-issue-manuell-schließen)
 11. [log_analyzer integrieren](#11-log_analyzer-integrieren)
 12. [PR mit veraltetem Server (Staleness-Check)](#12-pr-mit-veraltetem-server-staleness-check)
+13. [Migration auf zentrale Agent-Instanz](#13-migration-auf-zentrale-agent-instanz)
 
 ---
 
@@ -661,3 +662,86 @@ python3 agent_start.py --pr 61 --branch fix/issue-61-... --force --summary "..."
 - Check wird silent übersprungen wenn `log_path` fehlt oder Startup-Muster nicht gefunden — kein Fehler
 - Startup-Muster die erkannt werden: `application startup complete`, `uvicorn running`, `server started`, u.a.
 - Zeitzone: Commit-Timestamp und Log-Timestamp werden auf naive datetime normalisiert für Vergleich
+
+---
+
+## 13. Migration auf zentrale Agent-Instanz
+
+**Kontext:** Du willst Laufzeitdaten (contexts/, Log, Session) aus dem Submodul-Verzeichnis herauslösen und einen zentralen gitea-agent für mehrere Projekte nutzen.
+
+**Voraussetzung:** gitea-agent als eigenständiger Clone (nicht als Submodul).
+
+**Schritte:**
+
+```bash
+# 1. Projektstruktur anlegen
+mkdir -p /home/user/mein-projekt/agent/config
+mkdir -p /home/user/mein-projekt/agent/data
+
+# 2. agent_eval.json verschieben (war: tests/agent_eval.json)
+mv /home/user/mein-projekt/tests/agent_eval.json \
+   /home/user/mein-projekt/agent/config/agent_eval.json
+
+# 3. log_analyzer.py verschieben (war: tools/log_analyzer.py)
+mv /home/user/mein-projekt/tools/log_analyzer.py \
+   /home/user/mein-projekt/agent/config/log_analyzer.py
+
+# 4. .env anlegen (agent/.env — Symlink oder Kopie)
+cp /home/user/gitea-agent/.env.example /home/user/mein-projekt/agent/.env
+# PROJECT_ROOT=/home/user/mein-projekt eintragen
+```
+
+```ini
+# agent/.env
+GITEA_URL=http://192.168.1.x:3001
+GITEA_USER=dein-username
+GITEA_TOKEN=abc123xxxxxxxxxxxxx
+GITEA_REPO=username/mein-projekt
+PROJECT_ROOT=/home/user/mein-projekt
+```
+
+```bash
+# 5. .gitignore im Projekt anpassen
+echo "agent/data/" >> /home/user/mein-projekt/.gitignore
+echo "agent/.env"  >> /home/user/mein-projekt/.gitignore
+
+# 6. Agent mit project-spezifischer .env starten
+cd /home/user/gitea-agent
+env $(cat /home/user/mein-projekt/agent/.env | grep -v '^#' | xargs) python3 agent_start.py
+
+# Oder: .env direkt im gitea-agent-Verzeichnis auf das Projekt zeigen lassen
+ln -sf /home/user/mein-projekt/agent/.env /home/user/gitea-agent/.env
+python3 agent_start.py
+```
+
+**Was passiert automatisch:**
+- Agent erkennt `PROJECT_ROOT/agent/` → nutzt neue Pfade
+- `agent/data/contexts/`, `agent/data/gitea-agent.log`, `agent/data/session.json` werden auto-erstellt
+- `agent/config/agent_eval.json` wird für Eval genutzt
+- Fallback: wenn `agent/` nicht existiert → alte Pfade (keine Breaking Changes)
+
+**Für Skynet (jetson-llm-chat) konkret:**
+
+```bash
+mkdir -p /home/user/myproject/agent/config
+mkdir -p /home/user/myproject/agent/data
+
+# Configs verschieben
+mv /home/user/myproject/tests/agent_eval.json \
+   /home/user/myproject/agent/config/
+mv /home/user/myproject/tools/log_analyzer.py \
+   /home/user/myproject/agent/config/
+
+# .env anlegen
+echo "PROJECT_ROOT=/home/user/myproject" >> /home/user/myproject/agent/.env
+# + alle anderen Gitea-Credentials ergänzen
+
+# .gitignore
+echo "agent/data/" >> /home/user/myproject/.gitignore
+echo "agent/.env"  >> /home/user/myproject/.gitignore
+```
+
+**Pitfalls:**
+- `agent_eval.json` Pfad in `log_path`/`restart_script` anpassen (absolute Pfade eintragen)
+- `baseline.json` + `score_history.json` neu erzeugen lassen (erster Lauf nach Migration → neue Baseline)
+- Submodul `Helper-tools/` kann danach entfernt werden wenn nicht mehr benötigt
