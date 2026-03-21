@@ -421,13 +421,106 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
     files_file = idir / "files.md"
 
     ctx_file.write_text(ctx_content, encoding="utf-8")
+    files_header = (
+        f"# Dateien — Issue #{num}\n"
+        f"> Automatisch erkannt via Backtick-Erwähnungen, Import-Analyse (AST) und Keyword-Suche (grep).\n"
+        f"> Zusätzliche Suche im Repo ist nicht nötig — der Kontext ist vollständig.\n\n"
+    )
     files_file.write_text(
-        f"# Dateien — Issue #{num}\n\n" + "\n\n".join(parts) + "\n",
+        files_header + "\n\n".join(parts) + "\n",
         encoding="utf-8"
     )
 
     log.info(f"Kontext gespeichert: {ctx_file}, {files_file}")
     return ctx_file, files_file
+
+
+# ---------------------------------------------------------------------------
+# Kontext-Loader: Import-Analyse + Keyword-Suche
+# ---------------------------------------------------------------------------
+
+_EXCLUDE_DIRS = {"node_modules", ".git", "__pycache__", "venv", ".venv"}
+
+
+def _find_imports(files: list[Path]) -> list[Path]:
+    """
+    Findet zusätzliche Dateien via AST-Import-Analyse der übergebenen Python-Dateien.
+
+    Aufgerufen von:
+        cmd_implement() — für files.md
+        _build_analyse_comment() — für Gitea-Kommentar
+
+    Args:
+        files: Bereits erkannte relevante Dateipfade
+
+    Returns:
+        Liste zusätzlicher Dateipfade (existierend, nicht in files, dedupliziert).
+    """
+    extra = []
+    for f in files:
+        if f.suffix != ".py":
+            continue
+        try:
+            tree = ast.parse(f.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module:
+                    parts = node.module.split(".")
+                    candidate = PROJECT / Path(*parts).with_suffix(".py")
+                    if candidate.exists() and candidate not in files and candidate not in extra:
+                        extra.append(candidate)
+        except Exception:
+            pass
+    return extra
+
+
+def _search_keywords(issue_text: str, repo_path: Path) -> list[Path]:
+    """
+    Findet Dateien via Keyword-Suche (grep) über den Issue-Text.
+
+    Extrahiert Wörter aus Backtick-Spans im Issue-Text als Suchterme.
+    Ignoriert Verzeichnisse aus _EXCLUDE_DIRS.
+
+    Aufgerufen von:
+        cmd_implement() — für files.md
+
+    Args:
+        issue_text: Issue-Body (Markdown)
+        repo_path:  Wurzel des Repositories
+
+    Returns:
+        Liste gefundener Dateipfade (existierend, dedupliziert).
+    """
+    # Suchterme: Wörter aus Backtick-Spans (Funktions-/Klassennamen, etc.)
+    terms = re.findall(r"`([^`]+)`", issue_text)
+    keywords = []
+    for term in terms:
+        # Nur alphanumerische Terme ≥ 4 Zeichen — vermeidet false positives bei Kurzwörtern
+        for word in re.split(r"[^a-zA-Z0-9_]", term):
+            if len(word) >= 4 and word not in keywords:
+                keywords.append(word)
+
+    if not keywords:
+        return []
+
+    exts = tuple(settings.CODE_EXTENSIONS)
+    found = []
+
+    for path in repo_path.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix not in exts:
+            continue
+        if any(ex in path.parts for ex in _EXCLUDE_DIRS):
+            continue
+        try:
+            content = path.read_text(encoding="utf-8", errors="ignore")
+            if any(kw in content for kw in keywords):
+                if path not in found:
+                    found.append(path)
+        except Exception:
+            pass
+
+    return found
 
 
 # ---------------------------------------------------------------------------
@@ -455,20 +548,7 @@ def _build_analyse_comment(issue: dict, files: list[Path]) -> str:
     labels = [l["name"] for l in issue.get("labels", [])]
 
     # Zusätzliche betroffene Module via Import-Analyse
-    extra_files = []
-    for f in files:
-        if f.suffix != ".py":
-            continue
-        try:
-            tree = ast.parse(f.read_text(encoding="utf-8"))
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom) and node.module:
-                    parts = node.module.split(".")
-                    candidate = PROJECT / Path(*parts).with_suffix(".py")
-                    if candidate.exists() and candidate not in files and candidate not in extra_files:
-                        extra_files.append(candidate)
-        except Exception:
-            pass
+    extra_files = _find_imports(files)
 
     if any(lb in labels for lb in settings.RISK_BUG_LABELS):
         questions = [
@@ -926,9 +1006,14 @@ def cmd_implement(number: int) -> None:
 - PR erstellen: `python3 agent_start.py --pr {num} --branch {branch} --summary "..."`
 """)
 
+    base_files   = relevant_files(issue)
+    import_files = _find_imports(base_files)
+    kw_files     = _search_keywords(issue.get("body", "") or "", PROJECT)
+
+    all_files = list(dict.fromkeys(base_files + import_files + kw_files))
     files_dict = {
         str(f.relative_to(PROJECT)): f.read_text(encoding="utf-8")
-        for f in relevant_files(issue)
+        for f in all_files
     }
     ctx_file, files_file = save_implement_context(issue, files_dict)
     _idir2 = _find_issue_dir(num)
