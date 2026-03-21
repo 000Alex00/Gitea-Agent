@@ -441,12 +441,16 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
 
 _EXCLUDE_DIRS = {
     "node_modules", ".git", "__pycache__", "venv", ".venv",
-    "Backup", "backup", "llama-cpp-python-build", "vendor",
-    "agent", ".claude",
+    "Backup", "backup",
+    "vendor", "llama-cpp-python-build",
+    "agent", "contexts", ".claude",
+    "Documentation",
+    ".mypy_cache", ".pytest_cache",
+    "dist", "build",
 }
 
 
-def _find_imports(files: list[Path]) -> list[Path]:
+def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:
     """
     Findet zusätzliche Dateien via AST-Import-Analyse der übergebenen Python-Dateien.
 
@@ -456,25 +460,33 @@ def _find_imports(files: list[Path]) -> list[Path]:
 
     Args:
         files: Bereits erkannte relevante Dateipfade
+        depth: Import-Tiefe (1 = nur direkte Imports der Ausgangsdateien)
 
     Returns:
         Liste zusätzlicher Dateipfade (existierend, nicht in files, dedupliziert).
     """
-    extra = []
-    for f in files:
-        if f.suffix != ".py":
-            continue
-        try:
-            tree = ast.parse(f.read_text(encoding="utf-8"))
-            for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom) and node.module:
-                    parts = node.module.split(".")
-                    candidate = PROJECT / Path(*parts).with_suffix(".py")
-                    if candidate.exists() and candidate not in files and candidate not in extra:
-                        extra.append(candidate)
-        except Exception:
-            pass
-    return extra
+    found = []
+    to_process = list(files)
+
+    for _ in range(depth):
+        next_level = []
+        for f in to_process:
+            if f.suffix != ".py":
+                continue
+            try:
+                tree = ast.parse(f.read_text(encoding="utf-8"))
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.ImportFrom) and node.module:
+                        parts = node.module.split(".")
+                        candidate = PROJECT / Path(*parts).with_suffix(".py")
+                        if candidate.exists() and candidate not in files and candidate not in found:
+                            found.append(candidate)
+                            next_level.append(candidate)
+            except Exception:
+                pass
+        to_process = next_level
+
+    return found
 
 
 def _search_keywords(issue_text: str, repo_path: Path) -> list[Path]:
