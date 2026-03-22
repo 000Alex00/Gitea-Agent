@@ -142,8 +142,45 @@ Objektiv — kein LLM, nur regelbasiert:
 | `keyword_miss` | Antwort vorhanden, aber `expected_keywords` fehlen |
 | `pi5_offline` | Test wegen Pi5-Offline übersprungen |
 
+## Consecutive-Pass Gate (Auto-Issue Schließen)
+
+Seit Issue #50: Auto-Issues werden erst geschlossen, wenn der zugehörige Test **N-mal hintereinander** bestanden hat — nicht beim ersten Pass.
+
+### Konfiguration
+
+`agent_eval.json` im Zielprojekt:
+
+```json
+{
+  "close_after_consecutive_passes": 3
+}
+```
+
+| Wert | Verhalten |
+|---|---|
+| `1` (Default) | Bisheriges Verhalten — sofort schließen beim ersten Pass |
+| `3` | Test muss 3x hintereinander bestehen bevor Issue geschlossen wird |
+
+### Ablauf
+
+1. Watch-Loop erkennt: Test besteht, passendes `[Auto]`-Issue ist offen
+2. Zählt aufeinanderfolgende Passes rückwärts aus `score_history.json`
+3. `count < threshold` → Fortschritts-Kommentar: `"⏳ Test besteht (2/3) — warte auf Bestätigung"`
+4. `count >= threshold` → Issue wird geschlossen
+5. Kommentar-Dedup: gleicher Zählerstand wird nicht doppelt gepostet
+
+### Beispiel-Timeline
+
+```
+Zyklus 1: "Stilles Failure" FAIL  → Auto-Issue #42 erstellt
+Zyklus 2: "Stilles Failure" PASS  → Kommentar "⏳ Test besteht (1/3)"
+Zyklus 3: "Stilles Failure" PASS  → Kommentar "⏳ Test besteht (2/3)"
+Zyklus 4: "Stilles Failure" PASS  → Issue #42 geschlossen (3/3 erreicht)
+```
+
 ## Änderungshistorie
 
 - 2026-03-21 | fix: `_resolve_path()` + `_resolve_config()` — `Path()` fehlte bei str `project_root` (TypeError)
 - 2026-03-21 | #35: Pfade auf `agent/config/` + `agent/data/` umgestellt via `_resolve_path()` / `_resolve_config()` (closes #35)
 - 2026-03-21 | #29: `TestResult` + `category`/`actual_response`/`step_details`; `_categorize()` helper; `_run_steps()` gibt Step-Details zurück (closes #29)
+- 2026-03-22 | #50: `close_after_consecutive_passes` — Auto-Issues erst nach N aufeinanderfolgenden Passes schließen (closes #50)

@@ -23,6 +23,7 @@ Referenzprojekt: Skynet (LLM WhatsApp-Bot, Jetson Nano + Raspberry Pi 5).
 14. [LLM-gestützte Test-Generierung (--generate-tests)](#14-llm-gestützte-test-generierung---generate-tests)
 15. [Systematische Fehler-Erkennung (Tag-Aggregation)](#15-systematische-fehler-erkennung-tag-aggregation)
 16. [Patch-Modus & Live-Dashboard](#16-patch-modus--live-dashboard)
+17. [Consecutive-Pass Gate für Auto-Issues](#17-consecutive-pass-gate-für-auto-issues)
 
 ---
 
@@ -899,3 +900,50 @@ Um das Dashboard ohne Watch-Modus einmalig manuell zu generieren:
 ```bash
 python3 agent_start.py --dashboard
 ```
+
+---
+
+## 17. Consecutive-Pass Gate für Auto-Issues
+
+**Kontext:** Ein intermittierender Test (z.B. ChromaDB-Kontext) besteht manchmal zufällig. Das Auto-Issue wird sofort geschlossen, obwohl der Fix nicht verifiziert ist.
+
+**Lösung:** `close_after_consecutive_passes` in `agent_eval.json` — Auto-Issues werden erst nach N aufeinanderfolgenden Passes geschlossen.
+
+### Konfiguration
+
+In `agent/config/agent_eval.json` des Zielprojekts:
+
+```json
+{
+  "close_after_consecutive_passes": 3
+}
+```
+
+| Wert | Verhalten |
+|---|---|
+| `1` (Default) | Sofort schließen beim ersten Pass (bisheriges Verhalten) |
+| `3` | Test muss 3x hintereinander in der Watch-Loop bestehen |
+
+### Was passiert
+
+1. Test besteht → Watch-Loop zählt aufeinanderfolgende Passes aus `score_history.json`
+2. Zähler < Schwellwert → Fortschritts-Kommentar im Issue: `"⏳ Test besteht (2/3) — warte auf Bestätigung"`
+3. Zähler >= Schwellwert → Issue wird geschlossen
+4. Test schlägt zwischendurch fehl → Zähler wird zurückgesetzt (break bei erstem FAIL)
+
+### Beispiel-Timeline
+
+```
+Zyklus 1: "Stilles Failure" FAIL  → Auto-Issue #42 erstellt
+Zyklus 2: "Stilles Failure" PASS  → Kommentar "⏳ Test besteht (1/3)"
+Zyklus 3: "Stilles Failure" FAIL  → Kette unterbrochen, Zähler zurück auf 0
+Zyklus 4: "Stilles Failure" PASS  → Kommentar "⏳ Test besteht (1/3)"
+Zyklus 5: "Stilles Failure" PASS  → Kommentar "⏳ Test besteht (2/3)"
+Zyklus 6: "Stilles Failure" PASS  → Issue #42 geschlossen (3/3 erreicht)
+```
+
+### Pitfalls
+
+- Kommentar-Dedup: gleicher Zählerstand wird nicht doppelt gepostet
+- Ohne das Feld: Standard `1` — kein Breaking Change
+- Perf-Issues (`[Auto-Perf]`) folgen der gleichen Logik
