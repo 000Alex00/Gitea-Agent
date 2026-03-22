@@ -133,6 +133,38 @@ def check_env_sync() -> Tuple[bool, str]:
     return True, "All env vars are documented."
 
 
+def check_test_tags() -> Tuple[bool, str]:
+    """5. Test Tags Check: All tests in agent_eval.json should have a 'tag' field."""
+    try:
+        import json
+        from pathlib import Path
+
+        import evaluation
+
+        # This assumes PROJECT_ROOT is available in the settings
+        project_root = Path(settings.PROJECT_ROOT)
+        eval_config_path = evaluation._resolve_config(project_root)
+
+        if not eval_config_path.exists():
+            return True, "Skipped: agent_eval.json not found."
+
+        with open(eval_config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+
+        tests = config.get("tests", [])
+        missing_tags = [t.get("name") for t in tests if "tag" not in t]
+
+        if missing_tags:
+            return (
+                False,
+                f"Tests missing 'tag' field in {eval_config_path.name}: {', '.join(missing_tags)}",
+            )
+        return True, "All tests have a 'tag' field."
+
+    except Exception as e:
+        return False, f"Could not perform test tags check: {e}"
+
+
 def run() -> None:
     print("Running Agent Self-Consistency Check...")
     checks = [
@@ -142,12 +174,23 @@ def run() -> None:
         ("Env Sync Check", check_env_sync),
     ]
 
+    warnings = [
+        ("Test Tags Check", check_test_tags),
+    ]
+
     all_passed = True
     for name, check_func in checks:
         passed, message = check_func()
         if not passed:
             print(f"❌ {name} FAILED:\n   {message}", file=sys.stderr)
             all_passed = False
+        else:
+            print(f"✅ {name} PASSED")
+
+    for name, check_func in warnings:
+        passed, message = check_func()
+        if not passed:
+            print(f"⚠️ {name} WARNING:\n   {message}")
         else:
             print(f"✅ {name} PASSED")
 

@@ -1,0 +1,102 @@
+{
+    "server_url": "http://localhost:8000",
+    "chat_endpoint": "/chat",
+    "pi5_url": "",
+    "log_path": "/path/to/your/logs/system.log",
+    "restart_script": "/path/to/your/start.sh",
+    "inactivity_minutes": 5,
+    "watch_interval_minutes": 60,
+    "log_analysis_interval_minutes": 120,
+    "llm_log_analysis": {
+        "enabled": false,
+        "provider": "openai",
+        "url": "http://localhost:8000/v1/chat/completions",
+        "model": "llama-3",
+        "api_key": ""
+    },
+    "tests": [
+        {
+            "name": "Basis-Antwort",
+            "tag": "routing",
+            "weight": 1,
+            "pi5_required": false,
+            "message": "Was ist 2 plus 2?",
+            "expected_keywords": ["4"],
+            "_comment": "Einfachster Test — Server erreichbar und antwortet"
+        },
+        {
+            "name": "Kontext-Speicherung",
+            "tag": "chroma_retrieval",
+            "weight": 2,
+            "pi5_required": true,
+            "steps": [
+                {
+                    "message": "Mein Name ist TestUser",
+                    "expect_stored": true,
+                    "_comment": "Step 1: Information speichern"
+                },
+                {
+                    "message": "Wie heiße ich?",
+                    "expected_keywords": ["TestUser"],
+                    "_comment": "Step 2: Gespeicherte Information abrufen"
+                }
+            ]
+        },
+        {
+            "name": "System-Prompt Ton",
+            "tag": "system_prompt",
+            "weight": 1,
+            "pi5_required": false,
+            "message": "Hallo, wie geht es dir?",
+            "expected_keywords": [],
+            "_comment": "Prüft ob der Assistent antwortet — Keywords projektspezifisch anpassen"
+        }
+    ],
+    "improvement_hints": {
+        "chroma_retrieval": {
+            "hypothesis": "Chroma verliert Kontext oder Retrieval findet relevante Chunks nicht",
+            "levers": [
+                "Chroma-Persistenz prüfen — wird collection.persist() aufgerufen?",
+                "k (Anzahl zurückgegebener Chunks) erhöhen",
+                "Score-Threshold senken",
+                "Chunk-Size verkleinern",
+                "Embedding-Modell prüfen"
+            ],
+            "affected_files": ["chroma_handler.py", "retrieval.py", "memory.py"],
+            "_comment": "Dateipfade ans Projekt anpassen"
+        },
+        "routing": {
+            "hypothesis": "Anfragen werden falsch geroutet oder Server antwortet nicht",
+            "levers": [
+                "Server-Routing-Logik prüfen",
+                "Timeout-Werte erhöhen",
+                "Fallback-Handler prüfen"
+            ],
+            "affected_files": ["server.py", "router.py"],
+            "_comment": "Dateipfade ans Projekt anpassen"
+        },
+        "system_prompt": {
+            "hypothesis": "Systemkontext zu lang oder Instruktionen unklar",
+            "levers": [
+                "Systemprompt kürzen",
+                "Explizite Instruktionen für Grenzfälle ergänzen",
+                "Prompt auf Widersprüche prüfen"
+            ],
+            "affected_files": ["prompts/system.txt", "config.py"],
+            "_comment": "Dateipfade ans Projekt anpassen"
+        },
+        "web_search": {
+            "hypothesis": "Web-Search antwortet nicht oder liefert leere Ergebnisse",
+            "levers": [
+                "API-Key prüfen",
+                "Timeout erhöhen",
+                "Fallback wenn Web-Search offline"
+            ],
+            "affected_files": ["web_search.py", "server.py"],
+            "_comment": "Nur relevant wenn Web-Search genutzt wird — sonst entfernen"
+        }
+    },
+    "context_loader": {
+        "exclude_dirs": ["Backup", "Documentation", "node_modules", ".venv"]
+    }
+}

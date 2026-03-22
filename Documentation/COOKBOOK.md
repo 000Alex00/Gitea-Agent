@@ -30,7 +30,7 @@ Referenzprojekt: Skynet (LLM WhatsApp-Bot, Jetson Nano + Raspberry Pi 5).
 
 **Kontext:** Du willst den gitea-agent für ein neues Projekt nutzen.
 
-**Dateien:** `.env`, `tests/agent_eval.json` (im Zielprojekt)
+**Dateien:** `.env`, `agent_eval.template.json`
 
 **Schritte:**
 
@@ -41,33 +41,33 @@ cd gitea-agent
 
 # 2. .env befüllen
 cp .env.example .env
+# → Werte anpassen (GITEA_URL, GITEA_TOKEN, etc.)
+
+# 3. agent_eval.json aus Vorlage erstellen
+cp agent_eval.template.json /pfad/zu/deinem/projekt/agent/config/agent_eval.json
+# → Pfade in der neuen Datei anpassen (log_path, restart_script)
 ```
 
-```ini
-# .env — Werte anpassen (NICHT committen)
-GITEA_URL=http://192.168.1.x:3001
-GITEA_USER=dein-username
-GITEA_TOKEN=abc123xxxxxxxxxxxxx   # Gitea → Settings → Applications → Token
-GITEA_REPO=username/mein-projekt
-PROJECT_ROOT=/home/user/mein-projekt
-```
+**Wichtiger Hinweis zu `agent_eval.json`:**
+- **`tag` ist Pflicht:** Jeder Test in `agent_eval.json` muss ein `tag`-Feld haben. Dieses Feld ist entscheidend für die systematische Fehlererkennung und das Performance-Monitoring. Der `agent_self_check.py` gibt eine Warnung aus, wenn Tags fehlen.
 
 ```bash
-# 3. Labels in Gitea anlegen
+# 4. Labels in Gitea anlegen
 # Gitea → Repo → Issues → Labels → folgende erstellen:
 #   ready-for-agent   (grün)
 #   agent-proposed    (blau)
 #   in-progress       (gelb)
 #   needs-review      (orange)
 
-# 4. Ersten Testlauf
+# 5. Ersten Testlauf
 python3 agent_start.py --list
 ```
 
 **Pitfalls:**
-- `PROJECT_ROOT` muss absoluter Pfad zum Zielprojekt sein — nicht zum gitea-agent-Verzeichnis
-- Token braucht Scopes: `issue` (read+write) + `repository` (read+write)
-- Labels müssen exakt so heißen wie in `settings.py → LABEL_*`
+- `PROJECT_ROOT` in `.env` muss der absolute Pfad zum Zielprojekt sein.
+- `tag`-Felder in den Tests sind essenziell für die Fehleranalyse. Nicht vergessen!
+- Token braucht Scopes: `issue` (read+write) + `repository` (read+write).
+- Labels müssen exakt so heißen wie in `settings.py` definiert.
 
 ---
 
