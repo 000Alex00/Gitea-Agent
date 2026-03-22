@@ -768,3 +768,29 @@ Schlägt der Check fehl, wird der PR-Befehl blockiert und die Fehler werden im T
 ```bash
 python3 agent_self_check.py
 ```
+
+## 14. LLM-gestützte Test-Generierung (--generate-tests)
+
+Der Agent kann dir dabei helfen, Unit-Tests (`pytest`), Integrationstests und Evaluierungs-Einträge (`agent_eval.json`) für ein Issue automatisch via LLM generieren zu lassen. Dies spart Zeit beim manuellen Erstellen von Regressionstests.
+
+### Ablauf
+
+**1. Generierung anstoßen**
+Rufe den Agenten mit der Issue-Nummer auf, für die Tests generiert werden sollen:
+```bash
+python3 agent_start.py --generate-tests 44
+```
+
+**2. Was passiert im Hintergrund?**
+Der Agent lädt das Issue, sucht alle relevanten Dateien (Code und Imports) zusammen und erstellt einen spezifischen Prompt in einem neuen Kontext-Ordner (z. B. `contexts/44-task-tests/tests_prompt.md`). In diesem Prompt ist festgelegt:
+*   Es sollen `pytest` Unit-Tests generiert werden.
+*   Es sollen `agent_eval.json` Einträge hinzugefügt werden.
+*   **Wichtig:** Jeder Test in `agent_eval.json` muss zwingend ein `tag`-Feld (z. B. `"tag": "chroma_retrieval"`) besitzen, um den Bereich zu kennzeichnen.
+
+**3. Tests mit Claude ausführen**
+Anschließend gibt der Agent den genauen Befehl aus, den du ausführen musst, um Claude Code aufzurufen.
+```bash
+claude -p contexts/44-task-tests/tests_prompt.md
+```
+
+Nachdem Claude die Tests erstellt hat, solltest du diese kurz manuell verifizieren (`pytest`, `python3 evaluation.py`) und kannst sie danach in deinen Branch übernehmen.

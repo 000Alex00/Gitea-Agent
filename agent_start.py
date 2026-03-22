@@ -373,6 +373,45 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
     return out
 
 
+
+def save_tests_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:
+    num = issue["number"]
+    title = issue.get("title", "")
+    body = (issue.get("body", "") or "").strip()
+    
+    typ_match = re.search(r"^\\[([^\\]]+)\\]", title)
+    typ = (typ_match.group(1).lower().replace(" ", "-") if typ_match else "task")
+    folder = _working_dir() / f"{num}-{typ}-tests"
+    folder.mkdir(parents=True, exist_ok=True)
+    
+    ctx_file = folder / "tests_prompt.md"
+    files_file = folder / "files.md"
+
+    files_content = [f"# Dateien für Issue #{num}"]
+    for rel_path, text in files_dict.items():
+        lines = text.splitlines()
+        if len(lines) > settings.MAX_FILE_LINES:
+            text = "\n".join(lines[:settings.MAX_FILE_LINES]) + "\n... (abgeschnitten)"
+        ext = Path(rel_path).suffix.lstrip(".")
+        files_content.append(f"\n## {rel_path}\n```{ext}\n{text}\n```")
+    files_file.write_text("\n".join(files_content), encoding="utf-8")
+
+    prompt_content = f"""# Test-Generierung für Issue #{num}: {title}
+
+{body}
+
+Bitte generiere basierend auf den bereitgestellten Dateien in `files.md` folgende Test-Artefakte:
+
+1. **Unit-Tests (`pytest`)**: Falls Python-Code vorhanden ist, schreibe passende Unit-Tests. Achte auf gute Abdeckung der Randfälle.
+2. **Integrationstests**: Schreibe übergreifende Funktionstests, falls das Feature mehrere Komponenten betrifft.
+3. **agent_eval.json Einträge**: Erstelle für das interne Evaluierungssystem neue JSON-Einträge.
+   **WICHTIG**: Jeder Test-Eintrag in `agent_eval.json` MUSS zwingend ein Feld `tag` enthalten, das den abgedeckten Bereich benennt (z.B. `tag: "chroma_retrieval"`, `tag: "system_prompt"`, `tag: "context_window"`).
+
+Gehe schrittweise vor und erstelle oder aktualisiere die entsprechenden Dateien direkt im Dateisystem.
+"""
+    ctx_file.write_text(prompt_content, encoding="utf-8")
+    return ctx_file, files_file
+
 def save_implement_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:
     """
     Speichert Kontext + Quellcode für die Implementierungs-Phase.
@@ -1441,6 +1480,34 @@ Implementierung für Issue #{number}.
     _validate_pr_completion(number, branch, pr_url, idir_moved)
 
 
+
+def cmd_generate_tests(number: int) -> None:
+    print(f"[→] Erstelle Test-Generierungs-Kontext für Issue #{number}...")
+    log.info(f"Starte Test-Generierung für Issue #{number}")
+    
+    issue = gitea.get_issue(number)
+    
+    base_files = relevant_files(issue)
+    import_files = _find_imports(base_files)
+    
+    comments = gitea.get_comments(number)
+    bot_user = getattr(settings, "GITEA_BOT_USER", None) or "working-bot"
+    user_comments = [c.get("body", "") for c in comments if c.get("user", {}).get("login") != bot_user]
+    full_text = (issue.get("body", "") or "") + "\n" + "\n".join(user_comments)
+    kw_files = _search_keywords(full_text, PROJECT)
+    
+    all_files = list(dict.fromkeys(base_files + import_files + kw_files))
+    files_dict = {str(f.relative_to(PROJECT)): f.read_text(encoding="utf-8") for f in all_files}
+    
+    ctx_file, files_file = save_tests_context(issue, files_dict)
+    
+    print(f"[✓] Kontextdateien für Tests erstellt in {ctx_file.parent.name}/")
+    print(f"\n    → Führe nun Claude Code aus, um die Tests zu generieren:\n")
+    print(f"    claude -p {ctx_file.relative_to(PROJECT)}\n")
+    
+    msg = f"🤖 **Test-Generierung gestartet**\n\nDie relevanten Dateien wurden gesammelt. Du kannst die Tests nun lokal mit folgendem Befehl generieren lassen:\n\n```bash\nclaude -p {ctx_file.relative_to(PROJECT)}\n```\n\n*Der Prompt enthält strikte Vorgaben für pytest, Integrationstests und `agent_eval.json` Einträge inkl. `tag`-Feld.*"
+    gitea.post_comment(number, msg)
+
 def cmd_fixup(number: int) -> None:
     """
     Nach einem Bugfix-Commit auf einem in-progress Issue:
@@ -2468,6 +2535,12 @@ Ohne Argumente: automatischer Modus.
         """,
     )
     parser.add_argument(
+        "--generate-tests",
+        type=int,
+        metavar="NR",
+        help="Tests basierend auf Issue generieren",
+    )
+    parser.add_argument(
         "--list", action="store_true", help="Alle ready-for-agent Issues auflisten"
     )
     parser.add_argument("--issue", type=int, metavar="NR", help="Plan für Issue posten")
@@ -2535,6 +2608,8 @@ Ohne Argumente: automatischer Modus.
         cmd_plan(args.issue)
     elif args.implement:
         cmd_implement(args.implement)
+    elif args.generate_tests:
+        cmd_generate_tests(args.generate_tests)
     elif args.fixup:
         cmd_fixup(args.fixup)
     elif args.watch:
