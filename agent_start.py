@@ -37,12 +37,13 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
+import evaluation
 import gitea_api as gitea
 import settings
-import evaluation
 from log import get_logger
 
 log = get_logger(__name__)
+
 
 # Projektroot: aus .env oder Elternverzeichnis des Scripts
 def _project_root() -> Path:
@@ -62,10 +63,13 @@ def _project_root() -> Path:
         if p.exists():
             log.debug(f"PROJECT_ROOT aus settings: {p}")
             return p
-        log.warning(f"PROJECT_ROOT '{settings.PROJECT_ROOT}' existiert nicht — verwende Standard")
+        log.warning(
+            f"PROJECT_ROOT '{settings.PROJECT_ROOT}' existiert nicht — verwende Standard"
+        )
     p = _HERE.parent
     log.debug(f"PROJECT_ROOT (Standard): {p}")
     return p
+
 
 PROJECT = _project_root()
 
@@ -73,6 +77,7 @@ PROJECT = _project_root()
 # ---------------------------------------------------------------------------
 # Risiko-Klassifikation
 # ---------------------------------------------------------------------------
+
 
 def risk_level(issue: dict) -> tuple[int, str]:
     """
@@ -85,7 +90,7 @@ def risk_level(issue: dict) -> tuple[int, str]:
         Tuple (stufe: int, beschreibung: str)
     """
     labels = [l["name"] for l in issue.get("labels", [])]
-    title  = issue.get("title", "").lower()
+    title = issue.get("title", "").lower()
 
     if any(lb in labels for lb in settings.RISK_BUG_LABELS):
         return 3, "HOCH — Bug (Plan erforderlich)"
@@ -101,7 +106,7 @@ def risk_level(issue: dict) -> tuple[int, str]:
 def issue_type(issue: dict) -> str:
     """Leitet den Issue-Typ aus den Gitea-Labels ab."""
     labels = [l["name"] for l in issue.get("labels", [])]
-    title  = issue.get("title", "").lower()
+    title = issue.get("title", "").lower()
     if any(lb in labels for lb in settings.RISK_BUG_LABELS):
         return "bug"
     if any(lb in labels for lb in settings.RISK_FEAT_LABELS):
@@ -117,6 +122,7 @@ def issue_type(issue: dict) -> str:
 # Hilfsfunktionen
 # ---------------------------------------------------------------------------
 
+
 def relevant_files(issue: dict) -> list[Path]:
     """
     Extrahiert Dateipfade aus dem Issue-Body (Backtick-Erwähnungen).
@@ -127,9 +133,9 @@ def relevant_files(issue: dict) -> list[Path]:
     Returns:
         Liste existierender Dateipfade (dedupliziert).
     """
-    body      = issue.get("body", "")
-    exts      = tuple(settings.CODE_EXTENSIONS)
-    found     = []
+    body = issue.get("body", "")
+    exts = tuple(settings.CODE_EXTENSIONS)
+    found = []
     for line in body.splitlines():
         for part in line.split("`"):
             p = PROJECT / part.strip()
@@ -145,8 +151,8 @@ def branch_name(issue: dict) -> str:
     Returns:
         z.B. "fix/issue-16-bug-beschreibung"
     """
-    num    = issue["number"]
-    title  = issue.get("title", "").lower()
+    num = issue["number"]
+    title = issue.get("title", "").lower()
     labels = [l["name"] for l in issue.get("labels", [])]
 
     if any(lb in labels for lb in settings.RISK_BUG_LABELS):
@@ -160,7 +166,9 @@ def branch_name(issue: dict) -> str:
         prefix = settings.PREFIX_DOCS
 
     slug = title
-    slug = slug.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+    slug = (
+        slug.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+    )
     slug = re.sub(r"[^a-z0-9-]", "-", slug)
     slug = re.sub(r"-+", "-", slug)
     slug = slug[:35].strip("-")
@@ -170,6 +178,7 @@ def branch_name(issue: dict) -> str:
 # ---------------------------------------------------------------------------
 # Plan-Kommentar
 # ---------------------------------------------------------------------------
+
 
 def build_plan_comment(issue: dict) -> str:
     """
@@ -181,13 +190,15 @@ def build_plan_comment(issue: dict) -> str:
     Returns:
         Markdown-Text für den Gitea-Kommentar.
     """
-    num         = issue["number"]
+    num = issue["number"]
     stufe, desc = risk_level(issue)
-    files       = relevant_files(issue)
-    branch      = branch_name(issue)
+    files = relevant_files(issue)
+    branch = branch_name(issue)
 
-    file_list = "\n".join(f"- `{f.relative_to(PROJECT)}`" for f in files) \
-                or "- Keine automatisch erkannt — bitte manuell prüfen"
+    file_list = (
+        "\n".join(f"- `{f.relative_to(PROJECT)}`" for f in files)
+        or "- Keine automatisch erkannt — bitte manuell prüfen"
+    )
 
     return f"""## Agent-Analyse — Issue #{num}
 
@@ -222,6 +233,7 @@ def build_plan_comment(issue: dict) -> str:
 # Terminal-Ausgabe für LLM-Kontext
 # ---------------------------------------------------------------------------
 
+
 def print_context(issue: dict) -> None:
     """
     Gibt strukturierten Kontext für den LLM-Agenten im Terminal aus.
@@ -229,12 +241,12 @@ def print_context(issue: dict) -> None:
     Für Claude Code: direkt lesbar im Terminal.
     Für andere LLMs: als System-Prompt verwenden.
     """
-    num         = issue["number"]
-    title       = issue.get("title", "")
-    body        = issue.get("body", "")
+    num = issue["number"]
+    title = issue.get("title", "")
+    body = issue.get("body", "")
     stufe, desc = risk_level(issue)
-    files       = relevant_files(issue)
-    branch      = branch_name(issue)
+    files = relevant_files(issue)
+    branch = branch_name(issue)
 
     print("=" * 70)
     print(f"  AGENT — ISSUE #{num}")
@@ -259,6 +271,7 @@ def print_context(issue: dict) -> None:
 # ---------------------------------------------------------------------------
 # Kontext-Dateien
 # ---------------------------------------------------------------------------
+
 
 def _context_dir() -> Path:
     """
@@ -316,16 +329,17 @@ def save_plan_context(issue: dict) -> Path:
     Returns:
         Pfad zur geschriebenen Datei.
     """
-    num         = issue["number"]
-    title       = issue.get("title", "")
-    body        = (issue.get("body", "") or "").strip()
+    num = issue["number"]
+    title = issue.get("title", "")
+    body = (issue.get("body", "") or "").strip()
     stufe, desc = risk_level(issue)
-    files       = relevant_files(issue)
-    branch      = branch_name(issue)
+    files = relevant_files(issue)
+    branch = branch_name(issue)
 
     body_short = body[:200] + ("..." if len(body) > 200 else "")
-    file_list  = "\n".join(f"- {f.relative_to(PROJECT)}" for f in files) \
-                 or "- keine erkannt"
+    file_list = (
+        "\n".join(f"- {f.relative_to(PROJECT)}" for f in files) or "- keine erkannt"
+    )
 
     content = f"""{settings.STARTER_MD_PFLICHTREGELN}# Issue #{num} — {title}
 Status: ⏳ Wartet auf Freigabe
@@ -374,15 +388,14 @@ def save_implement_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:
     Returns:
         Tuple (kontext_datei, code_datei).
     """
-    num         = issue["number"]
-    title       = issue.get("title", "")
-    body        = (issue.get("body", "") or "").strip()
+    num = issue["number"]
+    title = issue.get("title", "")
+    body = (issue.get("body", "") or "").strip()
     stufe, desc = risk_level(issue)
-    branch      = branch_name(issue)
+    branch = branch_name(issue)
 
     body_short = body[:200] + ("..." if len(body) > 200 else "")
-    file_list  = "\n".join(f"- {name}" for name in files_dict) \
-                 or "- keine erkannt"
+    file_list = "\n".join(f"- {name}" for name in files_dict) or "- keine erkannt"
 
     # Issue-Kommentare laden (ohne Bot-Kommentare)
     comments = gitea.get_comments(num)
@@ -444,8 +457,8 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
             code = "\n".join(lines)
         parts.append(f"## {name}\n```\n{code}\n```")
 
-    idir       = _issue_dir(issue)
-    ctx_file   = idir / "starter.md"
+    idir = _issue_dir(issue)
+    ctx_file = idir / "starter.md"
     files_file = idir / "files.md"
 
     ctx_file.write_text(ctx_content, encoding="utf-8")
@@ -454,10 +467,7 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
         f"> Automatisch erkannt via Backtick-Erwähnungen, Import-Analyse (AST) und Keyword-Suche (grep).\n"
         f"> Zusätzliche Suche im Repo ist nicht nötig — der Kontext ist vollständig.\n\n"
     )
-    files_file.write_text(
-        files_header + "\n\n".join(parts) + "\n",
-        encoding="utf-8"
-    )
+    files_file.write_text(files_header + "\n\n".join(parts) + "\n", encoding="utf-8")
 
     log.info(f"Kontext gespeichert: {ctx_file}, {files_file}")
     return ctx_file, files_file
@@ -468,13 +478,23 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
 # ---------------------------------------------------------------------------
 
 _EXCLUDE_DIRS_DEFAULT = {
-    "node_modules", ".git", "__pycache__", "venv", ".venv",
-    "Backup", "backup",
-    "vendor", "llama-cpp-python-build",
-    "agent", "contexts", ".claude",
+    "node_modules",
+    ".git",
+    "__pycache__",
+    "venv",
+    ".venv",
+    "Backup",
+    "backup",
+    "vendor",
+    "llama-cpp-python-build",
+    "agent",
+    "contexts",
+    ".claude",
     "Documentation",
-    ".mypy_cache", ".pytest_cache",
-    "dist", "build",
+    ".mypy_cache",
+    ".pytest_cache",
+    "dist",
+    "build",
 }
 
 
@@ -499,6 +519,7 @@ def _get_exclude_dirs(project: Path) -> set[str]:
         return _EXCLUDE_DIRS_DEFAULT | set(extra)
     except Exception:
         return _EXCLUDE_DIRS_DEFAULT
+
 
 _KEYWORD_SEARCH_EXTENSIONS = {".py", ".js", ".ts", ".sh", ".yaml", ".yml", ".json"}
 
@@ -549,7 +570,11 @@ def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:
                     if isinstance(node, ast.ImportFrom) and node.module:
                         parts = node.module.split(".")
                         candidate = PROJECT / Path(*parts).with_suffix(".py")
-                        if candidate.exists() and candidate not in files and candidate not in found:
+                        if (
+                            candidate.exists()
+                            and candidate not in files
+                            and candidate not in found
+                        ):
                             found.append(candidate)
                             next_level.append(candidate)
             except Exception:
@@ -616,6 +641,7 @@ def _search_keywords(issue_text: str, repo_path: Path) -> list[Path]:
 # Analyse-Kommentar für Stufe 2/3
 # ---------------------------------------------------------------------------
 
+
 def _build_analyse_comment(issue: dict, files: list[Path]) -> str:
     """
     Erstellt einen Analyse-Kommentar für Stufe-2/3-Issues.
@@ -633,7 +659,7 @@ def _build_analyse_comment(issue: dict, files: list[Path]) -> str:
     Returns:
         Markdown-String für den Gitea-Kommentar.
     """
-    num    = issue["number"]
+    num = issue["number"]
     labels = [l["name"] for l in issue.get("labels", [])]
 
     # Zusätzliche betroffene Module via Import-Analyse
@@ -700,6 +726,7 @@ def _build_analyse_comment(issue: dict, files: list[Path]) -> str:
 # Plan- und Diskussions-Hilfsfunktionen
 # ---------------------------------------------------------------------------
 
+
 def _has_detailed_plan(number: int) -> bool:
     """Prüft ob in Gitea bereits ein befüllter Plan-Kommentar existiert.
 
@@ -725,6 +752,7 @@ def _has_detailed_plan(number: int) -> bool:
 # ---------------------------------------------------------------------------
 # Prozess-Enforcement (Issue #6)
 # ---------------------------------------------------------------------------
+
 
 def _check_pr_preconditions(number: int, branch: str) -> None:
     """
@@ -756,26 +784,36 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
     try:
         comments = gitea.get_comments(number)
         plan_kommentar = any(
-            ("Implementierungsplan" in c.get("body", "") or "Agent-Analyse" in c.get("body", ""))
+            (
+                "Implementierungsplan" in c.get("body", "")
+                or "Agent-Analyse" in c.get("body", "")
+            )
             for c in comments
         )
         if not plan_kommentar:
-            fehler.append("Kein Plan-Kommentar im Issue gefunden (cmd_plan ausgeführt?)")
+            fehler.append(
+                "Kein Plan-Kommentar im Issue gefunden (cmd_plan ausgeführt?)"
+            )
         else:
             # 3. Metadata-Block im Plan-Kommentar
             meta_vorhanden = any(
                 "Agent-Metadaten" in c.get("body", "")
                 for c in comments
-                if "Implementierungsplan" in c.get("body", "") or "Agent-Analyse" in c.get("body", "")
+                if "Implementierungsplan" in c.get("body", "")
+                or "Agent-Analyse" in c.get("body", "")
             )
             if not meta_vorhanden:
-                fehler.append("Plan-Kommentar ohne Metadata-Block (cmd_plan neu ausführen)")
+                fehler.append(
+                    "Plan-Kommentar ohne Metadata-Block (cmd_plan neu ausführen)"
+                )
     except Exception as e:
         log.warning(f"Kommentar-Prüfung fehlgeschlagen: {e}")
 
     # 4. Eval nach letztem Commit — nur wenn agent_eval.json existiert
-    eval_cfg  = evaluation._resolve_config(PROJECT)
-    hist_path = evaluation._resolve_path(PROJECT, "score_history.json", evaluation.SCORE_HISTORY)
+    eval_cfg = evaluation._resolve_config(PROJECT)
+    hist_path = evaluation._resolve_path(
+        PROJECT, "score_history.json", evaluation.SCORE_HISTORY
+    )
     if eval_cfg.exists():
         if hist_path.exists():
             try:
@@ -783,10 +821,15 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
                     history = json.load(f)
                 if history:
                     last_eval_ts = history[-1].get("timestamp", "")
-                    last_commit_ts = subprocess.check_output(
-                        ["git", "log", "-1", "--pretty=%cI"],
-                        cwd=PROJECT, stderr=subprocess.DEVNULL
-                    ).decode().strip()
+                    last_commit_ts = (
+                        subprocess.check_output(
+                            ["git", "log", "-1", "--pretty=%cI"],
+                            cwd=PROJECT,
+                            stderr=subprocess.DEVNULL,
+                        )
+                        .decode()
+                        .strip()
+                    )
                     if last_eval_ts < last_commit_ts:
                         fehler.append(
                             f"Eval nicht nach letztem Commit ausgeführt "
@@ -797,9 +840,36 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
             except Exception as e:
                 log.warning(f"score_history Prüfung fehlgeschlagen: {e}")
         else:
-            fehler.append("score_history.json nicht gefunden — Eval noch nie ausgeführt")
+            fehler.append(
+                "score_history.json nicht gefunden — Eval noch nie ausgeführt"
+            )
     else:
         log.debug("Kein agent_eval.json — Eval-Prüfung übersprungen")
+
+    # 5. Agent-Self-Check (if agent code is modified)
+    try:
+        changed_files = (
+            subprocess.check_output(
+                ["git", "diff", "--name-only", "main...HEAD"],
+                cwd=PROJECT,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .splitlines()
+        )
+        agent_files = {"agent_start.py", "settings.py", "gitea_api.py"}
+        if any(f in agent_files for f in changed_files):
+            log.info(
+                "Agent code modification detected, running self-consistency check..."
+            )
+            try:
+                subprocess.check_call(["python3", "agent_self_check.py"], cwd=PROJECT)
+            except subprocess.CalledProcessError:
+                fehler.append(
+                    "Agent Self-Consistency Check fehlgeschlagen (siehe Logs)"
+                )
+    except Exception as e:
+        log.warning(f"Konnte Git Diff für Self-Check nicht abfragen: {e}")
 
     if fehler:
         print("\n❌ cmd_pr abgebrochen — Prozess nicht vollständig:")
@@ -809,7 +879,9 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
         sys.exit(1)
 
 
-def _validate_pr_completion(number: int, branch: str, pr_url: str, idir_moved: bool) -> None:
+def _validate_pr_completion(
+    number: int, branch: str, pr_url: str, idir_moved: bool
+) -> None:
     """
     Maßnahme 4: Validiert nach cmd_pr() ob alle Pflichtschritte erfolgt sind.
 
@@ -843,8 +915,10 @@ def _validate_pr_completion(number: int, branch: str, pr_url: str, idir_moved: b
         fehlend.append("Context-Ordner nicht verschoben (contexts/ → contexts/done/)")
 
     if fehlend:
-        warnung = "⚠️ **Prozess unvollständig** — folgende Schritte fehlen:\n" + \
-                  "\n".join(f"- {s}" for s in fehlend)
+        warnung = (
+            "⚠️ **Prozess unvollständig** — folgende Schritte fehlen:\n"
+            + "\n".join(f"- {s}" for s in fehlend)
+        )
         print(f"\n[!] {warnung.replace('**', '')}")
         try:
             gitea.post_comment(number, warnung)
@@ -865,14 +939,16 @@ def _validate_comment(body: str, comment_type: str, *, critical: bool = False) -
         critical:     True → sys.exit(1) bei fehlenden Feldern, False → Warnung + weiter
     """
     required = settings.COMMENT_REQUIRED_FIELDS.get(comment_type, [])
-    missing  = [f for f in required if f.lower() not in body.lower()]
+    missing = [f for f in required if f.lower() not in body.lower()]
     if not missing:
         return
     msg = f"[!] Kommentar-Validierung '{comment_type}': fehlende Felder: {', '.join(missing)}"
     log.warning(msg)
     print(msg)
     if critical:
-        print("→ Kommentar unvollständig — Prozess abgebrochen. Bitte erneut ausführen.")
+        print(
+            "→ Kommentar unvollständig — Prozess abgebrochen. Bitte erneut ausführen."
+        )
         sys.exit(1)
 
 
@@ -895,25 +971,29 @@ def _update_discussion(issue: dict, starter_path: Path) -> None:
 
     lines = []
     for c in comments:
-        user       = c.get("user", {}).get("login", "")
-        body       = c.get("body", "")
-        ts         = c.get("created_at", "")[:10]
+        user = c.get("user", {}).get("login", "")
+        body = c.get("body", "")
+        ts = c.get("created_at", "")[:10]
         body_short = body[:1500] + ("..." if len(body) > 1500 else "")
         lines.append(f"**[{ts}] {user}:**\n{body_short}")
 
     current = starter_path.read_text(encoding="utf-8")
     if "## Kommentarhistorie" in current:
-        current = current[:current.index("## Kommentarhistorie")]
+        current = current[: current.index("## Kommentarhistorie")]
 
     starter_path.write_text(
-        current.rstrip() + "\n\n## Kommentarhistorie\n\n" + "\n\n---\n\n".join(lines) + "\n",
-        encoding="utf-8"
+        current.rstrip()
+        + "\n\n## Kommentarhistorie\n\n"
+        + "\n\n---\n\n".join(lines)
+        + "\n",
+        encoding="utf-8",
     )
 
 
 # ---------------------------------------------------------------------------
 # Subcommands
 # ---------------------------------------------------------------------------
+
 
 def cmd_list() -> None:
     """
@@ -948,28 +1028,35 @@ def cmd_plan(number: int) -> None:
     issue = gitea.get_issue(number)
 
     stufe, _ = risk_level(issue)
-    files    = relevant_files(issue)
+    files = relevant_files(issue)
 
     # Metadaten-Block (collapsible) aufbauen
-    file_stats  = []
+    file_stats = []
     total_chars = 0
     for f in files:
         try:
-            text  = f.read_text(encoding="utf-8")
+            text = f.read_text(encoding="utf-8")
             chars = len(text)
             total_chars += chars
-            file_stats.append(f"  {f.relative_to(PROJECT)} ({text.count(chr(10))} Zeilen, ~{chars // 4:,} Tokens)")
+            file_stats.append(
+                f"  {f.relative_to(PROJECT)} ({text.count(chr(10))} Zeilen, ~{chars // 4:,} Tokens)"
+            )
         except Exception:
             file_stats.append(f"  {f.relative_to(PROJECT)} (nicht lesbar)")
 
     total_tokens = total_chars // 4
-    timestamp    = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    model        = os.environ.get("CLAUDE_MODEL", os.environ.get("MODEL", "unbekannt"))
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    model = os.environ.get("CLAUDE_MODEL", os.environ.get("MODEL", "unbekannt"))
     try:
-        branch_cur = subprocess.check_output(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=PROJECT, stderr=subprocess.DEVNULL
-        ).decode().strip()
+        branch_cur = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                cwd=PROJECT,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
     except Exception:
         branch_cur = "unbekannt"
 
@@ -997,7 +1084,7 @@ def cmd_plan(number: int) -> None:
     log.info(f"Poste Plan-Kommentar für Issue #{number}")
     print("\n[→] Poste Plan-Kommentar auf Gitea...")
     plan_body = build_plan_comment(issue) + metadata
-    comment   = gitea.post_comment(number, plan_body)
+    comment = gitea.post_comment(number, plan_body)
     _validate_comment(comment.get("body", ""), "plan")
     gitea.swap_label(number, settings.LABEL_READY, settings.LABEL_PROPOSED)
 
@@ -1010,12 +1097,23 @@ def cmd_plan(number: int) -> None:
             analyse_body = _build_analyse_comment(issue, files)
             gitea.post_comment(number, analyse_body)
             gitea.add_label(number, settings.LABEL_HELP)
-            gitea.remove_label(number, settings.LABEL_PROPOSED)  # Plan noch nicht freigegeben
-            out.write_text(out.read_text(encoding="utf-8") + "\n## Analyse\n" + analyse_body, encoding="utf-8")
-            log.info(f"Analyse-Kommentar gepostet, Label '{settings.LABEL_HELP}' gesetzt, '{settings.LABEL_PROPOSED}' entfernt")
-            print(f"[✓] Analyse-Kommentar gepostet, Label '{settings.LABEL_HELP}' gesetzt, '{settings.LABEL_PROPOSED}' entfernt")
+            gitea.remove_label(
+                number, settings.LABEL_PROPOSED
+            )  # Plan noch nicht freigegeben
+            out.write_text(
+                out.read_text(encoding="utf-8") + "\n## Analyse\n" + analyse_body,
+                encoding="utf-8",
+            )
+            log.info(
+                f"Analyse-Kommentar gepostet, Label '{settings.LABEL_HELP}' gesetzt, '{settings.LABEL_PROPOSED}' entfernt"
+            )
+            print(
+                f"[✓] Analyse-Kommentar gepostet, Label '{settings.LABEL_HELP}' gesetzt, '{settings.LABEL_PROPOSED}' entfernt"
+            )
         else:
-            print(f"[!] Gitea hat bereits befüllten Plan — kein Analyse-Kommentar gepostet")
+            print(
+                f"[!] Gitea hat bereits befüllten Plan — kein Analyse-Kommentar gepostet"
+            )
 
     print(f"[→] Freigabe: mit 'ok' oder 'ja' kommentieren")
 
@@ -1033,7 +1131,9 @@ def cmd_implement(number: int) -> None:
     # Maßnahme 5: Vorbedingungen prüfen
     stufe, _ = risk_level(issue)
     if stufe >= 4:
-        print(f"[✗] Issue #{number} hat Risikostufe 4 — kein automatischer Implement-Start.")
+        print(
+            f"[✗] Issue #{number} hat Risikostufe 4 — kein automatischer Implement-Start."
+        )
         print(f"    Bitte manuell implementieren und mit --pr abschließen.")
         sys.exit(1)
 
@@ -1051,12 +1151,16 @@ def cmd_implement(number: int) -> None:
 
     if "PFLICHTREGELN" not in starter.read_text(encoding="utf-8"):
         print(f"[!] Warnung: starter.md enthält keinen PFLICHTREGELN-Block.")
-        print(f"    Bitte --issue {number} erneut ausführen um aktuellen Kontext zu laden.")
+        print(
+            f"    Bitte --issue {number} erneut ausführen um aktuellen Kontext zu laden."
+        )
 
     if not gitea.check_approval(number, settings.LABEL_HELP):
         log.warning(f"Keine Freigabe für Issue #{number}")
         print(f"[✗] Keine Freigabe für Issue #{number}.")
-        print(f"    Kommentiere 'ok' auf: {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
+        print(
+            f"    Kommentiere 'ok' auf: {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}"
+        )
         sys.exit(1)
 
     log.info(f"Freigabe erhalten für Issue #{number} — starte Implementierung")
@@ -1067,7 +1171,9 @@ def cmd_implement(number: int) -> None:
     try:
         result = subprocess.run(
             ["git", "checkout", "-b", branch],
-            cwd=PROJECT, capture_output=True, text=True
+            cwd=PROJECT,
+            capture_output=True,
+            text=True,
         )
         if result.returncode == 0:
             log.info(f"Branch '{branch}' erstellt")
@@ -1084,7 +1190,9 @@ def cmd_implement(number: int) -> None:
 
     typ = issue_type(issue)
     num = issue["number"]
-    gitea.post_comment(number, f"""## ✅ Implementierung gestartet
+    gitea.post_comment(
+        number,
+        f"""## ✅ Implementierung gestartet
 
 **Branch:** `{branch}`
 
@@ -1093,28 +1201,31 @@ def cmd_implement(number: int) -> None:
 - Kontext lesen: `contexts/{num}-{typ}/starter.md`
 - Implementieren + nach jeder Datei committen
 - PR erstellen: `python3 agent_start.py --pr {num} --branch {branch} --summary "..."`
-""")
+""",
+    )
 
-    base_files   = relevant_files(issue)
+    base_files = relevant_files(issue)
     import_files = _find_imports(base_files)
     # Kommentare für Keyword-Suche einbeziehen
     comments = gitea.get_comments(issue["number"])
     bot_user = getattr(settings, "GITEA_BOT_USER", None) or "working-bot"
     user_comments = [
-        c.get("body", "") for c in comments
+        c.get("body", "")
+        for c in comments
         if c.get("user", {}).get("login") != bot_user
     ]
     full_text = (issue.get("body", "") or "") + "\n" + "\n".join(user_comments)
-    kw_files     = _search_keywords(full_text, PROJECT)
+    kw_files = _search_keywords(full_text, PROJECT)
 
     all_files = list(dict.fromkeys(base_files + import_files + kw_files))
     files_dict = {
-        str(f.relative_to(PROJECT)): f.read_text(encoding="utf-8")
-        for f in all_files
+        str(f.relative_to(PROJECT)): f.read_text(encoding="utf-8") for f in all_files
     }
     ctx_file, files_file = save_implement_context(issue, files_dict)
     _idir2 = _find_issue_dir(num)
-    print(f"[✓] Kontext: {_idir2.name if _idir2 else ''}/starter.md + files.md — bereit zur Implementierung")
+    print(
+        f"[✓] Kontext: {_idir2.name if _idir2 else ''}/starter.md + files.md — bereit zur Implementierung"
+    )
 
     # Kontext-Zusammenfassung als Gitea-Kommentar posten
     context_summary_parts = []
@@ -1122,8 +1233,8 @@ def cmd_implement(number: int) -> None:
     if user_comments:
         from_comments: set[str] = set()
         for comment in user_comments:
-            words  = re.findall(r'`([^`]+)`', comment)
-            words += re.findall(r'\b([A-Za-z_][A-Za-z0-9_]{3,})\b', comment)
+            words = re.findall(r"`([^`]+)`", comment)
+            words += re.findall(r"\b([A-Za-z_][A-Za-z0-9_]{3,})\b", comment)
             from_comments.update(w.lower() for w in words if len(w) >= 4)
         if from_comments:
             context_summary_parts.append(
@@ -1133,13 +1244,16 @@ def cmd_implement(number: int) -> None:
     if files_dict:
         file_list = list(files_dict.keys())[:15]
         context_summary_parts.append(
-            f"**Erkannte Dateien ({len(files_dict)}):**\n" + "\n".join(f"- `{f}`" for f in file_list)
+            f"**Erkannte Dateien ({len(files_dict)}):**\n"
+            + "\n".join(f"- `{f}`" for f in file_list)
         )
         if len(files_dict) > 15:
             context_summary_parts.append(f"  _... und {len(files_dict) - 15} weitere_")
 
     if user_comments:
-        context_summary_parts.append(f"**Diskussion:** {len(user_comments)} Kommentar(e) einbezogen")
+        context_summary_parts.append(
+            f"**Diskussion:** {len(user_comments)} Kommentar(e) einbezogen"
+        )
 
     if context_summary_parts:
         context_comment = (
@@ -1150,7 +1264,14 @@ def cmd_implement(number: int) -> None:
         gitea.post_comment(number, context_comment)
 
 
-_RESTART_PATTERNS = ("server.py", "bot.js", "nanoclaw/", "whatsapp-bot/", "router.py", "analyst_worker.py")
+_RESTART_PATTERNS = (
+    "server.py",
+    "bot.js",
+    "nanoclaw/",
+    "whatsapp-bot/",
+    "router.py",
+    "analyst_worker.py",
+)
 
 
 def _neustart_required(changed_files: list[str]) -> str:
@@ -1161,8 +1282,13 @@ def _neustart_required(changed_files: list[str]) -> str:
     return "Nein"
 
 
-def cmd_pr(number: int, branch: str, summary: str = "",
-           force: bool = False, restart_before_eval: bool = False) -> None:
+def cmd_pr(
+    number: int,
+    branch: str,
+    summary: str = "",
+    force: bool = False,
+    restart_before_eval: bool = False,
+) -> None:
     """
     Schritt 3: PR erstellen + Abschluss-Kommentar ins Issue posten.
 
@@ -1176,8 +1302,8 @@ def cmd_pr(number: int, branch: str, summary: str = "",
     # Maßnahme 1: Vorbedingungen prüfen (blockiert bei Prozess-Verletzung)
     _check_pr_preconditions(number, branch)
 
-    issue   = gitea.get_issue(number)
-    title   = f"{issue['title']} (closes #{number})"
+    issue = gitea.get_issue(number)
+    title = f"{issue['title']} (closes #{number})"
     checklist = "\n".join(f"- [ ] {item}" for item in settings.PR_CHECKLIST)
     pr_body = f"""## Änderungen
 Implementierung für Issue #{number}.
@@ -1192,15 +1318,22 @@ Implementierung für Issue #{number}.
     docs_warning = ""
     changed = []
     try:
-        changed  = subprocess.check_output(
-            ["git", "diff", "--name-only", f"main...{branch}"],
-            cwd=PROJECT, stderr=subprocess.DEVNULL
-        ).decode().splitlines()
+        changed = (
+            subprocess.check_output(
+                ["git", "diff", "--name-only", f"main...{branch}"],
+                cwd=PROJECT,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .splitlines()
+        )
         code_changed = [f for f in changed if not f.startswith("Documentation/")]
         docs_changed = [f for f in changed if f.startswith("Documentation/")]
         if code_changed and not docs_changed:
             log.warning("Code geändert aber Documentation/ nicht aktualisiert")
-            print("[!] Warnung: Code geändert aber keine Documentation/*.md aktualisiert.")
+            print(
+                "[!] Warnung: Code geändert aber keine Documentation/*.md aktualisiert."
+            )
             docs_warning = "\n> ⚠️ **Hinweis:** `Documentation/` wurde nicht aktualisiert — bitte vor dem Merge nachholen."
     except Exception:
         pass
@@ -1231,7 +1364,9 @@ Implementierung für Issue #{number}.
                 gitea.post_comment(number, eval_comment)
                 _validate_comment(eval_comment, "eval_fail", critical=True)
                 gitea.swap_label(number, settings.LABEL_REVIEW, settings.LABEL_PROGRESS)
-                log.error(f"Eval FAIL — PR blockiert (Score {eval_result.score}/{eval_result.max_score})")
+                log.error(
+                    f"Eval FAIL — PR blockiert (Score {eval_result.score}/{eval_result.max_score})"
+                )
                 print(f"[✗] PR blockiert. Kommentar in Issue #{number} gepostet.")
                 return
         except Exception as e:
@@ -1241,13 +1376,16 @@ Implementierung für Issue #{number}.
             print(f"[!] Eval-Fehler (Warnung gepostet): {e}")
 
     log.info(f"Erstelle PR für Issue #{number} von Branch '{branch}'")
-    pr     = gitea.create_pr(branch=branch, title=title, body=pr_body)
+    pr = gitea.create_pr(branch=branch, title=title, body=pr_body)
     pr_url = pr.get("html_url", "?")
 
     gitea.swap_label(number, settings.LABEL_PROGRESS, settings.LABEL_REVIEW)
 
-    summary_block = f"## Was diese Änderung bewirkt\n{summary}" if summary else \
-        "> ⚠️ Keine Zusammenfassung angegeben — beim nächsten Mal `--summary \"...\"` mitgeben."
+    summary_block = (
+        f"## Was diese Änderung bewirkt\n{summary}"
+        if summary
+        else '> ⚠️ Keine Zusammenfassung angegeben — beim nächsten Mal `--summary "..."` mitgeben.'
+    )
     history_block = _format_history_block(PROJECT)
 
     # Eval-Ergebnis für Abschluss-Kommentar
@@ -1311,14 +1449,24 @@ def cmd_fixup(number: int) -> None:
     - Setzt Label: in-progress → needs-review
     """
     try:
-        commit_msg = subprocess.check_output(
-            ["git", "log", "-1", "--pretty=%s%n%n%b"],
-            cwd=PROJECT, stderr=subprocess.DEVNULL
-        ).decode().strip()
-        commit_sha = subprocess.check_output(
-            ["git", "log", "-1", "--pretty=%h"],
-            cwd=PROJECT, stderr=subprocess.DEVNULL
-        ).decode().strip()
+        commit_msg = (
+            subprocess.check_output(
+                ["git", "log", "-1", "--pretty=%s%n%n%b"],
+                cwd=PROJECT,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
+        commit_sha = (
+            subprocess.check_output(
+                ["git", "log", "-1", "--pretty=%h"],
+                cwd=PROJECT,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
     except Exception as e:
         log.warning(f"git log fehlgeschlagen: {e}")
         commit_msg = "(Commit-Message nicht lesbar)"
@@ -1340,10 +1488,10 @@ def cmd_fixup(number: int) -> None:
     print(f"    {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}")
 
 
-
 # ---------------------------------------------------------------------------
 # Watch-Modus
 # ---------------------------------------------------------------------------
+
 
 def _auto_issue_exists(test_name: str) -> bool:
     """Prüft ob ein offenes [Auto]-Issue für diesen Test bereits existiert."""
@@ -1391,13 +1539,21 @@ def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
         for name in passed_names:
             if name in title:
                 gitea.close_issue(issue["number"])
-                for lbl in [settings.LABEL_READY, settings.LABEL_PROPOSED, settings.LABEL_PROGRESS]:
+                for lbl in [
+                    settings.LABEL_READY,
+                    settings.LABEL_PROPOSED,
+                    settings.LABEL_PROGRESS,
+                ]:
                     try:
                         gitea.remove_label(issue["number"], lbl)
                     except Exception:
                         pass
-                log.info(f"[Auto]-Issue #{issue['number']} geschlossen — Test '{name}' besteht wieder")
-                print(f"[✓] Auto-Issue #{issue['number']} geschlossen ({name} wieder OK)")
+                log.info(
+                    f"[Auto]-Issue #{issue['number']} geschlossen — Test '{name}' besteht wieder"
+                )
+                print(
+                    f"[✓] Auto-Issue #{issue['number']} geschlossen ({name} wieder OK)"
+                )
                 idir = _find_issue_dir(issue["number"])
                 if idir and idir.exists():
                     dest = _done_dir() / idir.name
@@ -1424,20 +1580,32 @@ def _build_metadata(
         Markdown-String mit <details>-Block für Gitea-Kommentar
     """
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    model = os.environ.get("CLAUDE_MODEL", os.environ.get("MODEL", settings.CLAUDE_MODEL))
+    model = os.environ.get(
+        "CLAUDE_MODEL", os.environ.get("MODEL", settings.CLAUDE_MODEL)
+    )
     try:
-        commit = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            cwd=PROJECT, stderr=subprocess.DEVNULL
-        ).decode().strip()
+        commit = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"],
+                cwd=PROJECT,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
     except Exception:
         commit = "unbekannt"
     if not branch:
         try:
-            branch = subprocess.check_output(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                cwd=PROJECT, stderr=subprocess.DEVNULL
-            ).decode().strip()
+            branch = (
+                subprocess.check_output(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                    cwd=PROJECT,
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .strip()
+            )
         except Exception:
             branch = "unbekannt"
 
@@ -1457,7 +1625,9 @@ def _build_metadata(
 
     files_changed_line = ""
     if changed_paths:
-        files_changed_line = f"\n**Geänderte Dateien:** " + ", ".join(f"`{p}`" for p in changed_paths)
+        files_changed_line = f"\n**Geänderte Dateien:** " + ", ".join(
+            f"`{p}`" for p in changed_paths
+        )
 
     return (
         f"\n\n<details>\n<summary>🤖 Agent-Metadaten</summary>\n\n"
@@ -1496,7 +1666,11 @@ def _session_load() -> dict:
                 return data
         except Exception:
             pass
-    data = {"started": now.isoformat(), "issues_completed": 0, "last_activity": now.isoformat()}
+    data = {
+        "started": now.isoformat(),
+        "issues_completed": 0,
+        "last_activity": now.isoformat(),
+    }
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     return data
 
@@ -1542,7 +1716,9 @@ def _format_history_block(project_root: Path, n: int = 5) -> str:
     Returns:
         Markdown-String oder leer wenn keine History vorhanden.
     """
-    hist_path = evaluation._resolve_path(project_root, "score_history.json", evaluation.SCORE_HISTORY)
+    hist_path = evaluation._resolve_path(
+        project_root, "score_history.json", evaluation.SCORE_HISTORY
+    )
     if not hist_path.exists():
         return "**Verlauf:** keine Einträge"
     try:
@@ -1556,11 +1732,11 @@ def _format_history_block(project_root: Path, n: int = 5) -> str:
     recent = history[-n:][::-1]  # letzte n, neueste zuerst
     lines = ["**Verlauf (letzte 5):**", "```"]
     for e in recent:
-        ts      = e.get("timestamp", "?")[:16].replace("T", " ")
-        score   = int(e.get("score", 0))
-        max_s   = int(e.get("max_score", 0))
+        ts = e.get("timestamp", "?")[:16].replace("T", " ")
+        score = int(e.get("score", 0))
+        max_s = int(e.get("max_score", 0))
         trigger = e.get("trigger", "?")
-        failed  = e.get("failed", [])
+        failed = e.get("failed", [])
         failed_str = ", ".join(f["name"] for f in failed) if failed else "—"
         lines.append(f"{ts} | {score}/{max_s} | {trigger:<6} | {failed_str}")
     lines.append("```")
@@ -1583,9 +1759,10 @@ def _last_chat_inactive_minutes(log_path: str | Path) -> float | None:
         return None
 
     import re
+
     ts_pattern = re.compile(
-        r"(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2})"   # ISO: 2026-03-20T14:32 oder mit Leerzeichen
-        r"|(\d{2}:\d{2}:\d{2})"                   # HH:MM:SS
+        r"(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2})"  # ISO: 2026-03-20T14:32 oder mit Leerzeichen
+        r"|(\d{2}:\d{2}:\d{2})"  # HH:MM:SS
     )
     eval_markers = ("EVAL", "eval", "score_history", "agent_eval", "trigger")
 
@@ -1607,7 +1784,9 @@ def _last_chat_inactive_minutes(log_path: str | Path) -> float | None:
             else:  # HH:MM:SS — heutiges Datum annehmen
                 today = datetime.date.today()
                 h, mi, s = raw.split(":")
-                dt = datetime.datetime(today.year, today.month, today.day, int(h), int(mi), int(s))
+                dt = datetime.datetime(
+                    today.year, today.month, today.day, int(h), int(mi), int(s)
+                )
             delta = datetime.datetime.now() - dt
             return delta.total_seconds() / 60
         except Exception:
@@ -1647,6 +1826,7 @@ def _server_start_time(log_path: str | Path) -> datetime.datetime | None:
         return None
 
     import re
+
     ts_re = re.compile(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}")
 
     try:
@@ -1689,22 +1869,32 @@ def _check_server_staleness(branch: str, force: bool = False) -> None:
 
     server_start = _server_start_time(log_path)
     if server_start is None:
-        log.info("Server-Start-Zeitpunkt nicht ermittelbar — Staleness-Check übersprungen")
+        log.info(
+            "Server-Start-Zeitpunkt nicht ermittelbar — Staleness-Check übersprungen"
+        )
         return
 
     try:
-        commit_ts_raw = subprocess.check_output(
-            ["git", "log", "-1", "--pretty=%cI", branch],
-            cwd=PROJECT, stderr=subprocess.DEVNULL
-        ).decode().strip()
+        commit_ts_raw = (
+            subprocess.check_output(
+                ["git", "log", "-1", "--pretty=%cI", branch],
+                cwd=PROJECT,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
         # Zeitzone entfernen für Vergleich
         commit_ts = datetime.datetime.fromisoformat(commit_ts_raw)
         if commit_ts.tzinfo:
             import datetime as _dt
+
             commit_ts = commit_ts.replace(tzinfo=None) + commit_ts.utcoffset()
             commit_ts = commit_ts.replace(tzinfo=None)
     except Exception as e:
-        log.info(f"Commit-Timestamp nicht ermittelbar — Staleness-Check übersprungen ({e})")
+        log.info(
+            f"Commit-Timestamp nicht ermittelbar — Staleness-Check übersprungen ({e})"
+        )
         return
 
     if commit_ts <= server_start:
@@ -1718,7 +1908,9 @@ def _check_server_staleness(branch: str, force: bool = False) -> None:
         f"      Oder: --restart-before-eval (automatisch) / --force (überspringen)"
     )
     print(msg)
-    log.warning(f"Server-Code veraltet: commit {commit_ts} > server_start {server_start}")
+    log.warning(
+        f"Server-Code veraltet: commit {commit_ts} > server_start {server_start}"
+    )
     if not force:
         sys.exit(1)
     print("[!] --force: Staleness-Check übersprungen — Eval läuft trotzdem.")
@@ -1737,7 +1929,9 @@ def _restart_server_for_eval() -> None:
     eval_cfg = evaluation._load_config(PROJECT) or {}
     restart_sc = eval_cfg.get("restart_script")
     if not restart_sc:
-        print("[!] --restart-before-eval: kein restart_script in agent_eval.json konfiguriert")
+        print(
+            "[!] --restart-before-eval: kein restart_script in agent_eval.json konfiguriert"
+        )
         log.warning("--restart-before-eval: restart_script fehlt in agent_eval.json")
         return
     print(f"[→] --restart-before-eval: Neustart via {restart_sc}...")
@@ -1767,17 +1961,25 @@ def _has_new_commits_since_last_eval(project_root: Path) -> bool:
         last_ts = history[-1].get("timestamp", "")
         if not last_ts:
             return False
-        out = subprocess.check_output(
-            ["git", "log", "--oneline", f"--after={last_ts}"],
-            cwd=project_root, stderr=subprocess.DEVNULL
-        ).decode().strip()
+        out = (
+            subprocess.check_output(
+                ["git", "log", "--oneline", f"--after={last_ts}"],
+                cwd=project_root,
+                stderr=subprocess.DEVNULL,
+            )
+            .decode()
+            .strip()
+        )
         return bool(out)
     except Exception:
         return False
 
 
-def _wait_for_server(url: str | None = None, timeout_sec: int | None = None,
-                     interval_sec: int | None = None) -> bool:
+def _wait_for_server(
+    url: str | None = None,
+    timeout_sec: int | None = None,
+    interval_sec: int | None = None,
+) -> bool:
     """
     Pollt url bis der Server antwortet oder timeout_sec abgelaufen ist.
 
@@ -1795,12 +1997,16 @@ def _wait_for_server(url: str | None = None, timeout_sec: int | None = None,
         True wenn Server erreichbar, False bei Timeout.
     """
     import time
-    import urllib.request
     import urllib.error
+    import urllib.request
 
-    url          = url          or settings.SERVER_URL
-    timeout_sec  = timeout_sec  if timeout_sec  is not None else settings.SERVER_WAIT_TIMEOUT
-    interval_sec = interval_sec if interval_sec is not None else settings.SERVER_WAIT_INTERVAL
+    url = url or settings.SERVER_URL
+    timeout_sec = (
+        timeout_sec if timeout_sec is not None else settings.SERVER_WAIT_TIMEOUT
+    )
+    interval_sec = (
+        interval_sec if interval_sec is not None else settings.SERVER_WAIT_INTERVAL
+    )
 
     elapsed = 0
     while elapsed < timeout_sec:
@@ -1836,9 +2042,13 @@ def cmd_eval_after_restart(number: int | None = None) -> None:
     """
     import importlib.util
 
-    print(f"[eval-after-restart] Warte auf Server ({settings.SERVER_URL}, max {settings.SERVER_WAIT_TIMEOUT}s)...")
+    print(
+        f"[eval-after-restart] Warte auf Server ({settings.SERVER_URL}, max {settings.SERVER_WAIT_TIMEOUT}s)..."
+    )
     if not _wait_for_server():
-        print(f"[eval-after-restart] ❌ Timeout — Server nicht erreichbar nach {settings.SERVER_WAIT_TIMEOUT}s.")
+        print(
+            f"[eval-after-restart] ❌ Timeout — Server nicht erreichbar nach {settings.SERVER_WAIT_TIMEOUT}s."
+        )
         sys.exit(1)
     print("[eval-after-restart] ✅ Server bereit — starte Eval...")
 
@@ -1848,16 +2058,16 @@ def cmd_eval_after_restart(number: int | None = None) -> None:
         sys.exit(1)
 
     spec = importlib.util.spec_from_file_location("evaluation", eval_path)
-    ev   = importlib.util.module_from_spec(spec)
+    ev = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(ev)
 
     result = ev.run(PROJECT, trigger="restart")
     print(ev.format_terminal(result))
 
     if number:
-        status        = "✅ PASS" if result.passed else "❌ FAIL"
+        status = "✅ PASS" if result.passed else "❌ FAIL"
         history_block = _format_history_block(PROJECT)
-        body          = (
+        body = (
             f"## 🔄 Eval nach Neustart — {status}\n\n"
             f"**Score:** {result.score:.0f}/{result.max_score} "
             f"(Baseline: {result.baseline_score:.0f})\n"
@@ -1913,19 +2123,24 @@ def _build_auto_issue_body(
     if failed.step_details:
         total = len(failed.step_details)
         failed_step_idx = next(
-            (i + 1 for i, s in enumerate(failed.step_details) if not s.get("passed")), total
+            (i + 1 for i, s in enumerate(failed.step_details) if not s.get("passed")),
+            total,
         )
         lines.append(f"**Step {failed_step_idx}/{total} fehlgeschlagen**")
         lines.append("")
         lines.append("| Schritt | Nachricht | Erwartet | Ergebnis |")
         lines.append("|---------|-----------|----------|----------|")
         for i, s in enumerate(failed.step_details, start=1):
-            msg      = s.get("msg", "")[:60]
-            stored   = s.get("stored", False)
-            expected = ", ".join(s.get("expected", [])) if s.get("expected") else "(gespeichert)"
-            actual   = s.get("actual") or "—"
-            actual   = str(actual)[:80]
-            icon     = "✅" if s.get("passed") else "❌"
+            msg = s.get("msg", "")[:60]
+            stored = s.get("stored", False)
+            expected = (
+                ", ".join(s.get("expected", []))
+                if s.get("expected")
+                else "(gespeichert)"
+            )
+            actual = s.get("actual") or "—"
+            actual = str(actual)[:80]
+            icon = "✅" if s.get("passed") else "❌"
             if stored:
                 lines.append(f"| {i} | `{msg}` | (gespeichert) | {icon} OK |")
             else:
@@ -1945,7 +2160,9 @@ def _build_auto_issue_body(
         lines.append("")
 
     # Letzte 3 Scores (kompakter als der 5er-Block)
-    hist_path = evaluation._resolve_path(PROJECT, "score_history.json", evaluation.SCORE_HISTORY)
+    hist_path = evaluation._resolve_path(
+        PROJECT, "score_history.json", evaluation.SCORE_HISTORY
+    )
     if hist_path.exists():
         try:
             with hist_path.open(encoding="utf-8") as f:
@@ -1954,11 +2171,11 @@ def _build_auto_issue_body(
             lines.append("**Letzte 3 Scores:**")
             lines.append("```")
             for e in recent3:
-                ts      = e.get("timestamp", "?")[:16].replace("T", " ")
-                score   = int(e.get("score", 0))
-                max_s   = int(e.get("max_score", 0))
+                ts = e.get("timestamp", "?")[:16].replace("T", " ")
+                score = int(e.get("score", 0))
+                max_s = int(e.get("max_score", 0))
                 trigger = e.get("trigger", "?")
-                passed  = "✓" if e.get("passed") else "✗"
+                passed = "✓" if e.get("passed") else "✗"
                 lines.append(f"{ts} | {score}/{max_s} | {trigger:<6} | {passed}")
             lines.append("```")
             lines.append("")
@@ -2001,14 +2218,21 @@ def cmd_watch(interval_minutes: int = 60) -> None:
                     if failed.skipped:
                         continue
                     if _auto_issue_exists(failed.name):
-                        log.debug(f"[Auto]-Issue für '{failed.name}' bereits offen — kein Duplikat")
+                        log.debug(
+                            f"[Auto]-Issue für '{failed.name}' bereits offen — kein Duplikat"
+                        )
                         continue
 
                     try:
-                        commit = subprocess.check_output(
-                            ["git", "log", "-1", "--pretty=%h %s"],
-                            cwd=PROJECT, stderr=subprocess.DEVNULL
-                        ).decode().strip()
+                        commit = (
+                            subprocess.check_output(
+                                ["git", "log", "-1", "--pretty=%h %s"],
+                                cwd=PROJECT,
+                                stderr=subprocess.DEVNULL,
+                            )
+                            .decode()
+                            .strip()
+                        )
                     except Exception:
                         commit = "unbekannt"
 
@@ -2019,8 +2243,12 @@ def cmd_watch(interval_minutes: int = 60) -> None:
                         body=body,
                         label=settings.LABEL_READY,
                     )
-                    log.warning(f"Auto-Issue erstellt: #{issue['number']} für '{failed.name}'")
-                    print(f"[!] Auto-Issue erstellt: #{issue['number']} — {failed.name}")
+                    log.warning(
+                        f"Auto-Issue erstellt: #{issue['number']} für '{failed.name}'"
+                    )
+                    print(
+                        f"[!] Auto-Issue erstellt: #{issue['number']} — {failed.name}"
+                    )
 
         except Exception as e:
             log.error(f"Watch-Lauf Fehler: {e}")
@@ -2035,8 +2263,11 @@ def cmd_watch(interval_minutes: int = 60) -> None:
         if analyzer_path.exists():
             try:
                 import importlib.util
-                spec = importlib.util.spec_from_file_location("log_analyzer", analyzer_path)
-                la   = importlib.util.module_from_spec(spec)
+
+                spec = importlib.util.spec_from_file_location(
+                    "log_analyzer", analyzer_path
+                )
+                la = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(la)
                 la_result = la.run()
                 print(la.format_terminal(la_result))
@@ -2045,15 +2276,17 @@ def cmd_watch(interval_minutes: int = 60) -> None:
                 print(f"[!] Log-Analyzer Fehler: {e}")
 
         # Szenario 2: Automatischer Neustart bei Chat-Inaktivität + neuen Commits
-        eval_cfg   = evaluation._load_config(PROJECT) or {}
+        eval_cfg = evaluation._load_config(PROJECT) or {}
         restart_sc = eval_cfg.get("restart_script")
-        log_path   = eval_cfg.get("log_path")
-        threshold  = eval_cfg.get("inactivity_minutes", 5)
+        log_path = eval_cfg.get("log_path")
+        threshold = eval_cfg.get("inactivity_minutes", 5)
         if restart_sc and log_path:
             inactive = _last_chat_inactive_minutes(log_path)
             if inactive is not None and inactive >= threshold:
                 if _has_new_commits_since_last_eval(PROJECT):
-                    print(f"[Watch] Chat inaktiv {inactive:.1f}min + neue Commits → Neustart")
+                    print(
+                        f"[Watch] Chat inaktiv {inactive:.1f}min + neue Commits → Neustart"
+                    )
                     log.info(f"Szenario 2: Neustart via {restart_sc}")
                     subprocess.run([restart_sc], check=False)
                     cmd_eval_after_restart()
@@ -2065,6 +2298,7 @@ def cmd_watch(interval_minutes: int = 60) -> None:
 # ---------------------------------------------------------------------------
 # Auto-Modus
 # ---------------------------------------------------------------------------
+
 
 def cmd_auto() -> None:
     """
@@ -2087,7 +2321,7 @@ def cmd_auto() -> None:
             if not idir.is_dir() or idir.name == "done":
                 continue
             try:
-                num   = int(idir.name.split("-")[0])
+                num = int(idir.name.split("-")[0])
                 issue = gitea.get_issue(num)
                 if issue.get("state") == "closed":
                     shutil.move(str(idir), str(_done_dir() / idir.name))
@@ -2102,10 +2336,12 @@ def cmd_auto() -> None:
     proposed = gitea.get_issues(label=settings.LABEL_PROPOSED)
     approved = sorted(
         [i for i in proposed if gitea.check_approval(i["number"], settings.LABEL_HELP)],
-        key=lambda x: risk_level(x)[0]
+        key=lambda x: risk_level(x)[0],
     )
     if approved:
-        print(f"\n[✓] {len(approved)} freigegebene Issue(s) — starte Implementierung:\n")
+        print(
+            f"\n[✓] {len(approved)} freigegebene Issue(s) — starte Implementierung:\n"
+        )
         for issue in approved:
             log.info(f"Implementiere Issue #{issue['number']}: {issue['title'][:60]}")
             print(f"  → #{issue['number']} {issue['title'][:60]}")
@@ -2114,21 +2350,31 @@ def cmd_auto() -> None:
         did_something = True
 
     # Neue Issues planen
-    ready = sorted(gitea.get_issues(label=settings.LABEL_READY), key=lambda x: risk_level(x)[0])
+    ready = sorted(
+        gitea.get_issues(label=settings.LABEL_READY), key=lambda x: risk_level(x)[0]
+    )
     if ready:
         print(f"\n[→] {len(ready)} Issue(s) bereit — poste Pläne:\n")
         for issue in ready:
             stufe, _ = risk_level(issue)
-            log.info(f"Plane Issue #{issue['number']} (Stufe {stufe}): {issue['title'][:55]}")
+            log.info(
+                f"Plane Issue #{issue['number']} (Stufe {stufe}): {issue['title'][:55]}"
+            )
             print(f"  → #{issue['number']} (Stufe {stufe}) {issue['title'][:55]}")
             cmd_plan(issue["number"])
             print()
-        print(f"[→] Freigabe mit 'ok' kommentieren: {gitea.GITEA_URL}/{gitea.REPO}/issues")
+        print(
+            f"[→] Freigabe mit 'ok' kommentieren: {gitea.GITEA_URL}/{gitea.REPO}/issues"
+        )
         did_something = True
 
     # Status-Übersicht
     in_progress = gitea.get_issues(label=settings.LABEL_PROGRESS)
-    waiting     = [i for i in proposed if not gitea.check_approval(i["number"], settings.LABEL_HELP)]
+    waiting = [
+        i
+        for i in proposed
+        if not gitea.check_approval(i["number"], settings.LABEL_HELP)
+    ]
 
     if in_progress:
         print(f"\nIn Arbeit ({len(in_progress)}):")
@@ -2153,15 +2399,31 @@ def cmd_auto() -> None:
 # Entry Point
 # ---------------------------------------------------------------------------
 
+
 def _apply_auto_approve() -> None:
     """Schreibt .claude/settings.local.json basierend auf AUTO_APPROVE in .env."""
     import json
-    claude_dir  = _HERE / ".claude"
+
+    claude_dir = _HERE / ".claude"
     claude_dir.mkdir(exist_ok=True)
     target = claude_dir / "settings.local.json"
 
     if settings.AUTO_APPROVE:
-        data = {"permissions": {"allow": ["Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "Glob(*)", "Grep(*)", "Agent(*)", "WebFetch(*)", "WebSearch(*)"]}}
+        data = {
+            "permissions": {
+                "allow": [
+                    "Bash(*)",
+                    "Read(*)",
+                    "Write(*)",
+                    "Edit(*)",
+                    "Glob(*)",
+                    "Grep(*)",
+                    "Agent(*)",
+                    "WebFetch(*)",
+                    "WebSearch(*)",
+                ]
+            }
+        }
     else:
         data = {"permissions": {"allow": []}}
 
@@ -2171,6 +2433,7 @@ def _apply_auto_approve() -> None:
 
 def main():
     from log import setup as log_setup
+
     log_setup(log_file=str(settings.LOG_FILE_PATH), level=settings.LOG_LEVEL)
     _apply_auto_approve()
 
@@ -2185,20 +2448,65 @@ Ohne Argumente: automatischer Modus.
   python3 agent_start.py --issue 16                   → Plan posten
   python3 agent_start.py --implement 16               → Implementieren
   python3 agent_start.py --pr 16 --branch fix/issue-16-xyz  → PR erstellen
-        """
+        """,
     )
-    parser.add_argument("--list",      action="store_true",        help="Alle ready-for-agent Issues auflisten")
-    parser.add_argument("--issue",     type=int,  metavar="NR",    help="Plan für Issue posten")
-    parser.add_argument("--implement", type=int,  metavar="NR",    help="Nach OK: Branch + Implementierungskontext")
-    parser.add_argument("--fixup",     type=int,  metavar="NR",    help="Nach Bugfix: Kommentar + needs-review setzen")
-    parser.add_argument("--pr",        type=int,  metavar="NR",    help="PR erstellen (mit --branch)")
-    parser.add_argument("--branch",    type=str,  metavar="BRANCH",help="Branch-Name für --pr")
-    parser.add_argument("--summary",   type=str,  metavar="TEXT",  help="Zusammenfassung für Issue-Kommentar", default="")
-    parser.add_argument("--watch",              action="store_true",       help="Periodischer Eval-Loop mit Auto-Issues")
-    parser.add_argument("--interval",           type=int,  metavar="MIN", help="Interval für --watch in Minuten (überschreibt watch_interval_minutes aus agent_eval.json)", default=None)
-    parser.add_argument("--eval-after-restart",   type=int,  metavar="NR",  help="Nach Neustart: Eval ausführen + Score ins Issue (NR optional)", nargs="?", const=0)
-    parser.add_argument("--force",                action="store_true",       help="Staleness-Check vor Eval überspringen (--pr)")
-    parser.add_argument("--restart-before-eval",  action="store_true",       help="Server via restart_script neu starten vor Eval (--pr)")
+    parser.add_argument(
+        "--list", action="store_true", help="Alle ready-for-agent Issues auflisten"
+    )
+    parser.add_argument("--issue", type=int, metavar="NR", help="Plan für Issue posten")
+    parser.add_argument(
+        "--implement",
+        type=int,
+        metavar="NR",
+        help="Nach OK: Branch + Implementierungskontext",
+    )
+    parser.add_argument(
+        "--fixup",
+        type=int,
+        metavar="NR",
+        help="Nach Bugfix: Kommentar + needs-review setzen",
+    )
+    parser.add_argument(
+        "--pr", type=int, metavar="NR", help="PR erstellen (mit --branch)"
+    )
+    parser.add_argument(
+        "--branch", type=str, metavar="BRANCH", help="Branch-Name für --pr"
+    )
+    parser.add_argument(
+        "--summary",
+        type=str,
+        metavar="TEXT",
+        help="Zusammenfassung für Issue-Kommentar",
+        default="",
+    )
+    parser.add_argument(
+        "--watch", action="store_true", help="Periodischer Eval-Loop mit Auto-Issues"
+    )
+    parser.add_argument(
+        "--interval",
+        type=int,
+        metavar="MIN",
+        help="Interval für --watch in Minuten (überschreibt watch_interval_minutes aus agent_eval.json)",
+        default=None,
+    )
+    parser.add_argument(
+        "--eval-after-restart",
+        type=int,
+        metavar="NR",
+        help="Nach Neustart: Eval ausführen + Score ins Issue (NR optional)",
+        nargs="?",
+        const=0,
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Staleness-Check vor Eval überspringen (--pr)",
+    )
+    parser.add_argument(
+        "--restart-before-eval",
+        action="store_true",
+        help="Server via restart_script neu starten vor Eval (--pr)",
+    )
     args = parser.parse_args()
 
     if args.eval_after_restart is not None:
@@ -2229,9 +2537,13 @@ Ohne Argumente: automatischer Modus.
             log.error("--pr benötigt --branch <branch-name>")
             print("[✗] --pr benötigt --branch <branch-name>")
             sys.exit(1)
-        cmd_pr(args.pr, args.branch, args.summary,
-               force=args.force,
-               restart_before_eval=args.restart_before_eval)
+        cmd_pr(
+            args.pr,
+            args.branch,
+            args.summary,
+            force=args.force,
+            restart_before_eval=args.restart_before_eval,
+        )
     else:
         cmd_auto()
 

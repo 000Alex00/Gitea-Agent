@@ -749,3 +749,22 @@ echo "agent/.env"  >> /home/user/myproject/.gitignore
 - `agent_eval.json` Pfad in `log_path`/`restart_script` anpassen (absolute Pfade eintragen)
 - `baseline.json` + `score_history.json` neu erzeugen lassen (erster Lauf nach Migration → neue Baseline)
 - Submodul `Helper-tools/` kann danach entfernt werden wenn nicht mehr benötigt
+
+## Agent Self-Consistency Check
+
+Der Gitea Agent enthält einen integrierten deterministischen Check, um sicherzustellen, dass Erweiterungen am Agenten selbst vollständig und korrekt implementiert wurden (z.B. neue Flags ohne fehlende Handlers).
+
+### Was wird geprüft?
+1. **Labels:** Alle in `settings.py` definierten Labels existieren im Gitea-Projekt.
+2. **Flags:** Alle CLI-Flags in `agent_start.py` (`argparse`) haben ein zugehöriges `cmd_*()` Handle.
+3. **Pflichtfelder:** Alle in `COMMENT_REQUIRED_FIELDS` (`settings.py`) definierten Felder werden bei der Erstellung von Gitea-Kommentaren in `agent_start.py` eingebunden.
+4. **Environment Variables:** Alle mit `_env()` abgerufenen Konfigurationen in `settings.py` sind in der Vorlage `.env.example` dokumentiert.
+
+### Wann wird der Check ausgeführt?
+Der Check läuft automatisch innerhalb von `_check_pr_preconditions()` bevor ein PR (`--pr`) erstellt wird. Er greift nur, wenn Änderungen an `agent_start.py`, `settings.py` oder `gitea_api.py` detektiert wurden.
+
+### Fehlerbehebung
+Schlägt der Check fehl, wird der PR-Befehl blockiert und die Fehler werden im Terminal ausgegeben. Behebe die angezeigten Fehler (z.B. durch Hinzufügen der fehlenden Funktion oder des Labels) und starte den Befehl erneut. Du kannst den Check zur Validierung auch manuell ausführen:
+```bash
+python3 agent_self_check.py
+```
