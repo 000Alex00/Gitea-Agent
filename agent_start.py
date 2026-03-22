@@ -38,6 +38,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 import evaluation
+import dashboard
 import gitea_api as gitea
 import settings
 from log import get_logger
@@ -2348,7 +2349,7 @@ def _build_auto_issue_body(
     return "\n".join(lines)
 
 
-def cmd_watch(interval_minutes: int = 60) -> None:
+def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
     """
     Periodischer Eval-Loop: läuft alle interval_minutes Minuten.
 
@@ -2373,9 +2374,17 @@ def cmd_watch(interval_minutes: int = 60) -> None:
             print(evaluation.format_terminal(result))
 
             if not result.skipped and not result.warned:
-                _close_resolved_auto_issues(result)
+                try:
+                    dashboard.generate(PROJECT)
+                except Exception as e:
+                    pass
+
+                if not patch_mode:
+                    _close_resolved_auto_issues(result)
 
                 for t in result.all_tests:
+                    if patch_mode:
+                        continue
                     if t.skipped:
                         continue
                         
@@ -2421,7 +2430,8 @@ def cmd_watch(interval_minutes: int = 60) -> None:
             log.error(f"Watch-Lauf Fehler: {e}")
             print(f"[!] Fehler in Watch-Lauf: {e}")
 
-        _check_systematic_tag_failures(PROJECT)
+        if not patch_mode:
+            _check_systematic_tag_failures(PROJECT)
 
         # Optionaler Log-Analyzer: neue Struktur (agent/config/) oder Legacy (tools/)
         analyzer_path = (
@@ -2451,10 +2461,11 @@ def cmd_watch(interval_minutes: int = 60) -> None:
         threshold = eval_cfg.get("inactivity_minutes", 5)
         if restart_sc and log_path:
             inactive = _last_chat_inactive_minutes(log_path)
-            if inactive is not None and inactive >= threshold:
+            if patch_mode or (inactive is not None and inactive >= threshold):
+                inactive_str = f"{inactive:.1f}min" if inactive is not None else "N/A"
                 if _has_new_commits_since_last_eval(PROJECT):
                     print(
-                        f"[Watch] Chat inaktiv {inactive:.1f}min + neue Commits → Neustart"
+                        f"[Watch] Chat inaktiv ({inactive_str}) + neue Commits → Neustart (Patch: {patch_mode})"
                     )
                     log.info(f"Szenario 2: Neustart via {restart_sc}")
                     subprocess.run([restart_sc], check=False)
@@ -2468,6 +2479,15 @@ def cmd_watch(interval_minutes: int = 60) -> None:
 # Auto-Modus
 # ---------------------------------------------------------------------------
 
+
+
+def cmd_dashboard() -> None:
+    print(f"[→] Generiere Live-Dashboard...")
+    try:
+        dashboard.generate(PROJECT)
+        print(f"[✓] Dashboard erfolgreich erstellt: {getattr(settings, 'DASHBOARD_PATH', 'dashboard.html')}")
+    except Exception as e:
+        print(f"[!] Fehler bei Dashboard-Generierung: {e}")
 
 def cmd_auto() -> None:
     """
@@ -2654,6 +2674,17 @@ Ohne Argumente: automatischer Modus.
         help="Zusammenfassung für Issue-Kommentar",
         default="",
     )
+
+    parser.add_argument(
+        "--patch",
+        action="store_true",
+        help="Aktiviert den Patch-Modus im Watch-Loop (unterdrückt Auto-Issues, ignoriert Inaktivität)",
+    )
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Generiert das Live-Dashboard manuell",
+    )
     parser.add_argument(
         "--watch", action="store_true", help="Periodischer Eval-Loop mit Auto-Issues"
     )
@@ -2697,6 +2728,8 @@ Ohne Argumente: automatischer Modus.
         cmd_generate_tests(args.generate_tests)
     elif args.fixup:
         cmd_fixup(args.fixup)
+    elif args.dashboard:
+        cmd_dashboard()
     elif args.watch:
         # Interval: CLI-Arg > agent_eval.json > Fallback 60
         interval = args.interval
@@ -2708,7 +2741,7 @@ Ohne Argumente: automatischer Modus.
                 interval = cfg.get("watch_interval_minutes", 60)
             except Exception:
                 interval = 60
-        cmd_watch(interval)
+        cmd_watch(interval, patch_mode=args.patch)
     elif args.pr:
         if not args.branch:
             log.error("--pr benötigt --branch <branch-name>")

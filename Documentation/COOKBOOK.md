@@ -823,3 +823,33 @@ Konfiguriere in der `agent_eval.json`, ab wann ein Tag als "systematisch kaputt"
 **3. Watch-Modus Analyse**
 Der Agent prüft nach jedem Durchlauf die `score_history.json`.
 Tritt ein Fehler bei einem Tag in 3 von 5 aufeinanderfolgenden Läufen auf, wird automatisch ein Issue mit dem Titel `[Auto-Improvement] Systematische Schwäche bei Tag: <tag>` erstellt und dein konfigurierter Hinweis (`improvement_hints`) als Lösungsansatz vorgeschlagen.
+
+## 16. Patch-Modus & Live-Dashboard
+
+Wenn du lokal stark am Code arbeitest (oft speicherst, Code oft inkonsistent ist), stören die automatischen Gitea-Issues und blockierten Neustarts des Watch-Modus.
+
+### Patch-Modus aktivieren
+Starte den Watch-Modus mit dem Flag `--patch`:
+```bash
+python3 agent_start.py --watch --patch
+```
+**Was passiert im Patch-Modus?**
+*   **Keine Auto-Issues:** Es werden keine neuen Issues für Fehler oder Performance-Regressionen in Gitea angelegt.
+*   **Neustarts erlaubt:** Der Server wird bei neuen Commits sofort neu gestartet, der Inaktivitäts-Check (z.B. 5 Minuten warten) entfällt.
+
+### Live-Dashboard
+Anstatt Fehler in Gitea zu verfolgen, kannst du das Live-Dashboard nutzen. Bei jedem Eval-Lauf im Watch-Modus generiert der Agent automatisch eine `dashboard.html` im Projekt-Root.
+Öffne diese Datei einfach im Browser:
+```bash
+open dashboard.html
+# oder im Browser: file:///home/.../dashboard.html
+```
+Das Dashboard zeigt:
+*   Deinen Score-Verlauf (Chart.js) der letzten 24 Stunden.
+*   Live-Status des Servers und Pi5.
+*   Die letzten Fehler, Evaluations-Läufe und fehlschlagende Tags.
+
+Um das Dashboard ohne Watch-Modus einmalig manuell zu generieren:
+```bash
+python3 agent_start.py --dashboard
+```

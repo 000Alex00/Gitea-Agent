@@ -162,7 +162,16 @@ Vor dem Eval prüft `_check_server_staleness()` ob der laufende Server überhaup
 
 ---
 
-### Watch-Modus
+### Watch-Modus & Patch-Modus
+Der Watch-Modus läuft in regelmäßigen Zyklen und überwacht den Evaluierungs-Status. Bei Fehlern erstellt er automatisch Gitea-Issues.
+
+Wenn du intensiv am Code entwickelst und oft kaputten Code eincheckst, kannst du den **Patch-Modus** aktivieren (`--watch --patch`).
+Im Patch-Modus:
+1. Werden **keine** automatischen Gitea-Issues erstellt.
+2. Werden **Neustarts sofort durchgeführt** (die `inactivity_minutes` werden übersprungen).
+3. Wird bei jedem Lauf ein Live-Dashboard (`dashboard.html`) für dich generiert.
+
+### Watch-Modus starten
 `--watch` startet eine periodische Eval-Schleife im Hintergrund (empfohlen: tmux). Bei Regression → automatisches Bug-Issue in Gitea. Erholt sich der Score → Issue wird automatisch geschlossen.
 
 ```bash
@@ -535,7 +544,16 @@ python3 evaluation.py --project /path/to/project
 python3 evaluation.py --project /path/to/project --update-baseline
 ```
 
-### Watch-Modus
+### Watch-Modus & Patch-Modus
+Der Watch-Modus läuft in regelmäßigen Zyklen und überwacht den Evaluierungs-Status. Bei Fehlern erstellt er automatisch Gitea-Issues.
+
+Wenn du intensiv am Code entwickelst und oft kaputten Code eincheckst, kannst du den **Patch-Modus** aktivieren (`--watch --patch`).
+Im Patch-Modus:
+1. Werden **keine** automatischen Gitea-Issues erstellt.
+2. Werden **Neustarts sofort durchgeführt** (die `inactivity_minutes` werden übersprungen).
+3. Wird bei jedem Lauf ein Live-Dashboard (`dashboard.html`) für dich generiert.
+
+### Watch-Modus starten
 
 `--watch` startet eine periodische Eval-Schleife:
 
