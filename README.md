@@ -159,6 +159,48 @@ Vor dem Eval prüft `_check_server_staleness()` ob der laufende Server überhaup
 | Plan-Kommentar vorhanden | kein Plan im Issue |
 | Metadaten-Block im Plan | Plan ohne `🤖 Agent-Metadaten` |
 | Eval nach letztem Commit | Eval veraltet oder fehlend |
+| Server-Neustart | `restart_script` gesetzt, Eval veraltet |
+| Self-Consistency Check | Agent-Code geändert + Check fehlgeschlagen |
+
+---
+
+### Consecutive-Pass Gate
+Auto-Issues werden nicht beim ersten Pass geschlossen, sondern erst nach **N aufeinanderfolgenden Passes**. Verhindert Falsch-Positives bei intermittierenden Tests.
+
+```json
+// agent_eval.json
+{ "close_after_consecutive_passes": 3 }
+```
+
+Bei jedem Pass vor Erreichen des Schwellwerts postet der Agent einen Fortschritts-Kommentar:
+```
+⏳ Test besteht (2/3) — warte auf Bestätigung
+```
+Standard: `1` (bisheriges Verhalten — sofort schließen).
+
+---
+
+### Betriebsmodi — Night / Patch / Idle
+Drei systemd-basierte Modi steuern den Agent-Betrieb. Notebook kann jederzeit zugeklappt werden — keine offene Terminal-Session nötig.
+
+| Modus | Service | Beschreibung |
+|---|---|---|
+| **NIGHT** | `gitea-agent-night` | Autonomer Betrieb: Watch, Eval, Auto-Issues, Log-Analyse |
+| **PATCH** | `gitea-agent-patch` | Aktive Entwicklung: Watch mit `--patch` (keine Auto-Issues) |
+| **IDLE** | — | Alles gestoppt |
+
+```bash
+# Ersteinrichtung (einmalig)
+python3 agent_start.py --install-service
+
+# Moduswechsel
+./start_night.sh    # → Night-Modus (stoppt Patch falls aktiv)
+./start_patch.sh    # → Patch-Modus (stoppt Night falls aktiv)
+./stop_agent.sh     # → IDLE
+./agent_status.sh   # → Modus, Laufzeit, Score, offene Issues
+```
+
+Das Dashboard wird nicht nur im Watch-Takt aktualisiert, sondern sofort nach jedem signifikanten Event (PR-Abschluss, Auto-Issue erstellt/geschlossen, Server-Neustart).
 
 ---
 
@@ -172,9 +214,13 @@ Im Patch-Modus:
 3. Wird bei jedem Lauf ein Live-Dashboard (`dashboard.html`) für dich generiert.
 
 ### Watch-Modus starten
-`--watch` startet eine periodische Eval-Schleife im Hintergrund (empfohlen: tmux). Bei Regression → automatisches Bug-Issue in Gitea. Erholt sich der Score → Issue wird automatisch geschlossen.
+`--watch` startet eine periodische Eval-Schleife — entweder via systemd (empfohlen) oder manuell in tmux. Bei Regression → automatisches Bug-Issue in Gitea. Erholt sich der Score → Issue wird nach N Passes geschlossen (siehe Consecutive-Pass Gate).
 
 ```bash
+# Empfohlen: via Betriebsmodi-Skripte (systemd)
+./start_night.sh    # oder ./start_patch.sh
+
+# Alternativ: manuell
 tmux new -s watch
 python3 agent_start.py --watch --interval 30  # alle 30 Minuten
 # Ctrl+B, D zum Detachen
@@ -518,6 +564,7 @@ Im Zielprojekt muss eine `tests/agent_eval.json` existieren:
 | `restart_script` | Pfad zum Start-Skript — Watch startet Server automatisch neu bei Inaktivität + neuen Commits |
 | `inactivity_minutes` | Schwellwert für Chat-Inaktivität in Minuten, ab dem Neustart getriggert wird (Standard: 5) |
 | `log_analysis_interval_minutes` | Interval für Log-Analyse in Watch-Zyklen (projektspezifisch) |
+| `close_after_consecutive_passes` | Anzahl aufeinanderfolgender Passes bevor Auto-Issue geschlossen wird (Standard: 1) |
 | `weight` | Gewichtung im Score (1–3) |
 | `pi5_required` | Bei `true`: Test wird übersprungen wenn Pi5 offline |
 | `message` | Nachricht an den Server |
@@ -613,7 +660,7 @@ Priorität: `--interval` CLI-Arg > `watch_interval_minutes` in `agent_eval.json`
 - Score < Baseline → strukturiertes Gitea Issue mit Label `bug` erstellt (Titel: `[Auto] <test-name> fehlgeschlagen`)
 - Auto-Issue enthält: Tabelle Erwartung vs. Realität, Step-Tabelle mit ✅/❌ (bei steps-Tests), regelbasierte Fehler-Kategorie, letzte 3 Scores
 - Deduplication: kein Duplikat wenn Issue mit gleichem Titel bereits offen
-- Test besteht wieder → Issue wird automatisch geschlossen
+- Test besteht wieder → Issue wird nach `close_after_consecutive_passes` aufeinanderfolgenden Passes geschlossen (Standard: 1 = sofort)
 - Wenn `tools/log_analyzer.py` im Zielprojekt vorhanden → wird automatisch ausgeführt + Ausgabe ins Terminal
 
 **Szenario 2 — automatischer Neustart:**
@@ -632,12 +679,12 @@ Konfiguration in `agent_eval.json`:
 }
 ```
 
-**tmux empfohlen** für Dauerbetrieb:
+**Empfohlen:** Betriebsmodi-Skripte (systemd) statt tmux:
 ```bash
-tmux new -s watch
-python3 agent_start.py --watch
-# Ctrl+B, D zum Detachen
+python3 agent_start.py --install-service  # einmalig
+./start_night.sh                          # Night-Modus (systemd)
 ```
+Alternativ tmux: `tmux new -s watch && python3 agent_start.py --watch`
 
 ---
 
@@ -727,6 +774,16 @@ python3 agent_start.py --watch                             # alle 60 Minuten (St
 python3 agent_start.py --watch --interval 30               # alle 30 Minuten
 python3 agent_start.py --eval-after-restart                # Eval nach Neustart (ohne Issue-Kommentar)
 python3 agent_start.py --eval-after-restart 61             # Eval nach Neustart + Score in Issue #61
+
+# Betriebsmodi (systemd):
+python3 agent_start.py --install-service                   # Units installieren (einmalig)
+./start_night.sh                                           # Night-Modus
+./start_patch.sh                                           # Patch-Modus
+./stop_agent.sh                                            # IDLE
+./agent_status.sh                                          # Status anzeigen
+
+# Dashboard:
+python3 agent_start.py --dashboard                         # Dashboard einmalig generieren
 ```
 
 ---
@@ -778,6 +835,8 @@ Technische Schranken die Kontext-Drift verhindern — kein LLM kann sie umgehen:
 | Plan-Kommentar vorhanden | `Kein Plan-Kommentar im Issue gefunden` |
 | Agent-Metadaten-Block im Plan | `Plan-Kommentar ohne Metadata-Block` |
 | Eval nach letztem Commit ausgeführt | `Eval nicht ausgeführt seit letztem Commit` |
+| Server-Neustart empfohlen | `restart_script konfiguriert, Eval veraltet` (nur wenn `restart_script` in agent_eval.json gesetzt) |
+| Agent Self-Consistency Check | `Self-Check fehlgeschlagen` (nur wenn Agent-Code geändert) |
 
 Bei Fehler: `SystemExit(1)` — PR wird nicht erstellt.
 
@@ -860,12 +919,18 @@ Jede starter.md enthält automatisch einen PFLICHTREGELN-Block:
 
 ```
 gitea-agent/
-├── agent_start.py      # CLI + Workflow-Logik
-├── evaluation.py       # Eval-System
-├── gitea_api.py        # Gitea REST API Wrapper
-├── settings.py         # Alle konfigurierbaren Werte (Labels, Texte, Limits, Pfade)
-├── log.py              # Logging-Konfiguration (Console + File)
-├── .env.example        # Konfigurationsvorlage
+├── agent_start.py        # CLI + Workflow-Logik
+├── evaluation.py         # Eval-System
+├── gitea_api.py          # Gitea REST API Wrapper
+├── settings.py           # Alle konfigurierbaren Werte (Labels, Texte, Limits, Pfade)
+├── dashboard.py          # Live-Dashboard Generator
+├── agent_self_check.py   # Deterministischer Self-Consistency Check
+├── log.py                # Logging-Konfiguration (Console + File)
+├── start_night.sh        # Night-Modus starten (systemd)
+├── start_patch.sh        # Patch-Modus starten (systemd)
+├── stop_agent.sh         # Alle Services stoppen → IDLE
+├── agent_status.sh       # Modus, Laufzeit, Score, Issues anzeigen
+├── .env.example          # Konfigurationsvorlage
 └── README.md
 ```
 
@@ -1000,6 +1065,8 @@ Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für 
 - **Systematische Fehler-Erkennung (Tag-Aggregation)** — Der Watch-Modus analysiert die `score_history.json`, erkennt systematisch fehlschlagende Test-`tags` und erstellt `[Auto-Improvement]`-Issues mit Lösungsvorschlägen.
 - **LLM-gestützte Log-Analyse** — Der `log_analyzer.py` kann optional ein LLM nutzen, um bei unbekannten Fehlern eine Root-Cause-Analyse durchzuführen. Der Prompt wird dabei mit dem Kontext aus der `score_history.json` angereichert.
 - **Agent Self-Consistency Check** — Ein deterministischer Check (`agent_self_check.py`) stellt sicher, dass Erweiterungen am Agenten selbst konsistent sind (Flags, Labels, etc.) und wird vor jedem PR auf den Agenten-Code ausgeführt.
+- **Consecutive-Pass Gate** — Auto-Issues werden erst nach N aufeinanderfolgenden Passes geschlossen (`close_after_consecutive_passes`). Fortschritts-Kommentare im Issue zeigen den Zählerstand.
+- **Betriebsmodi (Night / Patch / Idle)** — Drei systemd-basierte Modi mit Shell-Skripten (`start_night.sh`, `start_patch.sh`, `stop_agent.sh`, `agent_status.sh`). Dashboard-Updates nach jedem Event. Dynamische Unit-Installation via `--install-service`.
 
 ### Geplant / In Arbeit
 
@@ -1014,4 +1081,4 @@ Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für 
 - **Gitea Webhook-Server** — kleiner HTTP-Server der Gitea-Webhooks empfängt und `agent_start.py` direkt triggert
 - **PR-Review-Kommentar-Loop** — Agent liest Review-Kommentare aus dem PR und reagiert automatisch auf Änderungswünsche
 - **Parallelisierung** — mehrere Issues gleichzeitig auf separaten Branches bearbeiten (aktuell sequenziell)
-- **Web-UI** — minimales Dashboard für Issue-Queue, Score-History und Watch-Status
+- **Web-UI** — erweitertes Dashboard mit Issue-Queue und Aktions-Buttons (aktuell: `dashboard.html` als statisches File)
