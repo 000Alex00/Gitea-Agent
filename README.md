@@ -1069,6 +1069,11 @@ Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für 
 - **Betriebsmodi (Night / Patch / Idle)** — Drei systemd-basierte Modi mit Shell-Skripten (`start_night.sh`, `start_patch.sh`, `stop_agent.sh`, `agent_status.sh`). Dashboard-Updates nach jedem Event. Dynamische Unit-Installation via `--install-service`.
 
 ### Geplant / In Arbeit
+- **AST-Repository-Skelett** (#46): Der Agent lädt nicht mehr die ganze Datei. Er nutzt das Skelett, um gezielt Segmente via --get-slice zu greifen. Verhindert Kontext-Overflow.
+
+- **Chirurgisches Refactoring** (#47): Zwang zum SEARCH/REPLACE Modus. Jede Änderung wird vor dem Commit durch einen AST-Syntax-Check gejagt.
+
+- **Stufe-1 Auto-Implement:** Autonome Bearbeitung von Low-Risk Issues (Docs/Cleanup), steuerbar über die .env.
 
 - **LLM-API Vollimplementierung** — automatische Implementierungsschleife über konfigurierbare API (Anthropic, OpenAI-kompatibel, Ollama); Grundstruktur vorhanden, fehlt: Datei-Edit-Loop + Commit-Logik
 - **Webhook-Integration** — Gitea sendet Event bei `ready-for-agent` → Agent wird direkt getriggert, kein Cron/manueller Aufruf nötig
