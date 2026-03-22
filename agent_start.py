@@ -1685,42 +1685,113 @@ def _sync_closed_contexts() -> None:
         print(f"[✓] {moved} verwaiste Context(s) nach done/ verschoben")
 
 
+def _consecutive_passes_for_test(test_name: str) -> int:
+    """Zählt aufeinanderfolgende Passes eines Tests aus score_history (rückwärts).
+
+    Bricht beim ersten Eintrag ab, in dem der Test in ``failed`` vorkommt.
+    """
+    hist_path = evaluation._resolve_path(
+        PROJECT, "score_history.json", evaluation.SCORE_HISTORY
+    )
+    if not hist_path.exists():
+        return 0
+    try:
+        with hist_path.open(encoding="utf-8") as f:
+            history = json.load(f)
+    except Exception:
+        return 0
+
+    count = 0
+    for entry in reversed(history):
+        test_failed = any(
+            f["name"] == test_name for f in entry.get("failed", [])
+        )
+        if not test_failed:
+            count += 1
+        else:
+            break
+    return count
+
+
 def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
-    """Schließt [Auto]-Issues deren Test jetzt wieder besteht (und Perf-Issues)."""
+    """Schließt [Auto]-Issues deren Test jetzt wieder besteht (und Perf-Issues).
+
+    Unterstützt ``close_after_consecutive_passes`` aus agent_eval.json:
+    Ein Auto-Issue wird erst geschlossen, wenn der zugehörige Test N-mal
+    hintereinander bestanden hat.  Standard: 1 (bisheriges Verhalten).
+    """
+    cfg = evaluation._load_config(PROJECT) or {}
+    threshold = cfg.get("close_after_consecutive_passes", 1)
+
     passed_names = {t.name for t in result.all_tests if t.passed}
     perf_passed_names = {t.name for t in result.all_tests if t.max_response_ms is None or t.response_ms <= t.max_response_ms}
     issues = gitea.get_issues(state="open")
     for issue in issues:
         title = issue.get("title", "")
+        matched_name: str | None = None
+
         if title.startswith("[Auto]"):
-            is_resolved = any(name in title for name in passed_names)
+            for name in passed_names:
+                if name in title:
+                    matched_name = name
+                    break
         elif title.startswith("[Auto-Perf]"):
-            is_resolved = any(name in title for name in perf_passed_names)
+            for name in perf_passed_names:
+                if name in title:
+                    matched_name = name
+                    break
         else:
             continue
-        
-        if is_resolved:
-                gitea.close_issue(issue["number"])
-                for lbl in [
-                    settings.LABEL_READY,
-                    settings.LABEL_PROPOSED,
-                    settings.LABEL_PROGRESS,
-                ]:
-                    try:
-                        gitea.remove_label(issue["number"], lbl)
-                    except Exception:
-                        pass
+
+        if matched_name is None:
+            continue
+
+        # --- Consecutive-Pass Gate ---
+        consec = _consecutive_passes_for_test(matched_name)
+
+        if consec < threshold:
+            # Fortschritts-Kommentar — aber nur wenn sich der Zähler geändert hat
+            progress_tag = f"Test besteht ({consec}/{threshold})"
+            existing = gitea.get_comments(issue["number"])
+            already_posted = any(progress_tag in c.get("body", "") for c in existing)
+            if not already_posted:
+                gitea.post_comment(
+                    issue["number"],
+                    f"⏳ {progress_tag} — warte auf Bestätigung",
+                )
                 log.info(
-                    f"[Auto]-Issue #{issue['number']} geschlossen — Test '{name}' besteht wieder"
+                    f"[Auto]-Issue #{issue['number']}: {progress_tag}"
                 )
-                print(
-                    f"[✓] Auto-Issue #{issue['number']} geschlossen ({name} wieder OK)"
-                )
-                idir = _find_issue_dir(issue["number"])
-                if idir and idir.exists():
-                    dest = _done_dir() / idir.name
-                    shutil.move(str(idir), str(dest))
-                    log.info(f"Context verschoben: {idir.name} → done/")
+                print(f"[⏳] Auto-Issue #{issue['number']}: {progress_tag}")
+            continue
+
+        # --- Threshold erreicht → schließen ---
+        gitea.close_issue(issue["number"])
+        for lbl in [
+            settings.LABEL_READY,
+            settings.LABEL_PROPOSED,
+            settings.LABEL_PROGRESS,
+        ]:
+            try:
+                gitea.remove_label(issue["number"], lbl)
+            except Exception:
+                pass
+        close_msg = (
+            f"nach {consec} aufeinanderfolgenden Passes"
+            if threshold > 1
+            else f"Test '{matched_name}' besteht wieder"
+        )
+        log.info(
+            f"[Auto]-Issue #{issue['number']} geschlossen — {close_msg}"
+        )
+        print(
+            f"[✓] Auto-Issue #{issue['number']} geschlossen ({close_msg})"
+        )
+        idir = _find_issue_dir(issue["number"])
+        if idir and idir.exists():
+            dest = _done_dir() / idir.name
+            shutil.move(str(idir), str(dest))
+            log.info(f"Context verschoben: {idir.name} → done/")
 
 
 def _build_metadata(
