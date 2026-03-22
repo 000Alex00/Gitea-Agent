@@ -309,6 +309,40 @@ contexts/open/13-enhancement/  →  contexts/done/13-enhancement/
 
 ---
 
+### Agent Self-Consistency Check
+Vor jedem PR, der den Agenten-Code selbst betrifft, läuft ein automatischer Selbst-Check (`agent_self_check.py`). Dieser deterministische Test stellt sicher, dass die interne Logik des Agenten konsistent ist. Er prüft u.a.:
+- Sind alle in `settings.py` definierten Gitea-Labels im Projekt vorhanden?
+- Haben alle CLI-Flags in `agent_start.py` eine zugehörige Handler-Funktion?
+- Sind alle Umgebungsvariablen in der `.env.example` dokumentiert?
+
+Schlägt der Check fehl, wird der PR blockiert, um unvollständige Implementierungen zu verhindern.
+
+---
+
+### LLM-gestützte Test-Generierung
+Der Befehl `--generate-tests <NR>` automatisiert die Erstellung von Testfällen. Der Agent sammelt den gesamten relevanten Kontext zu einem Issue (Code, Imports, Diskussion) und generiert einen System-Prompt. Dieser Prompt weist ein LLM an, passende `pytest`-Unit-Tests und `agent_eval.json`-Integrationstests zu schreiben.
+
+**Besonderheit:** Der Prompt erzwingt die Verwendung von `tag`s in den `agent_eval.json`-Tests, um eine systematische Fehleranalyse zu ermöglichen.
+
+---
+
+### LLM-gestützte Log-Analyse
+Der projektspezifische `log_analyzer.py`, der vom Watch-Modus aufgerufen wird, kann optional mit LLM-Unterstützung erweitert werden. Ist dies konfiguriert, sendet der Analyzer bei unbekannten Fehlermustern den Log-Kontext an ein LLM. 
+
+**Kontext-Anreicherung:** Der Prompt wird automatisch mit Informationen aus der `score_history.json` angereichert, um dem LLM Hinweise auf systematisch fehlschlagende Test-Tags zu geben. Dies ermöglicht gezieltere Hypothesen zur Fehlerursache.
+
+---
+
+### Live-Dashboard
+Für die lokale Entwicklung generiert der Agent eine `dashboard.html`. Diese Seite bietet eine Live-Übersicht über den Systemzustand und wird im `--watch`-Modus automatisch bei jedem Lauf aktualisiert. Sie kann auch manuell mit `--dashboard` erstellt werden.
+
+**Inhalt:**
+- **Score-Verlauf:** Interaktiver Chart der letzten 24 Stunden.
+- **System-Status:** Live-Ping von Server und Backend-Workern.
+- **Fehleranalyse:** Tabellen der letzten Fehler und systematisch fehlschlagender Test-Tags.
+
+---
+
 ## Schnellstart
 
 ```bash
