@@ -24,6 +24,7 @@ Referenzprojekt: Skynet (LLM WhatsApp-Bot, Jetson Nano + Raspberry Pi 5).
 15. [Systematische Fehler-Erkennung (Tag-Aggregation)](#15-systematische-fehler-erkennung-tag-aggregation)
 16. [Patch-Modus & Live-Dashboard](#16-patch-modus--live-dashboard)
 17. [Consecutive-Pass Gate für Auto-Issues](#17-consecutive-pass-gate-für-auto-issues)
+18. [Betriebsmodi — Night / Patch / Idle](#18-betriebsmodi--night--patch--idle)
 
 ---
 
@@ -947,3 +948,96 @@ Zyklus 6: "Stilles Failure" PASS  → Issue #42 geschlossen (3/3 erreicht)
 - Kommentar-Dedup: gleicher Zählerstand wird nicht doppelt gepostet
 - Ohne das Feld: Standard `1` — kein Breaking Change
 - Perf-Issues (`[Auto-Perf]`) folgen der gleichen Logik
+
+---
+
+## 18. Betriebsmodi — Night / Patch / Idle
+
+**Kontext:** Der Agent soll ohne offene Terminal-Session laufen. Drei Modi decken alle Szenarien ab: autonomer Nachtbetrieb, aktive Entwicklung, und Pause.
+
+### Übersicht
+
+| Modus | Service | Beschreibung |
+|---|---|---|
+| **NIGHT** | `gitea-agent-night` | Autonomer Betrieb: Watch, Eval, Auto-Issues, Log-Analyse |
+| **PATCH** | `gitea-agent-patch` | Aktive Entwicklung: Watch mit `--patch` (keine Auto-Issues) |
+| **IDLE** | — | Alles gestoppt |
+
+### Ersteinrichtung
+
+```bash
+# 1. Systemd-Units installieren (einmalig)
+python3 agent_start.py --install-service
+
+# 2. Skripte sind sofort nutzbar:
+./start_night.sh    # → Night-Modus
+./start_patch.sh    # → Patch-Modus
+./stop_agent.sh     # → IDLE
+./agent_status.sh   # → Status anzeigen
+```
+
+### Wechsel zwischen Modi
+
+```bash
+# Night → Patch (Patch stoppt Night automatisch)
+./start_patch.sh
+
+# Patch → Night (Night stoppt Patch automatisch)
+./start_night.sh
+
+# Alles stoppen
+./stop_agent.sh
+```
+
+Immer nur ein Modus aktiv — jedes Start-Skript stoppt den anderen zuerst.
+
+### start_patch.sh — Was passiert
+
+1. Stoppt Night-Service (falls aktiv)
+2. Server-Neustart via `restart_script` (falls konfiguriert)
+3. Eval durchführen + Dashboard aktualisieren
+4. `gitea-agent-patch.service` starten
+
+### start_night.sh — Was passiert
+
+1. Stoppt Patch-Service (falls aktiv)
+2. `gitea-agent-night.service` starten
+3. Watch-Loop läuft: Eval, Tag-Aggregation, Log-Analyse, Auto-Issues
+
+### agent_status.sh — Ausgabe
+
+```
+=== Agent-Status ===
+Modus:    NIGHT
+Seit:     Sat 2026-03-22 20:00:00 CET
+Laufzeit: 8h 30m
+
+Letzter Eval: 7/7 ✅ PASS (2026-03-23T04:00)
+
+Offene Issues: 3 (1 Auto, 2 manuell)
+  # 42 [Auto] Stilles Failure fehlgeschlagen [ready-for-agent]
+  # 50 Consecutive-Pass Gate
+  # 52 Betriebsmodi
+```
+
+### Dashboard-Event-Updates
+
+Das Dashboard wird nicht nur im Watch-Takt aktualisiert, sondern sofort nach:
+- PR-Abschluss (`cmd_pr`)
+- Auto-Issue erstellt/geschlossen
+- Server-Neustart + Eval
+- Manuelles `--dashboard`
+
+### Pflicht-Kette vor PR
+
+`_check_pr_preconditions()` erzwingt:
+1. Branch ≠ main
+2. Plan-Kommentar vorhanden
+3. Eval nach letztem Commit
+4. Server-Neustart empfohlen (wenn `restart_script` konfiguriert und Eval veraltet)
+
+### Pitfalls
+
+- `--install-service` braucht `sudo` für `/etc/systemd/system/`
+- Pfade werden dynamisch aus der aktuellen Umgebung abgeleitet — kein Hardcoding
+- Logs: `journalctl -u gitea-agent-night -f` bzw. `-u gitea-agent-patch`

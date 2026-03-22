@@ -886,7 +886,25 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
     else:
         log.debug("Kein agent_eval.json — Eval-Prüfung übersprungen")
 
-    # 5. Agent-Self-Check (if agent code is modified)
+    # 5. Pflicht-Kette: Server-Neustart vor PR (nur wenn restart_script konfiguriert)
+    if eval_cfg.exists():
+        try:
+            with eval_cfg.open(encoding="utf-8") as f:
+                cfg_data = json.load(f)
+            restart_script = cfg_data.get("restart_script")
+            if restart_script and Path(restart_script).exists():
+                # Prüfen ob Server seit letztem Commit neu gestartet wurde
+                # (heuristisch: wenn Eval nach letztem Commit fehlt, wurde
+                # vermutlich auch nicht neu gestartet)
+                if fehler and any("Eval nicht nach letztem Commit" in e for e in fehler):
+                    fehler.append(
+                        f"Server-Neustart empfohlen vor PR — restart_script: {restart_script}\n"
+                        f"    → Lösung: --restart-before-eval beim PR-Aufruf verwenden"
+                    )
+        except Exception as e:
+            log.warning(f"restart_script Prüfung fehlgeschlagen: {e}")
+
+    # 6. Agent-Self-Check (if agent code is modified)
     try:
         changed_files = (
             subprocess.check_output(
@@ -1477,6 +1495,8 @@ Implementierung für Issue #{number}.
     print(f"[✓] PR erstellt: {pr_url}")
     print(f"[✓] Kommentar in Issue #{number} gepostet.")
 
+    _dashboard_event("cmd_pr abgeschlossen")
+
     # Maßnahme 4: Abschluss-Validierung
     _validate_pr_completion(number, branch, pr_url, idir_moved)
 
@@ -1787,6 +1807,7 @@ def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
         print(
             f"[✓] Auto-Issue #{issue['number']} geschlossen ({close_msg})"
         )
+        _dashboard_event("Auto-Issue geschlossen")
         idir = _find_issue_dir(issue["number"])
         if idir and idir.exists():
             dest = _done_dir() / idir.name
@@ -2318,6 +2339,8 @@ def cmd_eval_after_restart(number: int | None = None) -> None:
         log.info(f"[eval-after-restart] Kommentar gepostet → Issue #{number}")
         print(f"[eval-after-restart] Kommentar gepostet → Issue #{number}")
 
+    _dashboard_event("eval-after-restart")
+
 
 def _build_auto_issue_body(
     failed: "evaluation.TestResult",
@@ -2477,7 +2500,8 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
                             )
                             log.warning(f"Auto-Issue erstellt: #{issue['number']} für '{t.name}'")
                             print(f"[!] Auto-Issue erstellt: #{issue['number']} — {t.name}")
-                            
+                            _dashboard_event("Auto-Issue erstellt")
+
                     # 2. Performance Regression
                     if t.max_response_ms is not None and t.response_ms > t.max_response_ms:
                         if _auto_perf_issue_exists(t.name):
@@ -2496,6 +2520,7 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
                             )
                             log.warning(f"Auto-Perf Issue erstellt: #{issue['number']} für '{t.name}'")
                             print(f"[!] Auto-Perf Issue erstellt: #{issue['number']} — {t.name}")
+                            _dashboard_event("Auto-Perf-Issue erstellt")
 
         except Exception as e:
             log.error(f"Watch-Lauf Fehler: {e}")
@@ -2547,9 +2572,94 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Auto-Modus
+# Dashboard-Event-Helper
 # ---------------------------------------------------------------------------
 
+
+def _dashboard_event(context: str = "") -> None:
+    """Dashboard nach signifikantem Event sofort aktualisieren."""
+    try:
+        dashboard.generate(PROJECT)
+        if context:
+            log.debug(f"Dashboard aktualisiert ({context})")
+    except Exception as e:
+        log.warning(f"Dashboard-Update fehlgeschlagen ({context}): {e}")
+
+
+# ---------------------------------------------------------------------------
+# Service-Installation
+# ---------------------------------------------------------------------------
+
+_UNIT_TEMPLATE = """\
+[Unit]
+Description=gitea-agent {mode} mode
+After=network.target
+
+[Service]
+Type=simple
+User={user}
+WorkingDirectory={workdir}
+ExecStart={python} {agent_start} --watch{patch_flag}
+Restart=on-failure
+RestartSec=30
+Environment=PATH={path}
+
+[Install]
+WantedBy=multi-user.target
+"""
+
+
+def cmd_install_service() -> None:
+    """Installiert die systemd-Units gitea-agent-night und gitea-agent-patch."""
+    import getpass
+
+    user = getpass.getuser()
+    python = sys.executable
+    agent_start = str(_HERE / "agent_start.py")
+    workdir = str(_HERE)
+    path = os.environ.get("PATH", "/usr/bin:/bin")
+
+    units = {
+        "gitea-agent-night": _UNIT_TEMPLATE.format(
+            mode="night", user=user, workdir=workdir,
+            python=python, agent_start=agent_start,
+            patch_flag="", path=path,
+        ),
+        "gitea-agent-patch": _UNIT_TEMPLATE.format(
+            mode="patch", user=user, workdir=workdir,
+            python=python, agent_start=agent_start,
+            patch_flag=" --patch", path=path,
+        ),
+    }
+
+    for name, content in units.items():
+        unit_path = Path(f"/etc/systemd/system/{name}.service")
+        print(f"[→] Schreibe {unit_path}")
+        try:
+            unit_path.write_text(content, encoding="utf-8")
+        except PermissionError:
+            print(f"[!] Keine Schreibrechte — versuche mit sudo...")
+            subprocess.run(
+                ["sudo", "tee", str(unit_path)],
+                input=content.encode(),
+                stdout=subprocess.DEVNULL,
+                check=True,
+            )
+        print(f"[✓] {name}.service installiert")
+
+    subprocess.run(["sudo", "systemctl", "daemon-reload"], check=True)
+    print("[✓] systemd daemon-reload")
+    print()
+    print("Nutzung:")
+    print("  start_night.sh  → Night-Modus starten")
+    print("  start_patch.sh  → Patch-Modus starten")
+    print("  stop_agent.sh   → Alles stoppen")
+    print("  agent_status.sh → Status anzeigen")
+
+
+# ---------------------------------------------------------------------------
+# Auto-Modus
+# ---------------------------------------------------------------------------
 
 
 def cmd_dashboard() -> None:
@@ -2784,9 +2894,16 @@ Ohne Argumente: automatischer Modus.
         action="store_true",
         help="Server via restart_script neu starten vor Eval (--pr)",
     )
+    parser.add_argument(
+        "--install-service",
+        action="store_true",
+        help="Systemd-Units für Night- und Patch-Modus installieren",
+    )
     args = parser.parse_args()
 
-    if args.eval_after_restart is not None:
+    if args.install_service:
+        cmd_install_service()
+    elif args.eval_after_restart is not None:
         nr = args.eval_after_restart if args.eval_after_restart != 0 else None
         cmd_eval_after_restart(nr)
     elif args.list:
