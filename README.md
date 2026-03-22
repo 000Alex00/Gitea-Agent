@@ -117,7 +117,7 @@ feat/issue-6-statusmanager
 // agent/config/agent_eval.json
 {
   "tests": [
-    { "name": "Grundfunktion", "weight": 2, "message": "Was ist 2+2?", "expected_keywords": ["4"] },
+    { "name": "Grundfunktion", "weight": 2, "message": "Was ist 2+2?", "expected_keywords": ["4"], "max_response_ms": 2000 },
     { "name": "Fakten-Speichern", "weight": 1, "steps": [
         { "message": "Mein Name ist Max", "expect_stored": true },
         { "message": "Wie heiße ich?", "expected_keywords": ["Max"] }
@@ -174,6 +174,13 @@ python3 agent_start.py --watch --interval 30  # alle 30 Minuten
 Auto-Issues enthalten: Erwartung vs. Realität, Step-Tabelle mit ✅/❌, Fehler-Kategorie, letzte 3 Scores. Duplikate werden verhindert (gleicher Titel + offen = kein neues Issue).
 
 ---
+
+
+### Performance-Benchmarking
+Das Eval-System misst automatisch die Latenz (Antwortzeit in Millisekunden) jedes Tests.
+Optional kann in der `agent_eval.json` pro Test ein `max_response_ms`-Limit gesetzt werden.
+Wird dieses Limit im Watch-Modus überschritten, erstellt der Agent automatisch ein Issue mit dem Label `[Auto-Perf]`, um eine Regression der Performance zu signalisieren.
+Die gemessenen Latenzen werden zudem fortlaufend in der `score_history.json` dokumentiert.
 
 ### Auto-Neustart (Watch)
 Zusätzlich zur Eval-Schleife prüft Watch ob ein Neustart sinnvoll ist:

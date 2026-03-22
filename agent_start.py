@@ -1499,6 +1499,12 @@ def _auto_issue_exists(test_name: str) -> bool:
     marker = f"[Auto] {test_name}"
     return any(marker in i.get("title", "") for i in issues)
 
+def _auto_perf_issue_exists(test_name: str) -> bool:
+    """Prüft ob ein offenes [Auto-Perf]-Issue für diesen Test bereits existiert."""
+    issues = gitea.get_issues(state="open")
+    marker = f"[Auto-Perf] {test_name}"
+    return any(marker in i.get("title", "") for i in issues)
+
 
 def _sync_closed_contexts() -> None:
     """Verschiebt Context-Ordner von open/ nach done/ für bereits geschlossene Issues.
@@ -1529,15 +1535,20 @@ def _sync_closed_contexts() -> None:
 
 
 def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:
-    """Schließt [Auto]-Issues deren Test jetzt wieder besteht."""
+    """Schließt [Auto]-Issues deren Test jetzt wieder besteht (und Perf-Issues)."""
     passed_names = {t.name for t in result.all_tests if t.passed}
+    perf_passed_names = {t.name for t in result.all_tests if t.max_response_ms is None or t.response_ms <= t.max_response_ms}
     issues = gitea.get_issues(state="open")
     for issue in issues:
         title = issue.get("title", "")
-        if not title.startswith("[Auto]"):
+        if title.startswith("[Auto]"):
+            is_resolved = any(name in title for name in passed_names)
+        elif title.startswith("[Auto-Perf]"):
+            is_resolved = any(name in title for name in perf_passed_names)
+        else:
             continue
-        for name in passed_names:
-            if name in title:
+        
+        if is_resolved:
                 gitea.close_issue(issue["number"])
                 for lbl in [
                     settings.LABEL_READY,
@@ -2214,41 +2225,47 @@ def cmd_watch(interval_minutes: int = 60) -> None:
             if not result.skipped and not result.warned:
                 _close_resolved_auto_issues(result)
 
-                for failed in result.failed_tests:
-                    if failed.skipped:
+                for t in result.all_tests:
+                    if t.skipped:
                         continue
-                    if _auto_issue_exists(failed.name):
-                        log.debug(
-                            f"[Auto]-Issue für '{failed.name}' bereits offen — kein Duplikat"
-                        )
-                        continue
-
-                    try:
-                        commit = (
-                            subprocess.check_output(
-                                ["git", "log", "-1", "--pretty=%h %s"],
-                                cwd=PROJECT,
-                                stderr=subprocess.DEVNULL,
+                        
+                    # 1. Funktionale Regression (Score Verlust)
+                    if not t.passed:
+                        if _auto_issue_exists(t.name):
+                            log.debug(f"[Auto]-Issue für '{t.name}' bereits offen — kein Duplikat")
+                        else:
+                            try:
+                                commit = subprocess.check_output(["git", "log", "-1", "--pretty=%h %s"], cwd=PROJECT, stderr=subprocess.DEVNULL).decode().strip()
+                            except Exception:
+                                commit = "unbekannt"
+                            body = _build_auto_issue_body(t, result, commit, "")
+                            _validate_comment(body, "auto_issue")
+                            issue = gitea.create_issue(
+                                title=f"[Auto] {t.name} fehlgeschlagen — Score-Verlust erkannt",
+                                body=body,
+                                label=settings.LABEL_READY,
                             )
-                            .decode()
-                            .strip()
-                        )
-                    except Exception:
-                        commit = "unbekannt"
-
-                    body = _build_auto_issue_body(failed, result, commit, "")
-                    _validate_comment(body, "auto_issue")
-                    issue = gitea.create_issue(
-                        title=f"[Auto] {failed.name} fehlgeschlagen — Score-Verlust erkannt",
-                        body=body,
-                        label=settings.LABEL_READY,
-                    )
-                    log.warning(
-                        f"Auto-Issue erstellt: #{issue['number']} für '{failed.name}'"
-                    )
-                    print(
-                        f"[!] Auto-Issue erstellt: #{issue['number']} — {failed.name}"
-                    )
+                            log.warning(f"Auto-Issue erstellt: #{issue['number']} für '{t.name}'")
+                            print(f"[!] Auto-Issue erstellt: #{issue['number']} — {t.name}")
+                            
+                    # 2. Performance Regression
+                    if t.max_response_ms is not None and t.response_ms > t.max_response_ms:
+                        if _auto_perf_issue_exists(t.name):
+                            log.debug(f"[Auto-Perf]-Issue für '{t.name}' bereits offen — kein Duplikat")
+                        else:
+                            try:
+                                commit = subprocess.check_output(["git", "log", "-1", "--pretty=%h %s"], cwd=PROJECT, stderr=subprocess.DEVNULL).decode().strip()
+                            except Exception:
+                                commit = "unbekannt"
+                            body = f"Performance-Regression im Test **{t.name}**.\nErlaubte Zeit: {t.max_response_ms}ms\nGemessene Zeit: **{t.response_ms}ms**\n\nBitte prüfen."
+                            _validate_comment(body, "auto_issue")
+                            issue = gitea.create_issue(
+                                title=f"[Auto-Perf] {t.name} Latenz überschritten",
+                                body=body,
+                                label=settings.LABEL_READY,
+                            )
+                            log.warning(f"Auto-Perf Issue erstellt: #{issue['number']} für '{t.name}'")
+                            print(f"[!] Auto-Perf Issue erstellt: #{issue['number']} — {t.name}")
 
         except Exception as e:
             log.error(f"Watch-Lauf Fehler: {e}")
