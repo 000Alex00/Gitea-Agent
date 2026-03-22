@@ -958,6 +958,15 @@ Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für 
 
 ## Roadmap
 
+### Abgeschlossen
+
+- **Performance-Benchmarking** — Misst die Latenz bei jedem Eval-Test und erstellt bei Regressionen automatisch `[Auto-Perf]`-Issues (`--watch`).
+- **Patch-Modus & Live-Dashboard** — Entwicklungs-Modus (`--patch`) ohne Auto-Issue-Spam, dafür mit einem Live-Dashboard (`dashboard.html`), das bei jedem Watch-Lauf aktualisiert wird.
+- **LLM-gestützte Test-Generierung** — Neuer Befehl (`--generate-tests`), der Kontext sammelt und einen Prompt zur Erstellung von `pytest`- und `agent_eval.json`-Tests vorbereitet.
+- **Systematische Fehler-Erkennung (Tag-Aggregation)** — Der Watch-Modus analysiert die `score_history.json`, erkennt systematisch fehlschlagende Test-`tags` und erstellt `[Auto-Improvement]`-Issues mit Lösungsvorschlägen.
+- **LLM-gestützte Log-Analyse** — Der `log_analyzer.py` kann optional ein LLM nutzen, um bei unbekannten Fehlern eine Root-Cause-Analyse durchzuführen. Der Prompt wird dabei mit dem Kontext aus der `score_history.json` angereichert.
+- **Agent Self-Consistency Check** — Ein deterministischer Check (`agent_self_check.py`) stellt sicher, dass Erweiterungen am Agenten selbst konsistent sind (Flags, Labels, etc.) und wird vor jedem PR auf den Agenten-Code ausgeführt.
+
 ### Geplant / In Arbeit
 
 - **LLM-API Vollimplementierung** — automatische Implementierungsschleife über konfigurierbare API (Anthropic, OpenAI-kompatibel, Ollama); Grundstruktur vorhanden, fehlt: Datei-Edit-Loop + Commit-Logik

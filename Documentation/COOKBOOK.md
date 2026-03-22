@@ -20,6 +20,9 @@ Referenzprojekt: Skynet (LLM WhatsApp-Bot, Jetson Nano + Raspberry Pi 5).
 11. [log_analyzer integrieren](#11-log_analyzer-integrieren)
 12. [PR mit veraltetem Server (Staleness-Check)](#12-pr-mit-veraltetem-server-staleness-check)
 13. [Migration auf zentrale Agent-Instanz](#13-migration-auf-zentrale-agent-instanz)
+14. [LLM-gestützte Test-Generierung (--generate-tests)](#14-llm-gestützte-test-generierung---generate-tests)
+15. [Systematische Fehler-Erkennung (Tag-Aggregation)](#15-systematische-fehler-erkennung-tag-aggregation)
+16. [Patch-Modus & Live-Dashboard](#16-patch-modus--live-dashboard)
 
 ---
 
@@ -544,6 +547,49 @@ def format_terminal(result: object) -> str:
 ```
 
 **Minimales Beispiel:**
+
+
+
+### LLM-gestützte Log-Analyse (Root-Cause Analyse)
+
+Der Log-Analyzer kann bei unbekannten oder wiederkehrenden Fehlern optional eine KI-gestützte Root-Cause-Analyse durchführen. Das System generiert dabei Hypothesen zur Fehlerursache, schlägt Fixes vor und weist auf bekannte Muster hin. 
+
+**Voraussetzung:**
+Du benötigst in der `agent_eval.json` einen Block `llm_log_analysis`, der die Anbindung konfiguriert (entweder an eine OpenAI-kompatible API wie `llama.cpp` oder Anthropic Claude).
+
+**Beispiel für llama.cpp (lokal):**
+```json
+{
+  "llm_log_analysis": {
+    "enabled": true,
+    "provider": "openai",
+    "url": "http://localhost:8080/v1/chat/completions",
+    "model": "mistral-instruct",
+    "api_key": ""
+  }
+}
+```
+
+**Beispiel für Claude (Anthropic API):**
+```json
+{
+  "llm_log_analysis": {
+    "enabled": true,
+    "provider": "anthropic",
+    "url": "https://api.anthropic.com/v1/messages",
+    "model": "claude-3-sonnet-20240229",
+    "api_key": "sk-ant-..."
+  }
+}
+```
+
+**Ablauf:**
+1. Der Watch-Modus führt den `log_analyzer.py` aus.
+2. Wenn ein systematischer Fehler erkannt wird (Muster `error`), wird geprüft, ob `llm_log_analysis` aktiv ist.
+3. Falls ja, sendet das Skript die Fehlermeldungen und Beispiel-Logs als Kontext an das Modell.
+4. Das LLM antwortet mit einer Root-Cause-Hypothese und Lösungsvorschlägen, welche automatisch an das generierte Gitea-Issue angehängt werden.
+5. **Tag-Kontext:** Zusätzlich wird die `score_history.json` analysiert, um dem LLM mitzuteilen, welche Test-Tags in letzter Zeit häufig fehlgeschlagen sind. Dadurch kann das LLM gezieltere Hypothesen aufstellen, die bekannte Schwachstellen berücksichtigen.
+6. **Fallback:** Ist das LLM nicht erreichbar oder deaktiviert, greift der Log-Analyzer stillschweigend auf die klassische regelbasierte Analyse zurück.
 
 ```python
 # tools/log_analyzer.py

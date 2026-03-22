@@ -71,6 +71,8 @@ def check_flags() -> Tuple[bool, str]:
         "watch",
         "eval_after_restart",
         "auto",
+        "generate_tests",
+        "dashboard",
     ]
 
     for flag in flags:
