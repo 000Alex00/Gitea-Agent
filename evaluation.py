@@ -50,6 +50,7 @@ class TestResult:
     step_details: list = field(
         default_factory=list
     )  # bei steps-Tests: [{msg, expected, actual, passed}]
+    tag: str = ""
     response_ms: float = 0.0  # Gemessene Antwortzeit in Millisekunden
     max_response_ms: float | None = None  # Maximal erlaubte Antwortzeit aus config
 
@@ -317,8 +318,8 @@ def _save_score_history(project_root: Path, result: "EvalResult", trigger: str) 
         "max_score": result.max_score,
         "baseline": result.baseline_score,
         "passed": result.passed,
-        "failed": [{"name": t.name, "reason": t.reason} for t in result.failed_tests],
-        "latencies": [{"name": t.name, "ms": t.response_ms, "max_ms": t.max_response_ms} for t in result.all_tests if t.response_ms > 0],
+        "failed": [{"name": t.name, "reason": t.reason, "tag": t.tag} for t in result.failed_tests],
+        "latencies": [{"name": t.name, "ms": t.response_ms, "max_ms": t.max_response_ms, "tag": t.tag} for t in result.all_tests if t.response_ms > 0],
     }
     history.append(entry)
     history = history[-HISTORY_MAX:]  # nur die letzten 90 behalten
@@ -398,6 +399,7 @@ def run(
         keywords = t.get("expected_keywords", [])
         pi5_req = t.get("pi5_required", False)
         max_resp_ms = t.get("max_response_ms")
+        tag = t.get("tag", "")
         total_weight += weight
 
         if pi5_req and not pi5_ok:
@@ -408,6 +410,7 @@ def run(
                 skipped=True,
                 reason="Pi5 offline",
                 category="pi5_offline",
+                tag=tag,
             )
             result.all_tests.append(tr)
             continue
@@ -433,6 +436,7 @@ def run(
                 step_details=step_details,
                 response_ms=resp_ms,
                 max_response_ms=max_resp_ms,
+                tag=tag,
             )
         else:
             t_start = time.perf_counter()
@@ -448,6 +452,7 @@ def run(
                     actual_response="",
                     response_ms=resp_ms,
                     max_response_ms=max_resp_ms,
+                    tag=tag,
                 )
                 result.all_tests.append(tr)
                 result.failed_tests.append(tr)
@@ -464,6 +469,7 @@ def run(
                 actual_response=response,
                 response_ms=resp_ms,
                 max_response_ms=max_resp_ms,
+                tag=tag,
             )
         result.all_tests.append(tr)
         if passed:

@@ -176,6 +176,29 @@ Auto-Issues enthalten: Erwartung vs. Realität, Step-Tabelle mit ✅/❌, Fehler
 ---
 
 
+
+### Systematische Fehler-Erkennung (Tag-Aggregation)
+Der Watch-Modus analysiert nach jedem Lauf die `score_history.json` und erkennt Muster über mehrere Läufe hinweg.
+Wenn Tests mit dem gleichen `tag` wiederholt fehlschlagen, wird automatisch ein Issue erstellt: `[Auto-Improvement] Systematische Schwäche bei Tag: <tag>`.
+
+**Konfiguration in `agent_eval.json`:**
+```json
+{
+  "tag_failure_threshold": 3,
+  "tag_failure_window": 5,
+  "affected_files": {
+    "chroma_retrieval": ["agent/utils/retriever.py", "agent/config/chroma.yaml"]
+  },
+  "improvement_hints": {
+    "chroma_retrieval": "Vector-Search Parameter prüfen oder Embeddings neu generieren."
+  }
+}
+```
+*   `tag_failure_threshold` / `tag_failure_window`: Erstellt ein Issue, wenn ein Tag in X der letzten Y Läufe mindestens einen Fehler hatte.
+*   `improvement_hints`: Eigener Text, der als Lösungsvorschlag (Hebel) in das Auto-Issue eingefügt wird.
+*   `affected_files`: Optionale Liste von Dateien, die bei diesem Tag als relevant markiert werden sollen.
+
+
 ### Performance-Benchmarking
 Das Eval-System misst automatisch die Latenz (Antwortzeit in Millisekunden) jedes Tests.
 Optional kann in der `agent_eval.json` pro Test ein `max_response_ms`-Limit gesetzt werden.

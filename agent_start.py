@@ -1573,6 +1573,89 @@ def _auto_perf_issue_exists(test_name: str) -> bool:
     return any(marker in i.get("title", "") for i in issues)
 
 
+
+def _auto_improvement_issue_exists(tag: str) -> bool:
+    issues = gitea.get_issues(state="open")
+    marker = f"[Auto-Improvement] Systematische Schwäche bei Tag: {tag}"
+    return any(marker in i.get("title", "") for i in issues)
+
+def _check_systematic_tag_failures(project_root) -> None:
+    try:
+        cfg = evaluation._load_config(project_root)
+        if not cfg: return
+        
+        threshold = cfg.get("tag_failure_threshold", 3)
+        window = cfg.get("tag_failure_window", 5)
+        hints = cfg.get("improvement_hints", {})
+        
+        hist_path = evaluation._resolve_path(project_root, "score_history.json", evaluation.SCORE_HISTORY)
+        if not hist_path.exists(): return
+        
+        import json
+        with hist_path.open(encoding="utf-8") as f:
+            history = json.load(f)
+            
+        if not history: return
+        
+        recent_history = history[-window:]
+        tag_failures = {}
+        
+        for run_entry in recent_history:
+            failed_tags_in_run = set()
+            for ftest in run_entry.get("failed", []):
+                tag = ftest.get("tag", "")
+                if tag:
+                    failed_tags_in_run.add(tag)
+            
+            for tag in failed_tags_in_run:
+                tag_failures[tag] = tag_failures.get(tag, 0) + 1
+                
+        for tag, count in tag_failures.items():
+            if count >= threshold:
+                if _auto_improvement_issue_exists(tag):
+                    log.debug(f"[Auto-Improvement]-Issue für Tag '{tag}' bereits offen.")
+                    continue
+                    
+                hint = hints.get(tag, "Keine spezifischen Hinweise in agent_eval.json (Feld 'improvement_hints') definiert.")
+                
+                # Sammle alle fehlerhaften Tests für diesen Tag als Kontext
+                failed_tests_for_tag = set()
+                for run_entry in recent_history:
+                    for ftest in run_entry.get("failed", []):
+                        if ftest.get("tag", "") == tag:
+                            failed_tests_for_tag.add(ftest.get("name", "Unbekannter Test"))
+                
+                tests_list = "\n".join(f"- {t}" for t in failed_tests_for_tag)
+                
+                # Suche nach betroffenen Dateien in der Konfiguration
+                affected_files_cfg = cfg.get("affected_files", {}).get(tag, [])
+                files_list = "\n".join(f"- `{f}`" for f in affected_files_cfg) if affected_files_cfg else "- *(Keine Dateien in `affected_files` Konfiguration hinterlegt)*"
+
+                body = (
+                    f"Der Test-Tag **{tag}** ist in den letzten {len(recent_history)} Evaluierungs-Läufen {count}-mal fehlgeschlagen.\n\n"
+                    f"Dies deutet auf eine systematische Schwäche oder Regression in diesem Code-Bereich hin.\n\n"
+                    f"**Betroffene Tests:**\n"
+                    f"{tests_list}\n\n"
+                    f"**Betroffene Dateien (laut Konfiguration):**\n"
+                    f"{files_list}\n\n"
+                    f"**Vorgeschlagene Hebel / Lösungsansätze:**\n"
+                    f"{hint}\n\n"
+                    f"Bitte den betroffenen Bereich analysieren und nachhaltig stabilisieren."
+                )
+                
+                issue = gitea.create_issue(
+                    title=f"[Auto-Improvement] Systematische Schwäche bei Tag: {tag}",
+                    body=body,
+                    label=settings.LABEL_READY,
+                )
+                log.warning(f"Auto-Improvement Issue erstellt: #{issue['number']} für Tag '{tag}'")
+                print(f"[!] Auto-Improvement Issue erstellt: #{issue['number']} — Tag {tag}")
+                
+    except Exception as e:
+        log.error(f"Fehler bei systematischer Tag-Analyse: {e}")
+        print(f"[!] Fehler bei systematischer Tag-Analyse: {e}")
+
+
 def _sync_closed_contexts() -> None:
     """Verschiebt Context-Ordner von open/ nach done/ für bereits geschlossene Issues.
 
@@ -2337,6 +2420,8 @@ def cmd_watch(interval_minutes: int = 60) -> None:
         except Exception as e:
             log.error(f"Watch-Lauf Fehler: {e}")
             print(f"[!] Fehler in Watch-Lauf: {e}")
+
+        _check_systematic_tag_failures(PROJECT)
 
         # Optionaler Log-Analyzer: neue Struktur (agent/config/) oder Legacy (tools/)
         analyzer_path = (

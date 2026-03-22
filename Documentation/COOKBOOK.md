@@ -794,3 +794,32 @@ claude -p contexts/44-task-tests/tests_prompt.md
 ```
 
 Nachdem Claude die Tests erstellt hat, solltest du diese kurz manuell verifizieren (`pytest`, `python3 evaluation.py`) und kannst sie danach in deinen Branch übernehmen.
+
+## 15. Systematische Fehler-Erkennung (Tag-Aggregation)
+
+Der Watch-Modus kann wiederkehrende Fehlermuster bei Test-Tags identifizieren und automatisch "Verbesserungs-Issues" erstellen. 
+
+### Ablauf
+
+**1. Tags in Tests definieren**
+Stelle sicher, dass Tests in der `agent_eval.json` ein `tag` Feld haben (z. B. `"tag": "routing"`).
+
+**2. Schwellenwerte und Hints setzen**
+Konfiguriere in der `agent_eval.json`, ab wann ein Tag als "systematisch kaputt" gilt und hinterlege Lösungsansätze:
+```json
+{
+  "tag_failure_threshold": 3,
+  "tag_failure_window": 5,
+  "affected_files": {
+    "routing": ["agent/router.py", "agent/config/prompts.yaml"]
+  },
+  "improvement_hints": {
+    "routing": "Prüfe den Router-Prompt auf Halluzinationen. Evtl. Temperatur senken.",
+    "chroma_retrieval": "Embeddings neu aufbauen oder Top-K erhöhen."
+  }
+}
+```
+
+**3. Watch-Modus Analyse**
+Der Agent prüft nach jedem Durchlauf die `score_history.json`.
+Tritt ein Fehler bei einem Tag in 3 von 5 aufeinanderfolgenden Läufen auf, wird automatisch ein Issue mit dem Titel `[Auto-Improvement] Systematische Schwäche bei Tag: <tag>` erstellt und dein konfigurierter Hinweis (`improvement_hints`) als Lösungsansatz vorgeschlagen.
