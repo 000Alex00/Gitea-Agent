@@ -525,17 +525,37 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
 
     limit = settings.MAX_FILE_LINES
     parts = []
+
+    # Repo-Skelett laden
+    issue_dir = _issue_dir(issue)
+    skeleton_path = issue_dir / "repo_skeleton.json"
+    skeleton_map = {}
+    if skeleton_path.exists():
+        try:
+            skeleton_data = json.loads(skeleton_path.read_text(encoding="utf-8"))
+            skeleton_map = {item["path"]: item for item in skeleton_data}
+        except Exception as e:
+            log.warning(f"Fehler beim Laden von repo_skeleton.json: {e}")
+
     for name, text in files_dict.items():
-        lines = text.splitlines()
-        size_kb = len(text.encode("utf-8")) / 1024
-        if size_kb > _MAX_FILE_SIZE_KB:
-            code = "\n".join(lines[:500])
-            code += f"\n\n# [GEKÜRZT: {len(lines)} Zeilen, {size_kb:.0f}KB — nur erste 500 Zeilen]"
-        elif len(lines) > limit:
-            code = "\n".join(lines[:limit])
-            code += f"\n\n[... gekürzt — {len(lines) - limit} Zeilen weggelassen ...]"
+        code = ""
+        skeleton_entry = skeleton_map.get(name)
+
+        if skeleton_entry and skeleton_entry.get("truncated"):
+            size_kb = skeleton_entry.get("size_kb", 0)
+            reason = skeleton_entry.get("reason", "Unbekannter Grund")
+            code = f"# [GEKÜRZT: {size_kb:.0f}KB — {reason}]\n# Der vollständige Dateiinhalt wurde aufgrund der Größe nicht geladen."
         else:
-            code = "\n".join(lines)
+            lines = text.splitlines()
+            size_kb = len(text.encode("utf-8")) / 1024
+            if size_kb > _MAX_FILE_SIZE_KB:
+                code = "\n".join(lines[:500])
+                code += f"\n\n# [GEKÜRZT: {len(lines)} Zeilen, {size_kb:.0f}KB — nur erste 500 Zeilen]"
+            elif len(lines) > limit:
+                code = "\n".join(lines[:limit])
+                code += f"\n\n[... gekürzt — {len(lines) - limit} Zeilen weggelassen ...]"
+            else:
+                code = "\n".join(lines)
         parts.append(f"## {name}\n```\n{code}\n```")
 
     idir = _issue_dir(issue)
