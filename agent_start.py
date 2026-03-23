@@ -523,50 +523,52 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
 {gitea.GITEA_URL}/{gitea.REPO}/issues/{num}
 """
 
-    limit = settings.MAX_FILE_LINES
     parts = []
 
-    # Repo-Skelett laden
-    issue_dir = _issue_dir(issue)
-    skeleton_path = issue_dir / "repo_skeleton.json"
-    skeleton_map = {}
-    if skeleton_path.exists():
-        try:
-            skeleton_data = json.loads(skeleton_path.read_text(encoding="utf-8"))
-            skeleton_map = {item["path"]: item for item in skeleton_data}
-        except Exception as e:
-            log.warning(f"Fehler beim Laden von repo_skeleton.json: {e}")
-
-    for name, text in files_dict.items():
-        code = ""
-        skeleton_entry = skeleton_map.get(name)
-
-        if skeleton_entry and skeleton_entry.get("truncated"):
-            size_kb = skeleton_entry.get("size_kb", 0)
-            reason = skeleton_entry.get("reason", "Unbekannter Grund")
-            code = f"# [GEKÜRZT: {size_kb:.0f}KB — {reason}]\n# Der vollständige Dateiinhalt wurde aufgrund der Größe nicht geladen."
-        else:
-            lines = text.splitlines()
-            size_kb = len(text.encode("utf-8")) / 1024
-            if size_kb > _MAX_FILE_SIZE_KB:
-                code = "\n".join(lines[:500])
-                code += f"\n\n# [GEKÜRZT: {len(lines)} Zeilen, {size_kb:.0f}KB — nur erste 500 Zeilen]"
-            elif len(lines) > limit:
-                code = "\n".join(lines[:limit])
-                code += f"\n\n[... gekürzt — {len(lines) - limit} Zeilen weggelassen ...]"
-            else:
-                code = "\n".join(lines)
-        parts.append(f"## {name}\n```\n{code}\n```")
-
     idir = _issue_dir(issue)
+    skeleton_map = _load_skeleton_map(idir)
+
+    for name in files_dict:  # only need keys, not content
+        entry = skeleton_map.get(name)
+        if entry and not entry.get("truncated"):
+            symbols = entry.get("symbols", [])
+            total_lines = entry.get("lines", "?")
+            if symbols:
+                sym_lines = "\n".join(
+                    f"  - {'Klasse' if s['type']=='class' else 'Funktion'} `{s['name']}` Zeilen {s['lines']}  `{s['signature']}`"
+                    for s in symbols
+                )
+            else:
+                sym_lines = "  *(keine Klassen/Funktionen erkannt)*"
+            slice_hint = f"python3 agent_start.py --get-slice {name}:1-{total_lines}"
+            parts.append(
+                f"## {name}  *({total_lines} Zeilen)*\n"
+                f"{sym_lines}\n"
+                f"> Volltext: `{slice_hint}`"
+            )
+        elif entry and entry.get("truncated"):
+            parts.append(
+                f"## {name}  *(zu groß — {entry.get('reason', '')})*\n"
+                f"> Volltext: `python3 agent_start.py --get-slice {name}:1-?`"
+            )
+        else:
+            # Kein Skelett-Eintrag: Volltext als Fallback (kleine/neue Dateien)
+            text = files_dict[name]
+            lines = text.splitlines()
+            code = "\n".join(lines[:300])
+            if len(lines) > 300:
+                code += f"\n\n[... {len(lines)-300} weitere Zeilen — --get-slice für vollständigen Code ...]"
+            ext = Path(name).suffix.lstrip(".")
+            parts.append(f"## {name}\n```{ext}\n{code}\n```")
+
     ctx_file = idir / "starter.md"
     files_file = idir / "files.md"
 
     ctx_file.write_text(ctx_content, encoding="utf-8")
     files_header = (
         f"# Dateien — Issue #{num}\n"
-        f"> Automatisch erkannt via Backtick-Erwähnungen, Import-Analyse (AST) und Keyword-Suche (grep).\n"
-        f"> Zusätzliche Suche im Repo ist nicht nötig — der Kontext ist vollständig.\n\n"
+        f"> Skelett-Modus aktiv — **kein Volltext**. Nutze `--get-slice datei.py:START-END` für Code-Details.\n"
+        f"> Automatisch erkannt via Backtick-Erwähnungen, Import-Analyse (AST) und Keyword-Suche (grep).\n\n"
     )
 
     # repo_skeleton.md einbetten falls vorhanden
