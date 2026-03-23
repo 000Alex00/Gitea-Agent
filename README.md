@@ -1072,6 +1072,7 @@ Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für 
 - **Diff-Validierung** (#57) — `--pr` prüft ob das LLM nur Zeilen im freigegebenen AST-Bereich geändert hat. Scope-Verletzungen erscheinen als Warnung im Terminal und als Gitea-Kommentar — kein harter Abbruch.
 - **SEARCH/REPLACE Protokoll** (#58) — LLM-agnostisches Patch-Format (`<<<<<<< SEARCH / ======= / >>>>>>> REPLACE`). Parser + Whitespace-Normalisierung + `ast.parse()`-Syntax-Check + `.bak`-Backup. `--apply-patch NR [--dry-run]`.
 - **Flächendeckende Codesegment-Strategie** (#72) — LLM bekommt niemals mehr Volltext. `files.md` enthält nur Skelett + Slice-Hinweise. `--build-skeleton` erstellt projektweites `repo_skeleton.json` (alle .py-Dateien, kein Größen-Limit). Watch-Loop aktualisiert inkrementell. `session.json` protokolliert Slice-Anforderungen pro Issue. Technische Schranke warnt bei ungesliceden Dateiänderungen.
+- **Gitea-Versionsvergleich** (#59) — Bei Score-Regression wird die alte Dateiversion via Gitea-API geladen und AST-Skelette verglichen. Struktureller Diff (`+ neu`, `- entfernt`, `~ gewachsen`) erscheint automatisch im Auto-Issue. Opt-in via `agent_eval.json: gitea_version_compare.enabled`.
 
 ### ⚠️ Bekannte Einschränkungen
 
