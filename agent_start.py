@@ -157,6 +157,24 @@ def relevant_files(issue: dict) -> list[Path]:
     return list(dict.fromkeys(found))
 
 
+def find_relevant_files_advanced(issue: dict) -> list[Path]:
+    """
+    Extrahiert Dateipfade aus dem Issue-Body (Backtick-Erwähnungen).
+    Zukünftig erweitert um AST-Analyse und Keyword-Suche.
+    """
+    # 1. Backtick-Erwähnungen (wie bisher)
+    body = issue.get("body", "")
+    exts = tuple(settings.CODE_EXTENSIONS)
+    found = []
+    for line in body.splitlines():
+        for part in line.split("`"):
+            p = PROJECT / part.strip()
+            if p.exists() and p.is_file() and p.suffix in exts:
+                found.append(p)
+
+    return list(dict.fromkeys(found))
+
+
 def branch_name(issue: dict) -> str:
     """
     Generiert einen Branch-Namen aus Issue-Nummer und Titel.
@@ -205,7 +223,7 @@ def build_plan_comment(issue: dict) -> str:
     """
     num = issue["number"]
     stufe, desc = risk_level(issue)
-    files = relevant_files(issue)
+    files = find_relevant_files_advanced(issue)
     branch = branch_name(issue)
 
     file_list = (
@@ -258,7 +276,7 @@ def print_context(issue: dict) -> None:
     title = issue.get("title", "")
     body = issue.get("body", "")
     stufe, desc = risk_level(issue)
-    files = relevant_files(issue)
+    files = find_relevant_files_advanced(issue)
     branch = branch_name(issue)
 
     print("=" * 70)
@@ -346,7 +364,7 @@ def save_plan_context(issue: dict) -> Path:
     title = issue.get("title", "")
     body = (issue.get("body", "") or "").strip()
     stufe, desc = risk_level(issue)
-    files = relevant_files(issue)
+    files = find_relevant_files_advanced(issue)
     branch = branch_name(issue)
 
     body_short = body[:200] + ("..." if len(body) > 200 else "")
@@ -1098,7 +1116,7 @@ def cmd_plan(number: int) -> None:
     issue = gitea.get_issue(number)
 
     stufe, _ = risk_level(issue)
-    files = relevant_files(issue)
+    files = find_relevant_files_advanced(issue)
 
     # Metadaten-Block (collapsible) aufbauen
     file_stats = []
@@ -1274,7 +1292,7 @@ def cmd_implement(number: int) -> None:
 """,
     )
 
-    base_files = relevant_files(issue)
+    base_files = find_relevant_files_advanced(issue)
     import_files = _find_imports(base_files)
     # Kommentare für Keyword-Suche einbeziehen
     comments = gitea.get_comments(issue["number"])
@@ -1520,7 +1538,7 @@ def cmd_generate_tests(number: int) -> None:
     
     issue = gitea.get_issue(number)
     
-    base_files = relevant_files(issue)
+    base_files = find_relevant_files_advanced(issue)
     import_files = _find_imports(base_files)
     
     comments = gitea.get_comments(number)
