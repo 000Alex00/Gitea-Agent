@@ -1198,6 +1198,7 @@ def cmd_plan(number: int) -> None:
         3. Label: ready-for-agent → agent-proposed
     """
     issue = gitea.get_issue(number)
+    stufe, _ = risk_level(issue)
 
     files = find_relevant_files_advanced(issue)
 
