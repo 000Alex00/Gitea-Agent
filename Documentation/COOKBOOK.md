@@ -1236,6 +1236,59 @@ Zusätzlich wird ein Kommentar ins Gitea-Issue gepostet, damit der Review sieht 
 
 ---
 
+## 16. SEARCH/REPLACE Protokoll (#58)
+
+LLM-agnostisches Patch-Protokoll für chirurgische Änderungen. Statt eine ganze Datei zu überschreiben, werden nur validierte Fragmente geändert.
+
+### Format
+
+Ein LLM postet einen Gitea-Kommentar mit folgendem Block:
+
+```
+## pfad/zur/datei.py
+<<<<<<< SEARCH
+[exakter alter Code — exakt wie in der Datei]
+=======
+[neuer Code]
+>>>>>>> REPLACE
+```
+
+Mehrere Blöcke hintereinander (verschiedene Dateien oder Bereiche) werden alle auf einmal angewendet.
+
+### Anwenden
+
+```bash
+# Prüfen ohne Schreiben
+python3 agent_start.py --self --apply-patch 58 --dry-run
+
+# Anwenden
+python3 agent_start.py --self --apply-patch 58
+
+# Danach committen
+git add datei.py
+git commit -m "patch: SEARCH/REPLACE via Issue #58"
+```
+
+### Sicherheits-Kette
+
+1. SEARCH muss exakt im Dateiinhalt vorkommen (Whitespace-normalisiert)
+2. REPLACE einfügen → neuen Inhalt erzeugen
+3. `ast.parse()` — Syntax-Check vor dem Schreiben
+4. `.bak`-Backup der Originaldatei
+5. Datei schreiben
+
+Bei fehlgeschlagenem SEARCH oder Syntax-Fehler: kein Schreiben, Fehlermeldung ins Issue.
+
+### Wann verwenden
+
+| Situation | Empfehlung |
+|---|---|
+| Kleine Änderung (1-2 Funktionen) | SEARCH/REPLACE — präzise |
+| Große Umstrukturierung | Direktes Schreiben — SEARCH/REPLACE zu umständlich |
+| LLM schreibt Datei komplett neu | Verboten wenn `repo_skeleton.json` vorhanden |
+
+---
+
 ## Sitzungs-Protokoll 2026-03-23
 
 ### Durchgeführte Änderungen

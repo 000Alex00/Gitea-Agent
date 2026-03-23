@@ -1070,6 +1070,7 @@ Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für 
 - **LLM-agnostischer Kontext-Export & Dual-Repo-Support** (#65) — `context_export.sh` exportiert den Issue-Kontext für beliebige LLMs (plain/gemini/file). `.env.agent` + `--self` Flag ermöglichen es, den Agenten auf sich selbst anzuwenden (gitea-agent entwickelt gitea-agent).
 - **AST-Repository-Skelett** (#68) — Bei `--issue`/`--implement` werden ClassDef/FunctionDef mit Zeilen und Signatur extrahiert (`repo_skeleton.json` + `repo_skeleton.md`). Große Dateien erscheinen als Skelett statt Volltext in `files.md`. `--get-slice datei.py:START-END` lädt exakte Zeilenbereiche nach.
 - **Diff-Validierung** (#57) — `--pr` prüft ob das LLM nur Zeilen im freigegebenen AST-Bereich geändert hat. Scope-Verletzungen erscheinen als Warnung im Terminal und als Gitea-Kommentar — kein harter Abbruch.
+- **SEARCH/REPLACE Protokoll** (#58) — LLM-agnostisches Patch-Format (`<<<<<<< SEARCH / ======= / >>>>>>> REPLACE`). Parser + Whitespace-Normalisierung + `ast.parse()`-Syntax-Check + `.bak`-Backup. `--apply-patch NR [--dry-run]`.
 
 ### ⚠️ Bekannte Einschränkungen
 
