@@ -650,6 +650,8 @@ _MAX_FILE_SIZE_KB = 50
 
 _MAX_SKELETON_FILE_SIZE_KB = 20 # Neue Konstante für Skeleton-Dateigröße
 
+_PROJECT_SKELETON = PROJECT / "repo_skeleton.json"
+
 def _extract_ast_symbols(content: str) -> list[dict]:
     """Extrahiert ClassDef/FunctionDef aus Python-Quellcode via AST."""
     symbols = []
@@ -752,6 +754,66 @@ def _skeleton_to_md(skeleton_data: list[dict]) -> str:
             lines.append("*(keine Klassen/Funktionen erkannt)*")
         lines.append("")
     return "\n".join(lines)
+
+
+def cmd_build_skeleton() -> None:
+    """Scannt alle .py-Dateien im PROJECT und schreibt repo_skeleton.json ins Projektroot."""
+    exclude_dirs = {".git", "venv", "__pycache__", ".tox", "node_modules", "dist", "build"}
+    py_files = [
+        f for f in PROJECT.rglob("*.py")
+        if not any(part in exclude_dirs for part in f.parts)
+    ]
+    _create_repo_skeleton(py_files, PROJECT)
+    print(f"[✓] Skelett erstellt: {len(py_files)} .py-Dateien → {_PROJECT_SKELETON}")
+
+
+def _update_skeleton_incremental(changed_files: list[str]) -> None:
+    """Aktualisiert repo_skeleton.json für die geänderten .py-Dateien inkrementell."""
+    if not _PROJECT_SKELETON.exists():
+        cmd_build_skeleton()
+        return
+    try:
+        skeleton_data = json.loads(_PROJECT_SKELETON.read_text(encoding="utf-8"))
+        skeleton_map = {entry["path"]: entry for entry in skeleton_data}
+        updated = []
+        for fname in changed_files:
+            if not fname.endswith(".py"):
+                continue
+            fpath = PROJECT / fname
+            if not fpath.exists():
+                continue
+            content = fpath.read_text(encoding="utf-8", errors="ignore")
+            symbols = _extract_ast_symbols(content)
+            lines = content.splitlines()
+            skeleton_map[fname] = {
+                "path": fname,
+                "truncated": False,
+                "lines": len(lines),
+                "size_kb": len(content.encode("utf-8")) / 1024,
+                "symbols": symbols,
+            }
+            updated.append(fname)
+        _PROJECT_SKELETON.write_text(
+            json.dumps(list(skeleton_map.values()), indent=2), encoding="utf-8"
+        )
+        if updated:
+            log.info(f"Skelett inkrementell aktualisiert: {updated}")
+    except Exception as e:
+        log.warning(f"_update_skeleton_incremental Fehler: {e}")
+
+
+def _load_skeleton_map(issue_dir: Path | None = None) -> dict:
+    """Lädt repo_skeleton.json und gibt {path_str: entry_dict} zurück."""
+    for candidate in [_PROJECT_SKELETON] + (
+        [issue_dir / "repo_skeleton.json"] if issue_dir else []
+    ):
+        try:
+            if candidate.exists():
+                data = json.loads(candidate.read_text(encoding="utf-8"))
+                return {item["path"]: item for item in data}
+        except Exception as e:
+            log.warning(f"_load_skeleton_map: {candidate} nicht lesbar: {e}")
+    return {}
 
 
 def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:
@@ -3043,6 +3105,17 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
             log.error(f"Watch-Lauf Fehler: {e}")
             print(f"[!] Fehler in Watch-Lauf: {e}")
 
+        # Skelett inkrementell aktualisieren (nach jedem Eval-Zyklus)
+        try:
+            changed_out = subprocess.check_output(
+                ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+                cwd=PROJECT, stderr=subprocess.DEVNULL
+            ).decode().strip()
+            if changed_out:
+                _update_skeleton_incremental(changed_out.splitlines())
+        except Exception as e:
+            log.debug(f"Skelett-Update übersprungen: {e}")
+
         if not patch_mode:
             _check_systematic_tag_failures(PROJECT)
 
@@ -3338,6 +3411,12 @@ Ohne Argumente: automatischer Modus.
         """,
     )
     parser.add_argument(
+        "--build-skeleton",
+        action="store_true",
+        dest="build_skeleton",
+        help="Projekt-weites repo_skeleton.json erstellen",
+    )
+    parser.add_argument(
         "--generate-tests",
         type=int,
         metavar="NR",
@@ -3443,7 +3522,9 @@ Ohne Argumente: automatischer Modus.
     )
     args = parser.parse_args()
 
-    if args.install_service:
+    if args.build_skeleton:
+        cmd_build_skeleton()
+    elif args.install_service:
         cmd_install_service()
     elif args.eval_after_restart is not None:
         nr = args.eval_after_restart if args.eval_after_restart != 0 else None
