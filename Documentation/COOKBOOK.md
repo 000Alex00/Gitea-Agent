@@ -1152,6 +1152,60 @@ python3 agent_start.py --self --pr NR --branch BRANCH --summary "..." --force
 
 ---
 
+## 14. AST-Repository-Skelett (#68)
+
+Bei `--issue` und `--implement` wird für alle relevanten Python-Dateien automatisch ein AST-Skelett erzeugt.
+
+### Was wird generiert
+
+| Datei | Inhalt |
+|---|---|
+| `contexts/NR-*/repo_skeleton.json` | Maschinenlesbar — Pfad, Zeilen, Symbole |
+| `contexts/NR-*/repo_skeleton.md` | LLM-Prompt — oben in `files.md` eingebettet |
+
+### Format repo_skeleton.json
+
+```json
+[
+  {
+    "path": "agent_start.py",
+    "truncated": false,
+    "lines": 3174,
+    "size_kb": 120,
+    "symbols": [
+      {"type": "function", "name": "cmd_plan", "lines": "1250-1340", "signature": "def cmd_plan(number: int) -> None:"},
+      {"type": "class",    "name": "Foo",      "lines": "45-90",     "signature": "class Foo:"}
+    ]
+  }
+]
+```
+
+Dateien > `_MAX_SKELETON_FILE_SIZE_KB` (Standard: 20 KB) werden als `truncated: true` markiert — kein Volltext, nur Metadaten.
+
+### Zeilenbereich nachladen — --get-slice
+
+Wenn das Skelett zeigt dass eine Funktion relevant ist, kann der exakte Bereich nachgeladen werden:
+
+```bash
+python3 agent_start.py --get-slice agent_start.py:1250-1340
+
+# Mit --self (gitea-agent Eigenentwicklung)
+python3 agent_start.py --self --get-slice agent_start.py:45-90
+```
+
+Ausgabe: nummerierte Zeilen direkt im Terminal — ideal zum Kopieren in den LLM-Kontext.
+
+### Konfiguration
+
+```bash
+# .env oder .env.agent
+MAX_FILE_LINES=300       # Ab dieser Zeilenzahl: Datei wird in files.md gekürzt
+```
+
+`_MAX_SKELETON_FILE_SIZE_KB` (20 KB) ist aktuell nur als Code-Konstante konfigurierbar.
+
+---
+
 ## Sitzungs-Protokoll 2026-03-23
 
 ### Durchgeführte Änderungen
