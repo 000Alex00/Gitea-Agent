@@ -1071,6 +1071,7 @@ Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für 
 - **AST-Repository-Skelett** (#68) — Bei `--issue`/`--implement` werden ClassDef/FunctionDef mit Zeilen und Signatur extrahiert (`repo_skeleton.json` + `repo_skeleton.md`). Große Dateien erscheinen als Skelett statt Volltext in `files.md`. `--get-slice datei.py:START-END` lädt exakte Zeilenbereiche nach.
 - **Diff-Validierung** (#57) — `--pr` prüft ob das LLM nur Zeilen im freigegebenen AST-Bereich geändert hat. Scope-Verletzungen erscheinen als Warnung im Terminal und als Gitea-Kommentar — kein harter Abbruch.
 - **SEARCH/REPLACE Protokoll** (#58) — LLM-agnostisches Patch-Format (`<<<<<<< SEARCH / ======= / >>>>>>> REPLACE`). Parser + Whitespace-Normalisierung + `ast.parse()`-Syntax-Check + `.bak`-Backup. `--apply-patch NR [--dry-run]`.
+- **Flächendeckende Codesegment-Strategie** (#72) — LLM bekommt niemals mehr Volltext. `files.md` enthält nur Skelett + Slice-Hinweise. `--build-skeleton` erstellt projektweites `repo_skeleton.json` (alle .py-Dateien, kein Größen-Limit). Watch-Loop aktualisiert inkrementell. `session.json` protokolliert Slice-Anforderungen pro Issue. Technische Schranke warnt bei ungesliceden Dateiänderungen.
 
 ### ⚠️ Bekannte Einschränkungen
 

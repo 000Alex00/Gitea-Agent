@@ -523,50 +523,52 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
 {gitea.GITEA_URL}/{gitea.REPO}/issues/{num}
 """
 
-    limit = settings.MAX_FILE_LINES
     parts = []
 
-    # Repo-Skelett laden
-    issue_dir = _issue_dir(issue)
-    skeleton_path = issue_dir / "repo_skeleton.json"
-    skeleton_map = {}
-    if skeleton_path.exists():
-        try:
-            skeleton_data = json.loads(skeleton_path.read_text(encoding="utf-8"))
-            skeleton_map = {item["path"]: item for item in skeleton_data}
-        except Exception as e:
-            log.warning(f"Fehler beim Laden von repo_skeleton.json: {e}")
-
-    for name, text in files_dict.items():
-        code = ""
-        skeleton_entry = skeleton_map.get(name)
-
-        if skeleton_entry and skeleton_entry.get("truncated"):
-            size_kb = skeleton_entry.get("size_kb", 0)
-            reason = skeleton_entry.get("reason", "Unbekannter Grund")
-            code = f"# [GEKÜRZT: {size_kb:.0f}KB — {reason}]\n# Der vollständige Dateiinhalt wurde aufgrund der Größe nicht geladen."
-        else:
-            lines = text.splitlines()
-            size_kb = len(text.encode("utf-8")) / 1024
-            if size_kb > _MAX_FILE_SIZE_KB:
-                code = "\n".join(lines[:500])
-                code += f"\n\n# [GEKÜRZT: {len(lines)} Zeilen, {size_kb:.0f}KB — nur erste 500 Zeilen]"
-            elif len(lines) > limit:
-                code = "\n".join(lines[:limit])
-                code += f"\n\n[... gekürzt — {len(lines) - limit} Zeilen weggelassen ...]"
-            else:
-                code = "\n".join(lines)
-        parts.append(f"## {name}\n```\n{code}\n```")
-
     idir = _issue_dir(issue)
+    skeleton_map = _load_skeleton_map(idir)
+
+    for name in files_dict:  # only need keys, not content
+        entry = skeleton_map.get(name)
+        if entry and not entry.get("truncated"):
+            symbols = entry.get("symbols", [])
+            total_lines = entry.get("lines", "?")
+            if symbols:
+                sym_lines = "\n".join(
+                    f"  - {'Klasse' if s['type']=='class' else 'Funktion'} `{s['name']}` Zeilen {s['lines']}  `{s['signature']}`"
+                    for s in symbols
+                )
+            else:
+                sym_lines = "  *(keine Klassen/Funktionen erkannt)*"
+            slice_hint = f"python3 agent_start.py --get-slice {name}:1-{total_lines}"
+            parts.append(
+                f"## {name}  *({total_lines} Zeilen)*\n"
+                f"{sym_lines}\n"
+                f"> Volltext: `{slice_hint}`"
+            )
+        elif entry and entry.get("truncated"):
+            parts.append(
+                f"## {name}  *(zu groß — {entry.get('reason', '')})*\n"
+                f"> Volltext: `python3 agent_start.py --get-slice {name}:1-?`"
+            )
+        else:
+            # Kein Skelett-Eintrag: Volltext als Fallback (kleine/neue Dateien)
+            text = files_dict[name]
+            lines = text.splitlines()
+            code = "\n".join(lines[:300])
+            if len(lines) > 300:
+                code += f"\n\n[... {len(lines)-300} weitere Zeilen — --get-slice für vollständigen Code ...]"
+            ext = Path(name).suffix.lstrip(".")
+            parts.append(f"## {name}\n```{ext}\n{code}\n```")
+
     ctx_file = idir / "starter.md"
     files_file = idir / "files.md"
 
     ctx_file.write_text(ctx_content, encoding="utf-8")
     files_header = (
         f"# Dateien — Issue #{num}\n"
-        f"> Automatisch erkannt via Backtick-Erwähnungen, Import-Analyse (AST) und Keyword-Suche (grep).\n"
-        f"> Zusätzliche Suche im Repo ist nicht nötig — der Kontext ist vollständig.\n\n"
+        f"> Skelett-Modus aktiv — **kein Volltext**. Nutze `--get-slice datei.py:START-END` für Code-Details.\n"
+        f"> Automatisch erkannt via Backtick-Erwähnungen, Import-Analyse (AST) und Keyword-Suche (grep).\n\n"
     )
 
     # repo_skeleton.md einbetten falls vorhanden
@@ -650,6 +652,8 @@ _MAX_FILE_SIZE_KB = 50
 
 _MAX_SKELETON_FILE_SIZE_KB = 20 # Neue Konstante für Skeleton-Dateigröße
 
+_PROJECT_SKELETON = PROJECT / "repo_skeleton.json"
+
 def _extract_ast_symbols(content: str) -> list[dict]:
     """Extrahiert ClassDef/FunctionDef aus Python-Quellcode via AST."""
     symbols = []
@@ -675,7 +679,7 @@ def _extract_ast_symbols(content: str) -> list[dict]:
     return symbols
 
 
-def _create_repo_skeleton(files: list[Path], output_dir: Path) -> Path:
+def _create_repo_skeleton(files: list[Path], output_dir: Path, max_size_kb: int = _MAX_SKELETON_FILE_SIZE_KB) -> Path:
     """
     Generiert repo_skeleton.json + repo_skeleton.md für die gegebenen Dateien.
 
@@ -694,12 +698,12 @@ def _create_repo_skeleton(files: list[Path], output_dir: Path) -> Path:
         try:
             rel_path = str(f.relative_to(PROJECT))
             size_kb = f.stat().st_size // 1024
-            if size_kb > _MAX_SKELETON_FILE_SIZE_KB:
+            if size_kb > max_size_kb:
                 skeleton_data.append({
                     "path": rel_path,
                     "truncated": True,
                     "size_kb": size_kb,
-                    "reason": f"Datei zu groß ({size_kb}KB > {_MAX_SKELETON_FILE_SIZE_KB}KB)",
+                    "reason": f"Datei zu groß ({size_kb}KB > {max_size_kb}KB)",
                     "symbols": [],
                 })
             else:
@@ -752,6 +756,66 @@ def _skeleton_to_md(skeleton_data: list[dict]) -> str:
             lines.append("*(keine Klassen/Funktionen erkannt)*")
         lines.append("")
     return "\n".join(lines)
+
+
+def cmd_build_skeleton() -> None:
+    """Scannt alle .py-Dateien im PROJECT und schreibt repo_skeleton.json ins Projektroot."""
+    exclude_dirs = {".git", "venv", "__pycache__", ".tox", "node_modules", "dist", "build"}
+    py_files = [
+        f for f in PROJECT.rglob("*.py")
+        if not any(part in exclude_dirs for part in f.parts)
+    ]
+    _create_repo_skeleton(py_files, PROJECT, max_size_kb=10_000)  # kein Limit für projektweites Skelett
+    print(f"[✓] Skelett erstellt: {len(py_files)} .py-Dateien → {_PROJECT_SKELETON}")
+
+
+def _update_skeleton_incremental(changed_files: list[str]) -> None:
+    """Aktualisiert repo_skeleton.json für die geänderten .py-Dateien inkrementell."""
+    if not _PROJECT_SKELETON.exists():
+        cmd_build_skeleton()
+        return
+    try:
+        skeleton_data = json.loads(_PROJECT_SKELETON.read_text(encoding="utf-8"))
+        skeleton_map = {entry["path"]: entry for entry in skeleton_data}
+        updated = []
+        for fname in changed_files:
+            if not fname.endswith(".py"):
+                continue
+            fpath = PROJECT / fname
+            if not fpath.exists():
+                continue
+            content = fpath.read_text(encoding="utf-8", errors="ignore")
+            symbols = _extract_ast_symbols(content)
+            lines = content.splitlines()
+            skeleton_map[fname] = {
+                "path": fname,
+                "truncated": False,
+                "lines": len(lines),
+                "size_kb": len(content.encode("utf-8")) / 1024,
+                "symbols": symbols,
+            }
+            updated.append(fname)
+        _PROJECT_SKELETON.write_text(
+            json.dumps(list(skeleton_map.values()), indent=2), encoding="utf-8"
+        )
+        if updated:
+            log.info(f"Skelett inkrementell aktualisiert: {updated}")
+    except Exception as e:
+        log.warning(f"_update_skeleton_incremental Fehler: {e}")
+
+
+def _load_skeleton_map(issue_dir: Path | None = None) -> dict:
+    """Lädt repo_skeleton.json und gibt {path_str: entry_dict} zurück."""
+    for candidate in [_PROJECT_SKELETON] + (
+        [issue_dir / "repo_skeleton.json"] if issue_dir else []
+    ):
+        try:
+            if candidate.exists():
+                data = json.loads(candidate.read_text(encoding="utf-8"))
+                return {item["path"]: item for item in data}
+        except Exception as e:
+            log.warning(f"_load_skeleton_map: {candidate} nicht lesbar: {e}")
+    return {}
 
 
 def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:
@@ -1090,6 +1154,65 @@ def _warn_diff_out_of_scope(number: int, branch: str) -> None:
         log.warning(f"Diff-Validierung: Kommentar konnte nicht gepostet werden: {e}")
 
 
+def _warn_slices_not_requested(number: int, branch: str) -> None:
+    """
+    Schritt 8 in _check_pr_preconditions: Warnung wenn .py-Dateien geändert wurden
+    ohne entsprechende --get-slice Anfragen.
+
+    Nicht-blockierend — postet Kommentar bei Fund.
+    """
+    try:
+        diff_out = subprocess.check_output(
+            ["git", "diff", "--name-only", f"main...{branch}"],
+            cwd=PROJECT, stderr=subprocess.DEVNULL
+        ).decode().strip()
+        changed_py = [f for f in diff_out.splitlines() if f.endswith(".py")]
+        if not changed_py:
+            return
+
+        idir = _find_issue_dir(number)
+        slices_requested: list[dict] = []
+        if idir:
+            session_path = idir / "session.json"
+            if session_path.exists():
+                try:
+                    data = json.loads(session_path.read_text(encoding="utf-8"))
+                    slices_requested = data.get("slices_requested", [])
+                except Exception:
+                    pass
+
+        requested_specs = [s.get("spec", "") for s in slices_requested]
+
+        if not slices_requested:
+            msg = (
+                "⚠️ **Slice-Warnung**: Keine `--get-slice` Anfragen in session.json gefunden.\n\n"
+                f"Geänderte .py-Dateien: {', '.join(f'`{f}`' for f in changed_py)}\n\n"
+                "> Bitte prüfen ob Code-Slices angefordert wurden."
+            )
+            print(f"\n[!] Slice-Warnung: keine --get-slice Anfragen gefunden")
+        else:
+            missing = [f for f in changed_py if not any(f in spec for spec in requested_specs)]
+            if not missing:
+                log.debug("Slice-Warnung: alle geänderten Dateien hatten Slice-Anfragen")
+                return
+            if not _PROJECT_SKELETON.exists():
+                return
+            n = len(missing)
+            msg = (
+                f"⚠️ **Slice-Warnung**: {n} Datei(en) geändert ohne `--get-slice`:\n\n"
+                + "\n".join(f"- `{f}`" for f in missing)
+                + "\n\n> Kein harter Abbruch — bitte prüfen ob Slices angefordert wurden."
+            )
+            print(f"\n[!] Slice-Warnung: {n} Datei(en) geändert ohne --get-slice: {missing}")
+
+        try:
+            gitea.post_comment(number, msg)
+        except Exception as e:
+            log.warning(f"Slice-Warnung: Kommentar konnte nicht gepostet werden: {e}")
+    except Exception as e:
+        log.debug(f"_warn_slices_not_requested übersprungen: {e}")
+
+
 def _check_pr_preconditions(number: int, branch: str) -> None:
     """
     Maßnahme 1 (höchste Priorität): Technische Schranke vor cmd_pr().
@@ -1227,6 +1350,9 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
 
     # 7. Diff-Validierung: geänderte Zeilen gegen repo_skeleton.json prüfen (Warnung)
     _warn_diff_out_of_scope(number, branch)
+
+    # 8. Slice-Warnung: geänderte Dateien ohne --get-slice Anfragen (Warnung)
+    _warn_slices_not_requested(number, branch)
 
     if fehler:
         print("\n❌ cmd_pr abgebrochen — Prozess nicht vollständig:")
@@ -1833,6 +1959,48 @@ def cmd_generate_tests(number: int) -> None:
     msg = f"🤖 **Test-Generierung gestartet**\n\nDie relevanten Dateien wurden gesammelt. Du kannst die Tests nun lokal mit folgendem Befehl generieren lassen:\n\n```bash\nclaude -p {ctx_file.relative_to(PROJECT)}\n```\n\n*Der Prompt enthält strikte Vorgaben für pytest, Integrationstests und `agent_eval.json` Einträge inkl. `tag`-Feld.*"
     gitea.post_comment(number, msg)
 
+def _current_issue_from_branch() -> int | None:
+    """Extrahiert Issue-Nummer aus dem aktuellen Branch-Namen."""
+    try:
+        branch = subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=PROJECT, stderr=subprocess.DEVNULL
+        ).decode().strip()
+        m = re.search(r'[/-]issue-(\d+)[/-]', branch)
+        if m:
+            return int(m.group(1))
+        m = re.search(r'-(\d+)-', branch)
+        if m:
+            return int(m.group(1))
+    except Exception:
+        pass
+    return None
+
+
+def _log_slice_request(spec: str) -> None:
+    """Loggt eine --get-slice Anfrage in session.json des aktuellen Issues."""
+    try:
+        issue_num = _current_issue_from_branch()
+        if issue_num is None:
+            return
+        idir = _find_issue_dir(issue_num)
+        if not idir:
+            return
+        session_path = idir / "session.json"
+        data: dict = {}
+        if session_path.exists():
+            try:
+                data = json.loads(session_path.read_text(encoding="utf-8"))
+            except Exception:
+                data = {}
+        slices = data.get("slices_requested", [])
+        slices.append({"spec": spec, "timestamp": datetime.datetime.now().isoformat()})
+        data["slices_requested"] = slices
+        session_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
 def cmd_get_slice(spec: str) -> None:
     """
     Gibt einen exakten Zeilenbereich einer Datei aus.
@@ -1863,6 +2031,7 @@ def cmd_get_slice(spec: str) -> None:
     print(f"# {file_part}  Zeilen {start}-{end}  (Datei: {total} Zeilen)\n")
     for i, line in enumerate(lines[start - 1 : end], start=start):
         print(f"{i:5}  {line}")
+    _log_slice_request(spec)
 
 
 # ---------------------------------------------------------------------------
@@ -3043,6 +3212,17 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
             log.error(f"Watch-Lauf Fehler: {e}")
             print(f"[!] Fehler in Watch-Lauf: {e}")
 
+        # Skelett inkrementell aktualisieren (nach jedem Eval-Zyklus)
+        try:
+            changed_out = subprocess.check_output(
+                ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+                cwd=PROJECT, stderr=subprocess.DEVNULL
+            ).decode().strip()
+            if changed_out:
+                _update_skeleton_incremental(changed_out.splitlines())
+        except Exception as e:
+            log.debug(f"Skelett-Update übersprungen: {e}")
+
         if not patch_mode:
             _check_systematic_tag_failures(PROJECT)
 
@@ -3338,6 +3518,12 @@ Ohne Argumente: automatischer Modus.
         """,
     )
     parser.add_argument(
+        "--build-skeleton",
+        action="store_true",
+        dest="build_skeleton",
+        help="Projekt-weites repo_skeleton.json erstellen",
+    )
+    parser.add_argument(
         "--generate-tests",
         type=int,
         metavar="NR",
@@ -3443,7 +3629,9 @@ Ohne Argumente: automatischer Modus.
     )
     args = parser.parse_args()
 
-    if args.install_service:
+    if args.build_skeleton:
+        cmd_build_skeleton()
+    elif args.install_service:
         cmd_install_service()
     elif args.eval_after_restart is not None:
         nr = args.eval_after_restart if args.eval_after_restart != 0 else None
