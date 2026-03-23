@@ -1347,6 +1347,55 @@ Nicht-blockierend — Entwickler entscheidet.
 
 ---
 
+## 18. Gitea-Versionsvergleich (#59)
+
+Bei Score-Regression lädt der Agent automatisch die alte Dateiversion aus Gitea und vergleicht AST-Skelette — Ursache statt Symptom.
+
+### Aktivierung
+
+In `agent_eval.json` des Zielprojekts:
+
+```json
+{
+  "gitea_version_compare": {
+    "enabled": true,
+    "compare_on_score_drop": true,
+    "base_ref": "main"
+  }
+}
+```
+
+Deaktiviert per Default (`enabled: false`).
+
+### Was im Auto-Issue erscheint
+
+```markdown
+### Struktureller AST-Diff (`main` → `3e33e07`)
+**analyst_worker.py:**
+  ~ gewachsen: `analyze` (45→78 Zeilen)
+  + neu: `_helper` (12-25 Zeilen)
+```
+
+### Wie es funktioniert
+
+1. Score fällt → Watch-Loop erstellt Auto-Issue
+2. `_gitea_version_compare(commit, changed_files)` aufgerufen
+3. `gitea_api.get_file_contents(path, base_ref)` lädt alte Version
+4. `gitea_api.get_file_contents(path, commit)` lädt neue Version
+5. `_ast_diff(old, new)` vergleicht Skelette
+6. Diff-Block wird ans Auto-Issue angehängt
+
+### AST-Diff Kategorien
+
+| Symbol | Bedeutung |
+|---|---|
+| `+ neu:` | Funktion/Klasse neu hinzugekommen |
+| `- entfernt:` | Funktion/Klasse entfernt |
+| `~ gewachsen:` | Funktion um > 5 Zeilen größer |
+| `~ geschrumpft:` | Funktion um > 5 Zeilen kleiner |
+
+---
+
 ## Sitzungs-Protokoll 2026-03-23
 
 ### Durchgeführte Änderungen
