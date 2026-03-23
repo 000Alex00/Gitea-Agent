@@ -967,6 +967,129 @@ def _has_detailed_plan(number: int) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _parse_diff_changed_lines(branch: str) -> dict[str, list[int]]:
+    """
+    Wertet `git diff --unified=0 main...HEAD` aus.
+
+    Returns:
+        {relativer_pfad: [geänderte_zeilennummern, ...]}
+    """
+    try:
+        raw = subprocess.check_output(
+            ["git", "diff", "--unified=0", f"main...{branch}"],
+            cwd=PROJECT,
+            stderr=subprocess.DEVNULL,
+        ).decode(errors="ignore")
+    except Exception:
+        return {}
+
+    result: dict[str, list[int]] = {}
+    current_file: str | None = None
+    for line in raw.splitlines():
+        # +++ b/path/to/file.py
+        if line.startswith("+++ b/"):
+            current_file = line[6:]
+            result.setdefault(current_file, [])
+        # @@ -OLD +NEW,COUNT @@ ...
+        elif line.startswith("@@") and current_file is not None:
+            m = re.search(r"\+(\d+)(?:,(\d+))?", line)
+            if m:
+                start = int(m.group(1))
+                count = int(m.group(2)) if m.group(2) is not None else 1
+                for ln in range(start, start + max(count, 1)):
+                    result[current_file].append(ln)
+    return result
+
+
+def _warn_diff_out_of_scope(number: int, branch: str) -> None:
+    """
+    Schritt 7 in _check_pr_preconditions: Warnung wenn LLM Zeilen außerhalb
+    des AST-Skeletts geändert hat.
+
+    Nicht-blockierend — Entwickler entscheidet. Postet Kommentar bei Fund.
+    """
+    # Kontext-Verzeichnis des Issues suchen
+    idir = _find_issue_dir(number)
+    if not idir:
+        log.debug("Diff-Validierung: kein Kontext-Verzeichnis gefunden — übersprungen")
+        return
+    skeleton_path = idir / "repo_skeleton.json"
+    if not skeleton_path.exists():
+        log.debug("Diff-Validierung: repo_skeleton.json nicht gefunden — übersprungen")
+        return
+
+    try:
+        skeleton_data = json.loads(skeleton_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        log.warning(f"Diff-Validierung: repo_skeleton.json nicht lesbar: {e}")
+        return
+
+    # Skelett als {pfad: [(start, end), ...]} aufbauen
+    skeleton_ranges: dict[str, list[tuple[int, int]]] = {}
+    for entry in skeleton_data:
+        path = entry.get("path", "")
+        if entry.get("truncated"):
+            continue
+        ranges = []
+        for sym in entry.get("symbols", []):
+            parts = sym.get("lines", "").split("-")
+            if len(parts) == 2:
+                try:
+                    ranges.append((int(parts[0]), int(parts[1])))
+                except ValueError:
+                    pass
+        # Auch die gesamte Datei als erlaubten Bereich eintragen
+        # (falls keine Symbole: gesamte Datei ist in scope)
+        total = entry.get("lines", 0)
+        if not ranges and total:
+            ranges = [(1, total)]
+        if ranges:
+            skeleton_ranges[path] = ranges
+
+    changed = _parse_diff_changed_lines(branch)
+    if not changed:
+        return
+
+    warnings: list[str] = []
+    for file_path, changed_lines in changed.items():
+        if not file_path.endswith(".py"):
+            continue
+        if file_path not in skeleton_ranges:
+            # Datei war nicht im Kontext — potenziell out-of-scope
+            warnings.append(
+                f"- `{file_path}`: **nicht im Skelett** — {len(changed_lines)} Zeile(n) geändert"
+            )
+            continue
+        ranges = skeleton_ranges[file_path]
+        out = [
+            ln for ln in changed_lines
+            if not any(s <= ln <= e for s, e in ranges)
+        ]
+        if out:
+            warnings.append(
+                f"- `{file_path}`: {len(out)} Zeile(n) außerhalb AST-Bereich: {out[:10]}"
+            )
+
+    if not warnings:
+        log.debug("Diff-Validierung: alle Änderungen im Skelett-Scope")
+        return
+
+    msg = (
+        "⚠️ **Diff-Validierung: Scope-Warnung**\n\n"
+        "Folgende Änderungen liegen außerhalb des freigegebenen AST-Bereichs:\n\n"
+        + "\n".join(warnings)
+        + "\n\n> Kein harter Abbruch — bitte prüfen ob diese Änderungen beabsichtigt sind."
+    )
+    print(f"\n[!] Diff-Validierung: {len(warnings)} Scope-Warnung(en):")
+    for w in warnings:
+        print(f"    {w}")
+    try:
+        gitea.post_comment(number, msg)
+        log.info(f"Diff-Validierung Warnung in Issue #{number} gepostet")
+    except Exception as e:
+        log.warning(f"Diff-Validierung: Kommentar konnte nicht gepostet werden: {e}")
+
+
 def _check_pr_preconditions(number: int, branch: str) -> None:
     """
     Maßnahme 1 (höchste Priorität): Technische Schranke vor cmd_pr().
@@ -1101,6 +1224,9 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
                 )
     except Exception as e:
         log.warning(f"Konnte Git Diff für Self-Check nicht abfragen: {e}")
+
+    # 7. Diff-Validierung: geänderte Zeilen gegen repo_skeleton.json prüfen (Warnung)
+    _warn_diff_out_of_scope(number, branch)
 
     if fehler:
         print("\n❌ cmd_pr abgebrochen — Prozess nicht vollständig:")
