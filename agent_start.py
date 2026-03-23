@@ -679,7 +679,7 @@ def _extract_ast_symbols(content: str) -> list[dict]:
     return symbols
 
 
-def _create_repo_skeleton(files: list[Path], output_dir: Path) -> Path:
+def _create_repo_skeleton(files: list[Path], output_dir: Path, max_size_kb: int = _MAX_SKELETON_FILE_SIZE_KB) -> Path:
     """
     Generiert repo_skeleton.json + repo_skeleton.md für die gegebenen Dateien.
 
@@ -698,12 +698,12 @@ def _create_repo_skeleton(files: list[Path], output_dir: Path) -> Path:
         try:
             rel_path = str(f.relative_to(PROJECT))
             size_kb = f.stat().st_size // 1024
-            if size_kb > _MAX_SKELETON_FILE_SIZE_KB:
+            if size_kb > max_size_kb:
                 skeleton_data.append({
                     "path": rel_path,
                     "truncated": True,
                     "size_kb": size_kb,
-                    "reason": f"Datei zu groß ({size_kb}KB > {_MAX_SKELETON_FILE_SIZE_KB}KB)",
+                    "reason": f"Datei zu groß ({size_kb}KB > {max_size_kb}KB)",
                     "symbols": [],
                 })
             else:
@@ -765,7 +765,7 @@ def cmd_build_skeleton() -> None:
         f for f in PROJECT.rglob("*.py")
         if not any(part in exclude_dirs for part in f.parts)
     ]
-    _create_repo_skeleton(py_files, PROJECT)
+    _create_repo_skeleton(py_files, PROJECT, max_size_kb=10_000)  # kein Limit für projektweites Skelett
     print(f"[✓] Skelett erstellt: {len(py_files)} .py-Dateien → {_PROJECT_SKELETON}")
 
 
