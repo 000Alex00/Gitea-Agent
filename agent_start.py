@@ -162,16 +162,27 @@ def find_relevant_files_advanced(issue: dict) -> list[Path]:
     Extrahiert Dateipfade aus dem Issue-Body (Backtick-Erwähnungen).
     Zukünftig erweitert um AST-Analyse und Keyword-Suche.
     """
-    # 1. Backtick-Erwähnungen (wie bisher)
     body = issue.get("body", "")
+    
+    # 1. Backtick-Erwähnungen (wie bisher)
     exts = tuple(settings.CODE_EXTENSIONS)
-    found = []
+    backtick_files = []
     for line in body.splitlines():
         for part in line.split("`"):
             p = PROJECT / part.strip()
             if p.exists() and p.is_file() and p.suffix in exts:
-                found.append(p)
+                backtick_files.append(p)
 
+    # 2. Keyword-Suche (grep)
+    keyword_files = _search_keywords(body, PROJECT)
+
+    # 3. AST-Importanalyse
+    # _find_imports erwartet eine Liste von Path-Objekten
+    all_initial_files = list(dict.fromkeys(backtick_files + keyword_files))
+    import_files = _find_imports(all_initial_files)
+
+    # 4. Zusammenführen und Deduplizieren
+    found = all_initial_files + import_files
     return list(dict.fromkeys(found))
 
 
@@ -609,6 +620,59 @@ _EXCLUDE_FILES = {
 }
 
 _MAX_FILE_SIZE_KB = 50
+
+_MAX_SKELETON_FILE_SIZE_KB = 20 # Neue Konstante für Skeleton-Dateigröße
+
+def _create_repo_skeleton(files: list[Path], output_dir: Path) -> Path:
+    """
+    Generiert eine repo_skeleton.json für die gegebenen Dateien.
+
+    Für jede Datei wird ein Eintrag mit Pfad und Zeilenbereich (oder truncated: true)
+    erstellt. Große Dateien werden als gekürzt markiert.
+
+    Args:
+        files:     Liste der relevanten Dateipfade
+        output_dir: Verzeichnis, in dem repo_skeleton.json gespeichert wird
+
+    Returns:
+        Pfad zur erstellten repo_skeleton.json
+    """
+    skeleton_data = []
+    for f in files:
+        try:
+            rel_path = str(f.relative_to(PROJECT))
+            size_kb = f.stat().st_size // 1024
+            if size_kb > _MAX_SKELETON_FILE_SIZE_KB:
+                skeleton_data.append({
+                    "path": rel_path,
+                    "truncated": True,
+                    "size_kb": size_kb,
+                    "reason": f"Datei zu groß ({size_kb}KB > {_MAX_SKELETON_FILE_SIZE_KB}KB)"
+                })
+            else:
+                # Datei lesen und Zeilen zählen
+                content = f.read_text(encoding="utf-8", errors="ignore")
+                lines = content.splitlines()
+                skeleton_data.append({
+                    "path": rel_path,
+                    "truncated": False,
+                    "lines": len(lines),
+                    "size_kb": size_kb,
+                    "start_line": 1,
+                    "end_line": len(lines),
+                })
+        except Exception:
+            # Bei Lesefehler oder anderer Exception
+            skeleton_data.append({
+                "path": str(f.relative_to(PROJECT)),
+                "truncated": True,
+                "reason": "Fehler beim Lesen oder Verarbeiten der Datei"
+            })
+    
+    output_path = output_dir / "repo_skeleton.json"
+    output_path.write_text(json.dumps(skeleton_data, indent=2), encoding="utf-8")
+    log.info(f"Repo-Skelett erstellt: {output_path}")
+    return output_path
 
 
 def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:
@@ -1115,8 +1179,12 @@ def cmd_plan(number: int) -> None:
     """
     issue = gitea.get_issue(number)
 
-    stufe, _ = risk_level(issue)
     files = find_relevant_files_advanced(issue)
+
+    # Repo-Skelett generieren
+    issue_dir = _issue_dir(issue)
+    _create_repo_skeleton(files, issue_dir)
+
 
     # Metadaten-Block (collapsible) aufbauen
     file_stats = []
