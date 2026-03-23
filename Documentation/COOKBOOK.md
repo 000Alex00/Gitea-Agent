@@ -1289,6 +1289,64 @@ Bei fehlgeschlagenem SEARCH oder Syntax-Fehler: kein Schreiben, Fehlermeldung in
 
 ---
 
+## 17. Flächendeckende Codesegment-Strategie (#72)
+
+LLM bekommt niemals mehr ganzen Dateiinhalt. Nur noch: Skelett-Übersicht → gezielter Slice auf Anforderung.
+
+### Projektweites Skelett aufbauen
+
+```bash
+# Einmalig ausführen (oder nach größeren Refactorings)
+python3 agent_start.py --self --build-skeleton
+# → schreibt repo_skeleton.json ins Projektroot
+# → erfasst alle .py-Dateien (keine Größenbeschränkung)
+```
+
+Das Skelett wird im Watch-Modus automatisch inkrementell aktualisiert (nur geänderte Dateien nach jedem Commit).
+
+### Wie files.md jetzt aussieht
+
+```
+## agent_start.py  *(3684 Zeilen)*
+  - Funktion `cmd_plan` Zeilen 1250-1360  `def cmd_plan(number: int) -> None:`
+  - Funktion `cmd_implement` Zeilen 1362-1520  `def cmd_implement(number: int) -> None:`
+  ...
+> Volltext: python3 agent_start.py --get-slice agent_start.py:1-3684
+```
+
+Kein Volltext mehr — auch nicht bei kleinen Dateien. Der Skelett-Eintrag mit Slice-Hinweis ist alles was das LLM bekommt.
+
+### Slice-Workflow
+
+```bash
+# LLM fordert gezielt Code an:
+python3 agent_start.py --self --get-slice agent_start.py:1250-1360
+
+# Aufruf wird in session.json protokolliert
+# → contexts/NR-*/session.json
+```
+
+### Slice-Schleife in context_export.sh
+
+Im `plain` Modus wird nach der Skelett-Ausgabe eine interaktive Schleife gestartet:
+
+```
+> SLICE: agent_start.py:1250-1360    ← LLM fordert an
+[Zeilen 1250-1360 ausgegeben]
+> READY                               ← Implementierung starten
+```
+
+Im `file` Modus: Anweisung im generierten Prompt enthalten.
+Im `gemini` Modus: Anweisung im `INSTRUCTION`-Parameter.
+
+### Technische Schranke (Schritt 8)
+
+`_check_pr_preconditions()` warnt wenn `.py`-Dateien geändert wurden ohne zuvor Slices angefordert zu haben. Grundlage ist `session.json` im Issue-Kontext-Verzeichnis.
+
+Nicht-blockierend — Entwickler entscheidet.
+
+---
+
 ## Sitzungs-Protokoll 2026-03-23
 
 ### Durchgeführte Änderungen
