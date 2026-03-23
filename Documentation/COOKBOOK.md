@@ -1206,6 +1206,36 @@ MAX_FILE_LINES=300       # Ab dieser Zeilenzahl: Datei wird in files.md gekürzt
 
 ---
 
+## 15. Diff-Validierung (#57)
+
+Bei `--pr` prüft `_check_pr_preconditions()` automatisch ob das LLM nur Zeilen innerhalb des freigegebenen AST-Bereichs geändert hat.
+
+### Verhalten
+
+- **Nicht-blockierend** — kein harter Abbruch, Entwickler entscheidet
+- Warnung im Terminal + Kommentar im Gitea-Issue bei Scope-Verletzung
+- Nur `.py`-Dateien werden geprüft (andere Dateien: kein Check)
+
+### Wann schlägt es an
+
+| Situation | Reaktion |
+|---|---|
+| Datei war nicht im Skelett-Kontext | Warnung: "nicht im Skelett" |
+| Geänderte Zeile liegt außerhalb aller AST-Symbole | Warnung mit Zeilennummern |
+| Alle Änderungen im Scope | Stille — kein Kommentar |
+
+### Beispiel-Ausgabe
+
+```
+[!] Diff-Validierung: 2 Scope-Warnung(en):
+    - agent_start.py: 3 Zeile(n) außerhalb AST-Bereich: [42, 43, 44]
+    - settings.py: nicht im Skelett — 5 Zeile(n) geändert
+```
+
+Zusätzlich wird ein Kommentar ins Gitea-Issue gepostet, damit der Review sieht was außerhalb des Plans geändert wurde.
+
+---
+
 ## Sitzungs-Protokoll 2026-03-23
 
 ### Durchgeführte Änderungen
