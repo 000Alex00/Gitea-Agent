@@ -1154,6 +1154,65 @@ def _warn_diff_out_of_scope(number: int, branch: str) -> None:
         log.warning(f"Diff-Validierung: Kommentar konnte nicht gepostet werden: {e}")
 
 
+def _warn_slices_not_requested(number: int, branch: str) -> None:
+    """
+    Schritt 8 in _check_pr_preconditions: Warnung wenn .py-Dateien geändert wurden
+    ohne entsprechende --get-slice Anfragen.
+
+    Nicht-blockierend — postet Kommentar bei Fund.
+    """
+    try:
+        diff_out = subprocess.check_output(
+            ["git", "diff", "--name-only", f"main...{branch}"],
+            cwd=PROJECT, stderr=subprocess.DEVNULL
+        ).decode().strip()
+        changed_py = [f for f in diff_out.splitlines() if f.endswith(".py")]
+        if not changed_py:
+            return
+
+        idir = _find_issue_dir(number)
+        slices_requested: list[dict] = []
+        if idir:
+            session_path = idir / "session.json"
+            if session_path.exists():
+                try:
+                    data = json.loads(session_path.read_text(encoding="utf-8"))
+                    slices_requested = data.get("slices_requested", [])
+                except Exception:
+                    pass
+
+        requested_specs = [s.get("spec", "") for s in slices_requested]
+
+        if not slices_requested:
+            msg = (
+                "⚠️ **Slice-Warnung**: Keine `--get-slice` Anfragen in session.json gefunden.\n\n"
+                f"Geänderte .py-Dateien: {', '.join(f'`{f}`' for f in changed_py)}\n\n"
+                "> Bitte prüfen ob Code-Slices angefordert wurden."
+            )
+            print(f"\n[!] Slice-Warnung: keine --get-slice Anfragen gefunden")
+        else:
+            missing = [f for f in changed_py if not any(f in spec for spec in requested_specs)]
+            if not missing:
+                log.debug("Slice-Warnung: alle geänderten Dateien hatten Slice-Anfragen")
+                return
+            if not _PROJECT_SKELETON.exists():
+                return
+            n = len(missing)
+            msg = (
+                f"⚠️ **Slice-Warnung**: {n} Datei(en) geändert ohne `--get-slice`:\n\n"
+                + "\n".join(f"- `{f}`" for f in missing)
+                + "\n\n> Kein harter Abbruch — bitte prüfen ob Slices angefordert wurden."
+            )
+            print(f"\n[!] Slice-Warnung: {n} Datei(en) geändert ohne --get-slice: {missing}")
+
+        try:
+            gitea.post_comment(number, msg)
+        except Exception as e:
+            log.warning(f"Slice-Warnung: Kommentar konnte nicht gepostet werden: {e}")
+    except Exception as e:
+        log.debug(f"_warn_slices_not_requested übersprungen: {e}")
+
+
 def _check_pr_preconditions(number: int, branch: str) -> None:
     """
     Maßnahme 1 (höchste Priorität): Technische Schranke vor cmd_pr().
@@ -1291,6 +1350,9 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
 
     # 7. Diff-Validierung: geänderte Zeilen gegen repo_skeleton.json prüfen (Warnung)
     _warn_diff_out_of_scope(number, branch)
+
+    # 8. Slice-Warnung: geänderte Dateien ohne --get-slice Anfragen (Warnung)
+    _warn_slices_not_requested(number, branch)
 
     if fehler:
         print("\n❌ cmd_pr abgebrochen — Prozess nicht vollständig:")
@@ -1897,6 +1959,48 @@ def cmd_generate_tests(number: int) -> None:
     msg = f"🤖 **Test-Generierung gestartet**\n\nDie relevanten Dateien wurden gesammelt. Du kannst die Tests nun lokal mit folgendem Befehl generieren lassen:\n\n```bash\nclaude -p {ctx_file.relative_to(PROJECT)}\n```\n\n*Der Prompt enthält strikte Vorgaben für pytest, Integrationstests und `agent_eval.json` Einträge inkl. `tag`-Feld.*"
     gitea.post_comment(number, msg)
 
+def _current_issue_from_branch() -> int | None:
+    """Extrahiert Issue-Nummer aus dem aktuellen Branch-Namen."""
+    try:
+        branch = subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=PROJECT, stderr=subprocess.DEVNULL
+        ).decode().strip()
+        m = re.search(r'[/-]issue-(\d+)[/-]', branch)
+        if m:
+            return int(m.group(1))
+        m = re.search(r'-(\d+)-', branch)
+        if m:
+            return int(m.group(1))
+    except Exception:
+        pass
+    return None
+
+
+def _log_slice_request(spec: str) -> None:
+    """Loggt eine --get-slice Anfrage in session.json des aktuellen Issues."""
+    try:
+        issue_num = _current_issue_from_branch()
+        if issue_num is None:
+            return
+        idir = _find_issue_dir(issue_num)
+        if not idir:
+            return
+        session_path = idir / "session.json"
+        data: dict = {}
+        if session_path.exists():
+            try:
+                data = json.loads(session_path.read_text(encoding="utf-8"))
+            except Exception:
+                data = {}
+        slices = data.get("slices_requested", [])
+        slices.append({"spec": spec, "timestamp": datetime.datetime.now().isoformat()})
+        data["slices_requested"] = slices
+        session_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
 def cmd_get_slice(spec: str) -> None:
     """
     Gibt einen exakten Zeilenbereich einer Datei aus.
@@ -1927,6 +2031,7 @@ def cmd_get_slice(spec: str) -> None:
     print(f"# {file_part}  Zeilen {start}-{end}  (Datei: {total} Zeilen)\n")
     for i, line in enumerate(lines[start - 1 : end], start=start):
         print(f"{i:5}  {line}")
+    _log_slice_request(spec)
 
 
 # ---------------------------------------------------------------------------
