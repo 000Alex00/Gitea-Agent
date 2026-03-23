@@ -3028,6 +3028,103 @@ def cmd_eval_after_restart(number: int | None = None) -> None:
     _dashboard_event("eval-after-restart")
 
 
+def _ast_diff(old_content: str, new_content: str) -> list[str]:
+    """
+    Vergleicht AST-Skelette zweier Dateiversionen.
+
+    Returns:
+        Liste von menschenlesbaren Diff-Zeilen:
+            "+ neu: func_name (Zeilen X-Y)"
+            "- entfernt: func_name"
+            "~ gewachsen: func_name (45→78 Zeilen)"
+            "~ geschrumpft: func_name (78→45 Zeilen)"
+    """
+    def _sym_map(content: str) -> dict[str, dict]:
+        syms = _extract_ast_symbols(content)
+        return {s["name"]: s for s in syms}
+
+    old_map = _sym_map(old_content)
+    new_map = _sym_map(new_content)
+    diffs = []
+
+    for name, sym in new_map.items():
+        if name not in old_map:
+            diffs.append(f"+ neu: `{name}` ({sym['lines']} Zeilen)")
+        else:
+            old_sym = old_map[name]
+            def _len(s: dict) -> int:
+                parts = s.get("lines", "1-1").split("-")
+                try:
+                    return int(parts[1]) - int(parts[0]) + 1
+                except (ValueError, IndexError):
+                    return 0
+            old_len, new_len = _len(old_sym), _len(sym)
+            if new_len > old_len + 5:
+                diffs.append(f"~ gewachsen: `{name}` ({old_len}→{new_len} Zeilen)")
+            elif old_len > new_len + 5:
+                diffs.append(f"~ geschrumpft: `{name}` ({old_len}→{new_len} Zeilen)")
+
+    for name in old_map:
+        if name not in new_map:
+            diffs.append(f"- entfernt: `{name}`")
+
+    return diffs
+
+
+def _gitea_version_compare(commit: str, changed_files: list[str]) -> str:
+    """
+    Lädt relevante Dateiversionen vor dem Commit und vergleicht AST-Skelette.
+
+    Liest agent_eval.json auf "gitea_version_compare.enabled".
+    Deaktiviert per Default.
+
+    Args:
+        commit:        Commit-Hash (kurz oder lang)
+        changed_files: Liste geänderter .py-Dateien (relativ zum PROJECT)
+
+    Returns:
+        Markdown-Block mit AST-Diff oder "" wenn deaktiviert/kein Diff.
+    """
+    # Konfiguration prüfen
+    eval_cfg_path = evaluation._resolve_config(PROJECT)
+    if not eval_cfg_path.exists():
+        return ""
+    try:
+        cfg = json.loads(eval_cfg_path.read_text(encoding="utf-8"))
+        vc_cfg = cfg.get("gitea_version_compare", {})
+        if not vc_cfg.get("enabled", False):
+            return ""
+        base_ref = vc_cfg.get("base_ref", "main")
+    except Exception:
+        return ""
+
+    py_files = [f for f in changed_files if f.endswith(".py")]
+    if not py_files:
+        return ""
+
+    diff_lines: list[str] = []
+    for rel_path in py_files[:5]:  # max 5 Dateien
+        try:
+            old_content = gitea.get_file_contents(rel_path, base_ref)
+            new_content = gitea.get_file_contents(rel_path, commit)
+            if not old_content or not new_content:
+                continue
+            file_diffs = _ast_diff(old_content, new_content)
+            if file_diffs:
+                diff_lines.append(f"**{rel_path}:**")
+                diff_lines.extend(f"  {d}" for d in file_diffs)
+        except Exception as e:
+            log.debug(f"Version compare fehlgeschlagen für {rel_path}: {e}")
+
+    if not diff_lines:
+        return ""
+
+    return (
+        "\n\n### Struktureller AST-Diff (`" + base_ref + "` → `" + commit[:8] + "`)\n"
+        + "\n".join(diff_lines)
+    )
+
+
 def _build_auto_issue_body(
     failed: "evaluation.TestResult",
     result: "evaluation.EvalResult",
@@ -3126,6 +3223,23 @@ def _build_auto_issue_body(
 
     lines.append("> Automatisch erkannt durch Watch-Modus.")
     lines.append("> Wird automatisch geschlossen wenn der Test wieder besteht.")
+
+    # AST-Diff anhängen (wenn gitea_version_compare aktiviert)
+    commit_hash = commit.split()[0] if commit else ""
+    if commit_hash:
+        try:
+            changed_files = (
+                subprocess.check_output(
+                    ["git", "diff", "--name-only", f"{commit_hash}^", commit_hash],
+                    cwd=PROJECT, stderr=subprocess.DEVNULL,
+                ).decode().splitlines()
+            )
+            ast_diff_block = _gitea_version_compare(commit_hash, changed_files)
+            if ast_diff_block:
+                lines.append(ast_diff_block)
+        except Exception as e:
+            log.debug(f"AST-Diff in auto issue fehlgeschlagen: {e}")
+
     return "\n".join(lines)
 
 

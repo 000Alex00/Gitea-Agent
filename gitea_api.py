@@ -14,6 +14,7 @@ Verwendete Endpunkte:
     PATCH  /repos/{repo}/issues/{nr}              → Issue updaten
     POST   /repos/{repo}/pulls                    → PR erstellen
     GET    /repos/{repo}/labels                   → Alle Labels abrufen
+    GET    /repos/{repo}/contents/{path}?ref=REF  → Dateiinhalt zu Commit/Branch
 """
 
 import base64
@@ -368,6 +369,27 @@ def get_pr_for_branch(branch: str, base: str | None = None) -> dict | None:
                 return pr
     except Exception:
         pass
+    return None
+
+
+def get_file_contents(path: str, ref: str) -> str | None:
+    """
+    Lädt den Inhalt einer Datei zu einem bestimmten Commit/Branch/Tag.
+
+    Args:
+        path: Relativer Dateipfad im Repo (z.B. "agent_start.py")
+        ref:  Commit-Hash, Branch oder Tag
+
+    Returns:
+        Dateiinhalt als String oder None bei Fehler.
+    """
+    try:
+        encoded_path = urllib.parse.quote(path, safe="/")
+        result = _request("GET", f"/repos/{REPO}/contents/{encoded_path}?ref={ref}")
+        if result and isinstance(result, dict) and result.get("encoding") == "base64":
+            return base64.b64decode(result["content"]).decode("utf-8", errors="replace")
+    except Exception as e:
+        log.warning(f"get_file_contents({path!r}, {ref!r}): {e}")
     return None
 
 
