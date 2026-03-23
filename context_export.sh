@@ -52,7 +52,10 @@ else
     GITEA_REPO="$(grep '^GITEA_REPO=' "$ENV_FILE" | cut -d= -f2)"
 fi
 
-CONTEXT_DIR="$PROJECT_ROOT/agent/data/contexts/open"
+CONTEXT_DIR="$(grep '^CONTEXT_DIR=' "$ENV_FILE" 2>/dev/null | cut -d= -f2)"
+if [ -z "${CONTEXT_DIR:-}" ]; then
+    CONTEXT_DIR="$PROJECT_ROOT/agent/data/contexts/open"
+fi
 
 # --- Kontext finden ---
 STARTER=$(ls "$CONTEXT_DIR"/$NR-*/starter.md 2>/dev/null | head -1)

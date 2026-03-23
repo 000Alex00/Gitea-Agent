@@ -157,6 +157,35 @@ def relevant_files(issue: dict) -> list[Path]:
     return list(dict.fromkeys(found))
 
 
+def find_relevant_files_advanced(issue: dict) -> list[Path]:
+    """
+    Extrahiert Dateipfade aus dem Issue-Body (Backtick-Erwähnungen).
+    Zukünftig erweitert um AST-Analyse und Keyword-Suche.
+    """
+    body = issue.get("body", "")
+    
+    # 1. Backtick-Erwähnungen (wie bisher)
+    exts = tuple(settings.CODE_EXTENSIONS)
+    backtick_files = []
+    for line in body.splitlines():
+        for part in line.split("`"):
+            p = PROJECT / part.strip()
+            if p.exists() and p.is_file() and p.suffix in exts:
+                backtick_files.append(p)
+
+    # 2. Keyword-Suche (grep)
+    keyword_files = _search_keywords(body, PROJECT)
+
+    # 3. AST-Importanalyse
+    # _find_imports erwartet eine Liste von Path-Objekten
+    all_initial_files = list(dict.fromkeys(backtick_files + keyword_files))
+    import_files = _find_imports(all_initial_files)
+
+    # 4. Zusammenführen und Deduplizieren
+    found = all_initial_files + import_files
+    return list(dict.fromkeys(found))
+
+
 def branch_name(issue: dict) -> str:
     """
     Generiert einen Branch-Namen aus Issue-Nummer und Titel.
@@ -205,7 +234,7 @@ def build_plan_comment(issue: dict) -> str:
     """
     num = issue["number"]
     stufe, desc = risk_level(issue)
-    files = relevant_files(issue)
+    files = find_relevant_files_advanced(issue)
     branch = branch_name(issue)
 
     file_list = (
@@ -258,7 +287,7 @@ def print_context(issue: dict) -> None:
     title = issue.get("title", "")
     body = issue.get("body", "")
     stufe, desc = risk_level(issue)
-    files = relevant_files(issue)
+    files = find_relevant_files_advanced(issue)
     branch = branch_name(issue)
 
     print("=" * 70)
@@ -346,7 +375,7 @@ def save_plan_context(issue: dict) -> Path:
     title = issue.get("title", "")
     body = (issue.get("body", "") or "").strip()
     stufe, desc = risk_level(issue)
-    files = relevant_files(issue)
+    files = find_relevant_files_advanced(issue)
     branch = branch_name(issue)
 
     body_short = body[:200] + ("..." if len(body) > 200 else "")
@@ -496,17 +525,37 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
 
     limit = settings.MAX_FILE_LINES
     parts = []
+
+    # Repo-Skelett laden
+    issue_dir = _issue_dir(issue)
+    skeleton_path = issue_dir / "repo_skeleton.json"
+    skeleton_map = {}
+    if skeleton_path.exists():
+        try:
+            skeleton_data = json.loads(skeleton_path.read_text(encoding="utf-8"))
+            skeleton_map = {item["path"]: item for item in skeleton_data}
+        except Exception as e:
+            log.warning(f"Fehler beim Laden von repo_skeleton.json: {e}")
+
     for name, text in files_dict.items():
-        lines = text.splitlines()
-        size_kb = len(text.encode("utf-8")) / 1024
-        if size_kb > _MAX_FILE_SIZE_KB:
-            code = "\n".join(lines[:500])
-            code += f"\n\n# [GEKÜRZT: {len(lines)} Zeilen, {size_kb:.0f}KB — nur erste 500 Zeilen]"
-        elif len(lines) > limit:
-            code = "\n".join(lines[:limit])
-            code += f"\n\n[... gekürzt — {len(lines) - limit} Zeilen weggelassen ...]"
+        code = ""
+        skeleton_entry = skeleton_map.get(name)
+
+        if skeleton_entry and skeleton_entry.get("truncated"):
+            size_kb = skeleton_entry.get("size_kb", 0)
+            reason = skeleton_entry.get("reason", "Unbekannter Grund")
+            code = f"# [GEKÜRZT: {size_kb:.0f}KB — {reason}]\n# Der vollständige Dateiinhalt wurde aufgrund der Größe nicht geladen."
         else:
-            code = "\n".join(lines)
+            lines = text.splitlines()
+            size_kb = len(text.encode("utf-8")) / 1024
+            if size_kb > _MAX_FILE_SIZE_KB:
+                code = "\n".join(lines[:500])
+                code += f"\n\n# [GEKÜRZT: {len(lines)} Zeilen, {size_kb:.0f}KB — nur erste 500 Zeilen]"
+            elif len(lines) > limit:
+                code = "\n".join(lines[:limit])
+                code += f"\n\n[... gekürzt — {len(lines) - limit} Zeilen weggelassen ...]"
+            else:
+                code = "\n".join(lines)
         parts.append(f"## {name}\n```\n{code}\n```")
 
     idir = _issue_dir(issue)
@@ -591,6 +640,59 @@ _EXCLUDE_FILES = {
 }
 
 _MAX_FILE_SIZE_KB = 50
+
+_MAX_SKELETON_FILE_SIZE_KB = 20 # Neue Konstante für Skeleton-Dateigröße
+
+def _create_repo_skeleton(files: list[Path], output_dir: Path) -> Path:
+    """
+    Generiert eine repo_skeleton.json für die gegebenen Dateien.
+
+    Für jede Datei wird ein Eintrag mit Pfad und Zeilenbereich (oder truncated: true)
+    erstellt. Große Dateien werden als gekürzt markiert.
+
+    Args:
+        files:     Liste der relevanten Dateipfade
+        output_dir: Verzeichnis, in dem repo_skeleton.json gespeichert wird
+
+    Returns:
+        Pfad zur erstellten repo_skeleton.json
+    """
+    skeleton_data = []
+    for f in files:
+        try:
+            rel_path = str(f.relative_to(PROJECT))
+            size_kb = f.stat().st_size // 1024
+            if size_kb > _MAX_SKELETON_FILE_SIZE_KB:
+                skeleton_data.append({
+                    "path": rel_path,
+                    "truncated": True,
+                    "size_kb": size_kb,
+                    "reason": f"Datei zu groß ({size_kb}KB > {_MAX_SKELETON_FILE_SIZE_KB}KB)"
+                })
+            else:
+                # Datei lesen und Zeilen zählen
+                content = f.read_text(encoding="utf-8", errors="ignore")
+                lines = content.splitlines()
+                skeleton_data.append({
+                    "path": rel_path,
+                    "truncated": False,
+                    "lines": len(lines),
+                    "size_kb": size_kb,
+                    "start_line": 1,
+                    "end_line": len(lines),
+                })
+        except Exception:
+            # Bei Lesefehler oder anderer Exception
+            skeleton_data.append({
+                "path": str(f.relative_to(PROJECT)),
+                "truncated": True,
+                "reason": "Fehler beim Lesen oder Verarbeiten der Datei"
+            })
+    
+    output_path = output_dir / "repo_skeleton.json"
+    output_path.write_text(json.dumps(skeleton_data, indent=2), encoding="utf-8")
+    log.info(f"Repo-Skelett erstellt: {output_path}")
+    return output_path
 
 
 def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:
@@ -1097,8 +1199,12 @@ def cmd_plan(number: int) -> None:
     """
     issue = gitea.get_issue(number)
 
-    stufe, _ = risk_level(issue)
-    files = relevant_files(issue)
+    files = find_relevant_files_advanced(issue)
+
+    # Repo-Skelett generieren
+    issue_dir = _issue_dir(issue)
+    _create_repo_skeleton(files, issue_dir)
+
 
     # Metadaten-Block (collapsible) aufbauen
     file_stats = []
@@ -1274,7 +1380,7 @@ def cmd_implement(number: int) -> None:
 """,
     )
 
-    base_files = relevant_files(issue)
+    base_files = find_relevant_files_advanced(issue)
     import_files = _find_imports(base_files)
     # Kommentare für Keyword-Suche einbeziehen
     comments = gitea.get_comments(issue["number"])
@@ -1520,7 +1626,7 @@ def cmd_generate_tests(number: int) -> None:
     
     issue = gitea.get_issue(number)
     
-    base_files = relevant_files(issue)
+    base_files = find_relevant_files_advanced(issue)
     import_files = _find_imports(base_files)
     
     comments = gitea.get_comments(number)

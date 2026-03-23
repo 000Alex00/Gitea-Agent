@@ -20,6 +20,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -291,6 +292,20 @@ def _save_baseline(project_root: Path, score: float) -> None:
         json.dump({"score": score}, f, indent=2)
 
 
+def _get_commit_hash() -> str:
+    """Gibt den aktuellen Git-Commit-Hash zurück. Leerer String bei Fehler."""
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--pretty=%H"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return ""
+
+
 def _save_score_history(project_root: Path, result: "EvalResult", trigger: str) -> None:
     """
     Hängt einen Eintrag an tests/score_history.json an. Max HISTORY_MAX Einträge.
@@ -310,9 +325,11 @@ def _save_score_history(project_root: Path, result: "EvalResult", trigger: str) 
                 history = json.load(f)
         except Exception:
             history = []
-
+    
+    commit_hash = _get_commit_hash()
     entry = {
         "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
+        "commit": commit_hash,
         "trigger": trigger,
         "score": result.score,
         "max_score": result.max_score,
