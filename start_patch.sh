@@ -3,11 +3,29 @@
 #
 # Stoppt Night-Service falls aktiv, führt Server-Neustart + Eval durch,
 # startet gitea-agent-patch.service.
+#
+# Optionen:
+#   --self   gitea-agent Eigenentwicklung (.env.agent, kein Eval)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 NIGHT_SVC="gitea-agent-night"
 PATCH_SVC="gitea-agent-patch"
+SELF=0
+
+for ARG in "$@"; do
+    [ "$ARG" = "--self" ] && SELF=1
+done
+
+if [ "$SELF" -eq 1 ]; then
+    echo "[→] Patch-Modus: gitea-agent Eigenentwicklung (--self)"
+    export AGENT_ENV_FILE="$SCRIPT_DIR/.env.agent"
+    cd "$SCRIPT_DIR"
+    python3 agent_start.py --self --watch --patch &
+    echo "[✓] gitea-agent Watch-Loop gestartet (PID $!)"
+    echo "    Env: $AGENT_ENV_FILE"
+    exit 0
+fi
 
 echo "[→] Starte Patch-Modus..."
 

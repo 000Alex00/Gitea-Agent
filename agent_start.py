@@ -36,6 +36,18 @@ import time
 from pathlib import Path
 
 _HERE = Path(__file__).parent
+
+# --self: .env.agent statt .env laden (vor allen anderen Imports)
+if "--self" in sys.argv:
+    _agent_env = _HERE / ".env.agent"
+    if _agent_env.exists():
+        for _line in _agent_env.read_text(encoding="utf-8").splitlines():
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
+        os.environ["AGENT_ENV_FILE"] = str(_agent_env)
+
 sys.path.insert(0, str(_HERE))
 import evaluation
 import dashboard
@@ -2893,6 +2905,11 @@ Ohne Argumente: automatischer Modus.
         "--restart-before-eval",
         action="store_true",
         help="Server via restart_script neu starten vor Eval (--pr)",
+    )
+    parser.add_argument(
+        "--self",
+        action="store_true",
+        help="gitea-agent Eigenentwicklung: lädt .env.agent statt .env",
     )
     parser.add_argument(
         "--install-service",
