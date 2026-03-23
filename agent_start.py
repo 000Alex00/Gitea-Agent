@@ -568,7 +568,14 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
         f"> Automatisch erkannt via Backtick-Erwähnungen, Import-Analyse (AST) und Keyword-Suche (grep).\n"
         f"> Zusätzliche Suche im Repo ist nicht nötig — der Kontext ist vollständig.\n\n"
     )
-    files_file.write_text(files_header + "\n\n".join(parts) + "\n", encoding="utf-8")
+
+    # repo_skeleton.md einbetten falls vorhanden
+    skeleton_md_path = idir / "repo_skeleton.md"
+    skeleton_section = ""
+    if skeleton_md_path.exists():
+        skeleton_section = skeleton_md_path.read_text(encoding="utf-8") + "\n\n---\n\n"
+
+    files_file.write_text(files_header + skeleton_section + "\n\n".join(parts) + "\n", encoding="utf-8")
 
     log.info(f"Kontext gespeichert: {ctx_file}, {files_file}")
     return ctx_file, files_file
@@ -643,16 +650,41 @@ _MAX_FILE_SIZE_KB = 50
 
 _MAX_SKELETON_FILE_SIZE_KB = 20 # Neue Konstante für Skeleton-Dateigröße
 
+def _extract_ast_symbols(content: str) -> list[dict]:
+    """Extrahiert ClassDef/FunctionDef aus Python-Quellcode via AST."""
+    symbols = []
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return symbols
+    lines = content.splitlines()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            # Zeilennummern
+            start = node.lineno
+            end = getattr(node, "end_lineno", start)
+            # Signatur: erste Zeile des Blocks
+            sig = lines[start - 1].strip() if start <= len(lines) else ""
+            entry = {
+                "type": "class" if isinstance(node, ast.ClassDef) else "function",
+                "name": node.name,
+                "lines": f"{start}-{end}",
+                "signature": sig,
+            }
+            symbols.append(entry)
+    return symbols
+
+
 def _create_repo_skeleton(files: list[Path], output_dir: Path) -> Path:
     """
-    Generiert eine repo_skeleton.json für die gegebenen Dateien.
+    Generiert repo_skeleton.json + repo_skeleton.md für die gegebenen Dateien.
 
-    Für jede Datei wird ein Eintrag mit Pfad und Zeilenbereich (oder truncated: true)
-    erstellt. Große Dateien werden als gekürzt markiert.
+    Für Python-Dateien: AST-Extraktion (ClassDef/FunctionDef mit Name, Zeilen, Signatur).
+    Große Dateien werden als truncated markiert.
 
     Args:
-        files:     Liste der relevanten Dateipfade
-        output_dir: Verzeichnis, in dem repo_skeleton.json gespeichert wird
+        files:      Liste der relevanten Dateipfade
+        output_dir: Verzeichnis für repo_skeleton.json / repo_skeleton.md
 
     Returns:
         Pfad zur erstellten repo_skeleton.json
@@ -667,32 +699,59 @@ def _create_repo_skeleton(files: list[Path], output_dir: Path) -> Path:
                     "path": rel_path,
                     "truncated": True,
                     "size_kb": size_kb,
-                    "reason": f"Datei zu groß ({size_kb}KB > {_MAX_SKELETON_FILE_SIZE_KB}KB)"
+                    "reason": f"Datei zu groß ({size_kb}KB > {_MAX_SKELETON_FILE_SIZE_KB}KB)",
+                    "symbols": [],
                 })
             else:
-                # Datei lesen und Zeilen zählen
                 content = f.read_text(encoding="utf-8", errors="ignore")
                 lines = content.splitlines()
+                symbols = _extract_ast_symbols(content) if f.suffix == ".py" else []
                 skeleton_data.append({
                     "path": rel_path,
                     "truncated": False,
                     "lines": len(lines),
                     "size_kb": size_kb,
-                    "start_line": 1,
-                    "end_line": len(lines),
+                    "symbols": symbols,
                 })
         except Exception:
-            # Bei Lesefehler oder anderer Exception
             skeleton_data.append({
                 "path": str(f.relative_to(PROJECT)),
                 "truncated": True,
-                "reason": "Fehler beim Lesen oder Verarbeiten der Datei"
+                "reason": "Fehler beim Lesen oder Verarbeiten der Datei",
+                "symbols": [],
             })
-    
-    output_path = output_dir / "repo_skeleton.json"
-    output_path.write_text(json.dumps(skeleton_data, indent=2), encoding="utf-8")
-    log.info(f"Repo-Skelett erstellt: {output_path}")
-    return output_path
+
+    json_path = output_dir / "repo_skeleton.json"
+    json_path.write_text(json.dumps(skeleton_data, indent=2), encoding="utf-8")
+
+    # repo_skeleton.md für LLM-Prompt erzeugen
+    md_path = output_dir / "repo_skeleton.md"
+    md_path.write_text(_skeleton_to_md(skeleton_data), encoding="utf-8")
+
+    log.info(f"Repo-Skelett erstellt: {json_path}")
+    return json_path
+
+
+def _skeleton_to_md(skeleton_data: list[dict]) -> str:
+    """Erzeugt eine menschenlesbare Markdown-Übersicht aus repo_skeleton.json."""
+    lines = ["# Repo-Skelett\n"]
+    for entry in skeleton_data:
+        path = entry.get("path", "?")
+        if entry.get("truncated"):
+            lines.append(f"## {path}  *(zu groß — {entry.get('reason', '')})*\n")
+            continue
+        total = entry.get("lines", 0)
+        lines.append(f"## {path}  *({total} Zeilen)*\n")
+        symbols = entry.get("symbols", [])
+        if symbols:
+            for sym in symbols:
+                kind = "Klasse" if sym["type"] == "class" else "Funktion"
+                lines.append(f"- **{kind}** `{sym['name']}` Zeilen {sym['lines']}")
+                lines.append(f"  `{sym['signature']}`")
+        else:
+            lines.append("*(keine Klassen/Funktionen erkannt)*")
+        lines.append("")
+    return "\n".join(lines)
 
 
 def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:
@@ -1647,6 +1706,38 @@ def cmd_generate_tests(number: int) -> None:
     
     msg = f"🤖 **Test-Generierung gestartet**\n\nDie relevanten Dateien wurden gesammelt. Du kannst die Tests nun lokal mit folgendem Befehl generieren lassen:\n\n```bash\nclaude -p {ctx_file.relative_to(PROJECT)}\n```\n\n*Der Prompt enthält strikte Vorgaben für pytest, Integrationstests und `agent_eval.json` Einträge inkl. `tag`-Feld.*"
     gitea.post_comment(number, msg)
+
+def cmd_get_slice(spec: str) -> None:
+    """
+    Gibt einen exakten Zeilenbereich einer Datei aus.
+
+    Args:
+        spec: "datei.py:START-END" oder "datei.py:START"
+    """
+    if ":" not in spec:
+        print(f"[✗] Format: --get-slice datei.py:START-END  (z.B. agent_start.py:45-90)")
+        sys.exit(1)
+    file_part, range_part = spec.rsplit(":", 1)
+    path = PROJECT / file_part
+    if not path.exists():
+        print(f"[✗] Datei nicht gefunden: {path}")
+        sys.exit(1)
+    try:
+        if "-" in range_part:
+            start, end = (int(x) for x in range_part.split("-", 1))
+        else:
+            start = end = int(range_part)
+    except ValueError:
+        print(f"[✗] Ungültiger Bereich: {range_part!r}  (erwartet: START-END oder START)")
+        sys.exit(1)
+    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
+    total = len(lines)
+    start = max(1, start)
+    end = min(total, end)
+    print(f"# {file_part}  Zeilen {start}-{end}  (Datei: {total} Zeilen)\n")
+    for i, line in enumerate(lines[start - 1 : end], start=start):
+        print(f"{i:5}  {line}")
+
 
 def cmd_fixup(number: int) -> None:
     """
@@ -2950,6 +3041,13 @@ Ohne Argumente: automatischer Modus.
     )
     parser.add_argument("--issue", type=int, metavar="NR", help="Plan für Issue posten")
     parser.add_argument(
+        "--get-slice",
+        type=str,
+        metavar="DATEI:START-END",
+        dest="get_slice",
+        help="Exakten Zeilenbereich ausgeben, z.B. agent_start.py:45-90",
+    )
+    parser.add_argument(
         "--implement",
         type=int,
         metavar="NR",
@@ -3032,6 +3130,8 @@ Ohne Argumente: automatischer Modus.
         cmd_eval_after_restart(nr)
     elif args.list:
         cmd_list()
+    elif args.get_slice:
+        cmd_get_slice(args.get_slice)
     elif args.issue:
         cmd_plan(args.issue)
     elif args.implement:
