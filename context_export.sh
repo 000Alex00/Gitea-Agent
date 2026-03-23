@@ -132,6 +132,25 @@ case "$FORMAT" in
             echo "--- files.md ---"
             cat "$FILES"
         fi
+
+        # Slice-Anforderungsschleife
+        echo ""
+        echo "=========================================="
+        echo "  SLICE-MODUS — Zeile eingeben:"
+        echo "  SLICE: datei.py:START-END   → Code laden"
+        echo "  READY                       → Starten"
+        echo "=========================================="
+        while true; do
+            printf "> "
+            read -r INPUT
+            if [ "$INPUT" = "READY" ] || [ -z "$INPUT" ]; then
+                break
+            fi
+            SLICE=$(echo "$INPUT" | sed -n 's/^SLICE: //p')
+            if [ -n "$SLICE" ]; then
+                python3 "$AGENT_DIR/agent_start.py" ${SELF:+--self} --get-slice "$SLICE"
+            fi
+        done
         ;;
 
     gemini)
@@ -140,6 +159,8 @@ case "$FORMAT" in
         echo ""
         cd "$PROJECT_ROOT"
         INSTRUCTION="Du arbeitest auf Branch ${BRANCH:-unbekannt} in $PROJECT_ROOT. NIEMALS auf main committen. Nach jeder Dateiänderung committen. Am Ende diesen PR-Befehl ausführen: $PR_CMD"
+        SLICE_HINT="files.md enthält nur Skelett. Fordere Code-Slices an mit: 'SLICE: datei.py:START-END'. Der Agent liefert den Zeilenbereich."
+        INSTRUCTION="$INSTRUCTION $SLICE_HINT"
         if [ -n "${FILES:-}" ]; then
             gemini "@$STARTER @$FILES $INSTRUCTION"
         else
@@ -159,6 +180,22 @@ case "$FORMAT" in
                 echo ""
                 cat "$FILES"
             fi
+            echo ""
+            echo "---"
+            echo ""
+            cat <<'SLICEDOC'
+## Slice-Workflow
+files.md enthält nur Skelett — kein Volltext.
+Fordere Slices explizit an:
+
+  SLICE: datei.py:START-END
+
+Beispiel:
+  SLICE: agent_start.py:646-695
+
+Der Betreuer liefert den exakten Zeilenbereich.
+Starte die Implementierung erst wenn du alle nötigen Slices hast.
+SLICEDOC
         } > "$OUTFILE"
         echo "[✓] Kontext-Datei erzeugt: $OUTFILE"
         echo "    → Datei in Web-Chat hochladen (GPT, Claude Web, Gemini Web)"
