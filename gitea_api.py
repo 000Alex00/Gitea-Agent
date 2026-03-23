@@ -29,7 +29,7 @@ from log import get_logger
 
 log = get_logger(__name__)
 
-_ENV_FILE = Path(__file__).parent / ".env"
+_ENV_FILE = Path(os.environ.get("AGENT_ENV_FILE", str(Path(__file__).parent / ".env")))
 
 
 def _load_env() -> dict:

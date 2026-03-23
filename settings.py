@@ -10,7 +10,7 @@ Reihenfolge: Umgebungsvariable → .env → Standardwert
 import os
 from pathlib import Path
 
-_ENV_FILE = Path(__file__).parent / ".env"
+_ENV_FILE = Path(os.environ.get("AGENT_ENV_FILE", str(Path(__file__).parent / ".env")))
 
 
 def _env(key: str, default: str = "") -> str:

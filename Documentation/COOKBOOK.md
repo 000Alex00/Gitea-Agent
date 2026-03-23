@@ -18,6 +18,8 @@ Referenzprojekt: Skynet (LLM WhatsApp-Bot, Jetson Nano + Raspberry Pi 5).
 9. [Eval nach Neustart (--eval-after-restart)](#9-eval-nach-neustart---eval-after-restart)
 10. [Auto-Issue manuell schließen](#10-auto-issue-manuell-schließen)
 11. [log_analyzer integrieren](#11-log_analyzer-integrieren)
+12. [LLM-Workflow — Welches LLM, welcher Befehl](#12-llm-workflow--welches-llm-welcher-befehl)
+13. [Zwei Repos — Ein Agent](#13-zwei-repos--ein-agent)
 12. [PR mit veraltetem Server (Staleness-Check)](#12-pr-mit-veraltetem-server-staleness-check)
 13. [Migration auf zentrale Agent-Instanz](#13-migration-auf-zentrale-agent-instanz)
 14. [LLM-gestützte Test-Generierung (--generate-tests)](#14-llm-gestützte-test-generierung---generate-tests)
@@ -1041,3 +1043,105 @@ Das Dashboard wird nicht nur im Watch-Takt aktualisiert, sondern sofort nach:
 - `--install-service` braucht `sudo` für `/etc/systemd/system/`
 - Pfade werden dynamisch aus der aktuellen Umgebung abgeleitet — kein Hardcoding
 - Logs: `journalctl -u gitea-agent-night -f` bzw. `-u gitea-agent-patch`
+
+---
+
+## 12. LLM-Workflow — Welches LLM, welcher Befehl
+
+### Claude Code (Standard)
+
+```bash
+python3 agent_start.py --implement NR
+```
+
+Claude Code liest `starter.md` selbst und arbeitet direkt im Dateisystem.
+
+### Gemini CLI
+
+```bash
+# Kontext laden + Gemini direkt starten
+./context_export.sh NR gemini
+
+# gitea-agent Eigenentwicklung
+./context_export.sh NR --self gemini
+```
+
+Gemini bekommt `starter.md` + `files.md` als `@`-Referenzen übergeben.
+
+### Web-Chat (GPT, Claude Web, Gemini Web, Copilot)
+
+```bash
+# Kontext-Datei erzeugen
+./context_export.sh NR file
+
+# → context_NR.md in Web-Chat hochladen
+# → Anweisung: "Lies die Datei und arbeite das Issue ab"
+# → Nach Session: PR-Befehl manuell ausführen (wird in der Datei angezeigt)
+```
+
+### Plain-Text (Copy/Paste)
+
+```bash
+./context_export.sh NR
+# → Kontext im Terminal ausgeben, manuell kopieren
+```
+
+### PR-Befehl nach jeder Session
+
+```bash
+# Standard (jetson-llm-chat)
+python3 ~/gitea-agent/agent_start.py --pr NR --branch BRANCH --summary "..."
+
+# gitea-agent Eigenentwicklung
+GITEA_REPO=youruser/gitea-agent \
+python3 ~/gitea-agent/agent_start.py --self --pr NR --branch BRANCH --summary "..." --force
+```
+
+---
+
+## 13. Zwei Repos — Ein Agent
+
+Der Agent kann zwei verschiedene Repos verwalten:
+
+| | jetson-llm-chat | gitea-agent |
+|---|---|---|
+| Env-Datei | `.env` | `.env.agent` |
+| Eval | läuft (agent_eval.json vorhanden) | übersprungen |
+| Flag | (Standard) | `--self` |
+
+### Setup
+
+`.env.agent` liegt in `~/gitea-agent/` und enthält:
+
+```
+GITEA_REPO=youruser/gitea-agent
+PROJECT_ROOT=/home/user/gitea-agent
+# Kein agent_eval.json → Eval wird übersprungen
+```
+
+### Befehle mit --self
+
+```bash
+# Issue planen
+python3 agent_start.py --self --issue NR
+
+# Implementieren (Kontext generieren)
+python3 agent_start.py --self --implement NR
+
+# PR erstellen
+GITEA_REPO=youruser/gitea-agent \
+python3 agent_start.py --self --pr NR --branch BRANCH --summary "..." --force
+
+# Patch-Modus für gitea-agent
+./start_patch.sh --self
+
+# Kontext für Gemini / Web-Chat
+./context_export.sh NR --self gemini
+./context_export.sh NR --self file
+```
+
+### Eval-Verhalten
+
+- `agent_eval.json` in `PROJECT_ROOT/agent/config/` oder `PROJECT_ROOT/tests/` → Eval läuft
+- Datei fehlt → Eval wird automatisch übersprungen
+- `gitea-agent` hat kein `agent_eval.json` → `--force` beim `--pr` nötig
