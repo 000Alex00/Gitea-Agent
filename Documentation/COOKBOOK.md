@@ -1145,3 +1145,35 @@ python3 agent_start.py --self --pr NR --branch BRANCH --summary "..." --force
 - `agent_eval.json` in `PROJECT_ROOT/agent/config/` oder `PROJECT_ROOT/tests/` → Eval läuft
 - Datei fehlt → Eval wird automatisch übersprungen
 - `gitea-agent` hat kein `agent_eval.json` → `--force` beim `--pr` nötig
+
+---
+
+## Sitzungs-Protokoll 2026-03-23
+
+### Durchgeführte Änderungen
+- `context_export.sh` — LLM-agnostischer Kontext-Export (plain/gemini/file)
+- `.env.agent` — Dual-Repo-Unterstützung für gitea-agent Eigenentwicklung
+- `--self` Flag in `agent_start.py` — schaltet zwischen jetson-llm-chat und gitea-agent
+- `start_patch.sh` — `--self` Flag ergänzt
+- `evaluation.py` — Commit-Hash in score_history.json
+- `context_export.sh` — CONTEXT_DIR aus .env.agent lesen (Fix)
+- `agent_eval.json` — Tags für alle Tests gesetzt (chroma_retrieval, routing, web_search)
+- `score_history.json` — Tags nachträglich migriert
+- `dashboard.py` — failed vs failed_tests Feldname-Fix
+- `dashboard.html` — Tag-Aggregation funktioniert jetzt
+
+### ⚠️ Gemini CLI — NICHT FUNKTIONAL für Agent-Workflow
+
+Gemini CLI ist aktuell NICHT geeignet für komplexe Issues:
+- Verlässt den Issue-Scope unkontrolliert
+- Refactored Dateien die nicht zum Issue gehören
+- Ignoriert --self Flag beim PR-Befehl
+- Infinite Loop nach Abschluss (Bug in Gemini CLI)
+
+Gemini CLI NUR für einfache Issues verwenden (< 50 Zeilen, eine Datei).
+Für alle anderen Issues: Claude Code verwenden.
+
+### Offene Issues
+- #68  AST-Skelett (neu erstellt — mit Claude Code abarbeiten)
+- context_export.sh: files.md wird nicht zuverlässig eingebettet
+- Gemini Scope-Drift: strikterer Prompt nötig in context_export.sh
