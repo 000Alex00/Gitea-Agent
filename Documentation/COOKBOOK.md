@@ -1048,6 +1048,8 @@ Das Dashboard wird nicht nur im Watch-Takt aktualisiert, sondern sofort nach:
 
 ## 12. LLM-Workflow — Welches LLM, welcher Befehl
 
+> Implementiert in Issue #65 — `context_export.sh` + `--self` Flag + Dual-Repo-Support. Siehe auch Kapitel 13.
+
 ### Claude Code (Standard)
 
 ```bash
@@ -1057,6 +1059,8 @@ python3 agent_start.py --implement NR
 Claude Code liest `starter.md` selbst und arbeitet direkt im Dateisystem.
 
 ### Gemini CLI
+
+> ⚠️ **Eingeschränkt nutzbar** — nur für einfache Issues (eine Datei, < 50 Zeilen). Bei komplexen Issues: Scope-Drift, ignoriert `--self` beim PR-Befehl, Infinite Loop nach Abschluss. Für alles andere: Claude Code verwenden.
 
 ```bash
 # Kontext laden + Gemini direkt starten

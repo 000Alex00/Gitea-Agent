@@ -1067,6 +1067,16 @@ Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für 
 - **Agent Self-Consistency Check** — Ein deterministischer Check (`agent_self_check.py`) stellt sicher, dass Erweiterungen am Agenten selbst konsistent sind (Flags, Labels, etc.) und wird vor jedem PR auf den Agenten-Code ausgeführt.
 - **Consecutive-Pass Gate** — Auto-Issues werden erst nach N aufeinanderfolgenden Passes geschlossen (`close_after_consecutive_passes`). Fortschritts-Kommentare im Issue zeigen den Zählerstand.
 - **Betriebsmodi (Night / Patch / Idle)** — Drei systemd-basierte Modi mit Shell-Skripten (`start_night.sh`, `start_patch.sh`, `stop_agent.sh`, `agent_status.sh`). Dashboard-Updates nach jedem Event. Dynamische Unit-Installation via `--install-service`.
+- **LLM-agnostischer Kontext-Export & Dual-Repo-Support** (#65) — `context_export.sh` exportiert den Issue-Kontext für beliebige LLMs (plain/gemini/file). `.env.agent` + `--self` Flag ermöglichen es, den Agenten auf sich selbst anzuwenden (gitea-agent entwickelt gitea-agent).
+
+### ⚠️ Bekannte Einschränkungen
+
+**Gemini CLI** ist aktuell **nicht geeignet** für Issues mit mehr als einer Datei oder mehr als ~50 Zeilen Änderung:
+- Verlässt den Issue-Scope und refactored Dateien die nicht zum Issue gehören
+- Ignoriert das `--self` Flag beim PR-Befehl
+- Infinite Loop nach Abschluss (Bug in Gemini CLI)
+
+Für alle komplexeren Issues: **Claude Code verwenden**. Gemini CLI nur für triviale Einzeldatei-Änderungen.
 
 ### Geplant / In Arbeit
 - **AST-Repository-Skelett** (#46): Der Agent lädt nicht mehr die ganze Datei. Er nutzt das Skelett, um gezielt Segmente via --get-slice zu greifen. Verhindert Kontext-Overflow.
