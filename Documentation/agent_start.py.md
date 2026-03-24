@@ -15,6 +15,21 @@ Zentrales CLI für den gitea-agent. Koordiniert Issue-Scan, PR-Erstellung, Eval 
 | `--interval MIN` | Watch-Interval in Minuten (Default: aus agent_eval.json) |
 | `--force` | PR auch bei Staleness-Warnung erzwingen |
 | `--restart-before-eval` | Server vor Eval neustarten |
+| `--changelog [VERSION]` | CHANGELOG.md aus git-History generieren/aktualisieren |
+
+## Changelog-Generator (`cmd_changelog`)
+
+Liest Commits seit letztem Git-Tag, klassifiziert nach Conventional-Commit-Präfix und schreibt/prependet einen Abschnitt in `CHANGELOG.md`.
+
+**Funktionen:**
+- `_git_log_since_tag(cwd)` — git log seit letztem Tag, gibt `(commits, last_tag)` zurück
+- `_classify_commit(subject)` — parst Conventional-Commit-Präfix (`feat:`, `fix:`, etc.)
+- `_build_changelog_block(commits, version, date)` — formatiert Markdown-Abschnitt
+- `cmd_changelog(version, update_file)` — Hauptfunktion, schreibt CHANGELOG.md
+
+**Gruppen-Reihenfolge:** feat → fix → refactor → perf → test → docs → ci → style → chore → sonstiges
+
+**PR-Integration:** `cmd_pr()` ruft `cmd_changelog()` automatisch nach erfolgreichem PR auf (nicht blockierend).
 
 ## Watch-Modus
 
