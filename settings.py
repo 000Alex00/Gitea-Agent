@@ -130,14 +130,10 @@ PROJECT_ROOT = _env("PROJECT_ROOT", "")
 CONTEXT_DIR = _env("CONTEXT_DIR", "contexts")
 
 # ---------------------------------------------------------------------------
-# Pfad-Auflösung: zentrale Agent-Instanz vs. Submodul-Modus
-#
-# Neue Struktur (wenn PROJECT_ROOT/agent/ existiert):
-#   agent/config/  ← versioniert (agent_eval.json, log_analyzer.py)
-#   agent/data/    ← .gitignore (contexts/, logs, session, baseline, history)
-#   agent/.env     ← .gitignore (Secrets)
-#
-# Fallback (alte Submodul-Struktur): Pfade relativ zu agent_start.py
+# Pfad-Auflösung: wenn PROJECT_ROOT/agent/ existiert → neue Struktur
+#   agent/config/  ← agent_eval.json, log_analyzer.py
+#   agent/data/    ← contexts/, logs, session, baseline, history
+# sonst → Fallback: Pfade relativ zu agent_start.py
 # ---------------------------------------------------------------------------
 
 _HERE_SETTINGS = Path(__file__).parent

@@ -102,7 +102,7 @@ python3 agent_start.py --list
 
 # Schritt 1: Issue schreiben
 # In Gitea: Neue Issue → Body mit betroffenen Dateien in Backticks:
-# "Bitte Timeout in `nanoclaw/plugins/web_search.py` auf 8s setzen."
+# "Bitte Timeout in `myproject/plugins/web_search.py` auf 8s setzen."
 # Der Agent ergänzt automatisch via Import-Analyse (AST) + Keyword-Suche (grep).
 # Label: ready-for-agent
 
@@ -154,7 +154,7 @@ python3 agent_start.py --pr 61 --branch fix/issue-61-timeout-web-search --summar
 
 ```bash
 # 1. Bug entdecken, fixen, committen
-git add nanoclaw/plugins/web_search.py
+git add myproject/plugins/web_search.py
 git commit -m "fix: web_search timeout exception handling"
 
 # 2. Fixup-Kommentar posten
@@ -193,13 +193,13 @@ cp agent_eval.template.json /pfad/zu/deinem/projekt/agent/config/agent_eval.json
   "server_url": "http://localhost:8000",
   "chat_endpoint": "/chat",
   "watch_interval_minutes": 60,
-  "log_path": "/home/user/llm-chat/gitea-agent.log",
+  "log_path": "/home/user/myproject/gitea-agent.log",
   "restart_script": "/home/user/start_llm.sh",
   "tests": [
     {
       "name": "Routing einfach",
       "weight": 1,
-      "pi5_required": false,
+      "worker_required": false,
       "message": "Was ist 2 plus 2?",
       "expected_keywords": ["4"],
       "tag": "math_basic"
@@ -207,7 +207,7 @@ cp agent_eval.template.json /pfad/zu/deinem/projekt/agent/config/agent_eval.json
     {
       "name": "Kontext-Persistenz",
       "weight": 2,
-      "pi5_required": false,
+      "worker_required": false,
       "message": "Mein Name ist Max. Wie heiße ich?",
       "expected_keywords": ["Max"],
       "tag": "context_persistence"
@@ -224,12 +224,12 @@ cp agent_eval.template.json /pfad/zu/deinem/projekt/agent/config/agent_eval.json
 | `weight` | ja | Gewichtung im Score |
 | `message` | ja* | Nachricht an server.py (`*` außer bei `steps`) |
 | `expected_keywords` | nein | Alle Keywords müssen in Antwort vorkommen (case-insensitive) |
-| `pi5_required` | nein | Pi5 offline → Test überspringen statt FAIL |
+| `worker_required` | nein | Worker offline → Test überspringen statt FAIL |
 | `tag` | **ja** | Tag für systematische Fehlererkennung (Issue #50) |
 
 **Pitfalls:**
 - `tag` ist Pflicht — ohne Tag gibt `agent_self_check.py` Warnung.
-- `pi5_required: true` ohne `pi5_url` → Test wird immer übersprungen.
+- `worker_required: true` ohne `worker_url` → Test wird immer übersprungen.
 - Keywords case-insensitive — `["Max"]` matcht auch `"max"`.
 
 ---
@@ -246,14 +246,14 @@ cp agent_eval.template.json /pfad/zu/deinem/projekt/agent/config/agent_eval.json
 {
   "server_url": "http://localhost:8000",
   "chat_endpoint": "/chat",
-  "pi5_url": "http://192.168.1.x:1235",
+  "worker_url": "http://192.168.1.x:1235",
   "watch_interval_minutes": 60,
-  "log_path": "/home/user/llm-chat/gitea-agent.log",
+  "log_path": "/home/user/myproject/gitea-agent.log",
   "tests": [
     {
       "name": "Routing einfach",
       "weight": 1,
-      "pi5_required": false,
+      "worker_required": false,
       "message": "Was ist 2 plus 2?",
       "expected_keywords": ["4"],
       "tag": "math_basic"
@@ -261,7 +261,7 @@ cp agent_eval.template.json /pfad/zu/deinem/projekt/agent/config/agent_eval.json
     {
       "name": "Stilles Failure",
       "weight": 2,
-      "pi5_required": true,
+      "worker_required": true,
       "steps": [
         {
           "message": "Mein Lieblingstier ist ein Pinguin",
@@ -277,7 +277,7 @@ cp agent_eval.template.json /pfad/zu/deinem/projekt/agent/config/agent_eval.json
     {
       "name": "Mehrschrittige Abfrage",
       "weight": 3,
-      "pi5_required": true,
+      "worker_required": true,
       "steps": [
         {
           "message": "Ich heiße Anna",
@@ -297,7 +297,7 @@ cp agent_eval.template.json /pfad/zu/deinem/projekt/agent/config/agent_eval.json
     {
       "name": "Performance-Check",
       "weight": 1,
-      "pi5_required": false,
+      "worker_required": false,
       "message": "Was ist die Hauptstadt von Deutschland?",
       "expected_keywords": ["Berlin"],
       "max_response_ms": 2000,
@@ -383,7 +383,7 @@ python3 agent_start.py --watch
 // agent/config/agent_eval.json
 {
   "watch_interval_minutes": 30,
-  "log_path": "/home/user/llm-chat/gitea-agent.log",
+  "log_path": "/home/user/myproject/gitea-agent.log",
   "restart_script": "/home/user/start_llm.sh",
   "inactivity_minutes": 5
 }

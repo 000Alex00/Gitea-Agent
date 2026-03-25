@@ -158,7 +158,7 @@ python3 agent_start.py --pr 21 --branch fix/issue-21-xyz --summary "..."
 Bei Score-Regression lädt der Agent die alte Dateiversion via Gitea-API und vergleicht AST-Skelette: welche Funktionen wurden hinzugefügt, entfernt oder haben sich in der Größe verändert?
 
 ```
-## AST-Strukturänderung: nanoclaw/server.py
+## AST-Strukturänderung: myproject/server.py
 
 + handle_upload  (neu)
 - _cleanup_temp  (entfernt)
@@ -200,8 +200,8 @@ Gitea-Kommentare (nur von echten Nutzern, Bot-Kommentare gefiltert) werden in `s
 
 ```markdown
 ## Diskussion
-**Alex:** Das betrifft auch analyst_worker.py, nicht nur server.py
-**Robin:** ok, beide Dateien anpassen
+**User:** Das betrifft auch worker.py, nicht nur server.py
+**Colleague:** ok, beide Dateien anpassen
 ```
 
 ---
@@ -235,7 +235,7 @@ Betroffene Dateien: server.py, router.py
 **Commit:** abc1234
 **Zeitstempel:** 2026-03-20T14:23:00
 **Token-Schätzung:** ~4200 (Kontext: files.md, starter.md)
-**Gelesene Dateien:** nanoclaw/server.py, nanoclaw/router.py
+**Gelesene Dateien:** myproject/server.py, myproject/router.py
 </details>
 ```
 
@@ -392,10 +392,10 @@ Wenn Tests mit dem gleichen `tag` wiederholt fehlschlagen, wird automatisch ein 
   "tag_failure_threshold": 3,
   "tag_failure_window": 5,
   "affected_files": {
-    "chroma_retrieval": ["agent/utils/retriever.py", "agent/config/chroma.yaml"]
+    "vector_search": ["agent/utils/search.py", "agent/config/search.yaml"]
   },
   "improvement_hints": {
-    "chroma_retrieval": "Vector-Search Parameter prüfen oder Embeddings neu generieren."
+    "vector_search": "Suchparameter prüfen oder Index neu aufbauen."
   }
 }
 ```
@@ -468,8 +468,8 @@ Nach `--implement` postet der Agent eine Zusammenfassung des aufgebauten Kontext
 ```
 ## 📎 Kontext-Loader
 **Erkannte Dateien (5):**
-- `nanoclaw/server.py`
-- `nanoclaw/router.py`
+- `myproject/server.py`
+- `myproject/router.py`
 **Diskussion:** 2 Kommentar(e) einbezogen
 ---
 _Kontext bereit in starter.md + files.md_
@@ -630,7 +630,7 @@ Keine zusätzlichen Abhängigkeiten — nur Python 3.10+ Stdlib.
 In Gitea ein neues Issue anlegen. Im Body die betroffenen Dateien in Backticks erwähnen — der Agent erkennt sie automatisch und ergänzt zusätzlich via Import-Analyse (AST) und Keyword-Suche (grep):
 
 ```
-Bitte Docstrings in `nanoclaw/fact_extractor.py` ergänzen.
+Bitte Docstrings in `myproject/utils.py` ergänzen.
 ```
 
 ---
@@ -661,7 +661,7 @@ Der Agent scannt alle Issues und verarbeitet sie der Reihe nach:
 
 [→] 1 Issue(s) bereit — poste Pläne:
 
-  → #21 (Stufe 1) Docstrings in fact_extractor.py ergänzen
+  → #21 (Stufe 1) Docstrings in utils.py ergänzen
 
 [✓] Kommentar gepostet: http://gitea/repo/issues/21
 [→] Freigabe: mit 'ok' oder 'ja' kommentieren
@@ -750,19 +750,19 @@ Im Zielprojekt muss eine `tests/agent_eval.json` existieren:
 {
   "server_url": "http://192.168.1.x:8000",
   "chat_endpoint": "/chat",
-  "pi5_url": "http://192.168.1.x:1235",
+  "worker_url": "http://192.168.1.x:1235",
   "tests": [
     {
       "name": "Routing einfach",
       "weight": 1,
-      "pi5_required": false,
+      "worker_required": false,
       "message": "Was ist 2 plus 2?",
       "expected_keywords": ["4"]
     },
     {
       "name": "Stilles Failure",
       "weight": 2,
-      "pi5_required": true,
+      "worker_required": true,
       "steps": [
         {"message": "Mein Name ist Max", "expect_stored": true},
         {"message": "Wie heiße ich?", "expected_keywords": ["Max"]}
@@ -778,7 +778,7 @@ Im Zielprojekt muss eine `tests/agent_eval.json` existieren:
 |---|---|
 | `server_url` | URL des zu testenden Servers |
 | `chat_endpoint` | HTTP-POST Endpunkt — wird aus dem Zielprojekt gelesen, nicht hardcodiert |
-| `pi5_url` | Optionaler Backend-Worker — wird vorab auf Erreichbarkeit geprüft |
+| `worker_url` | Optionaler Backend-Worker — wird vorab auf Erreichbarkeit geprüft |
 | `watch_interval_minutes` | Interval für `--watch` in Minuten (Standard: 60) — wird von `--interval` CLI-Arg überschrieben |
 | `log_path` | Pfad zur Logdatei — von `--watch` für Inaktivitätserkennung (Szenario 2) genutzt |
 | `restart_script` | Pfad zum Start-Skript — Watch startet Server automatisch neu bei Inaktivität + neuen Commits |
@@ -787,7 +787,7 @@ Im Zielprojekt muss eine `tests/agent_eval.json` existieren:
 | `close_after_consecutive_passes` | Anzahl aufeinanderfolgender Passes bevor Auto-Issue geschlossen wird (Standard: 1) |
 | `gitea_version_compare.enabled` | AST-Diff gegen alte Dateiversion bei Regression (opt-in, Standard: false) |
 | `weight` | Gewichtung im Score (1–3) |
-| `pi5_required` | Bei `true`: Test wird übersprungen wenn Pi5 offline |
+| `worker_required` | Bei `true`: Test wird übersprungen wenn Worker offline |
 | `message` | Nachricht an den Server |
 | `expected_keywords` | Alle Keywords müssen in der Antwort enthalten sein (case-insensitive). Leer `[]` = nur Antwort vorhanden prüfen |
 | `expect_stored` | `true` = Antwort darf `null` sein — prüft nur ob Server nicht abstürzt (z.B. beim Einschreiben von Fakten) |
@@ -831,7 +831,7 @@ Die letzten 5 Einträge werden automatisch an jeden `--pr` Gitea-Kommentar angeh
 | Situation | Verhalten |
 |---|---|
 | `server_url` offline | Warnung — Eval übersprungen, PR wird trotzdem erstellt |
-| `pi5_url` offline | Pi5-Tests übersprungen, Rest läuft durch |
+| `worker_url` offline | Worker-Tests übersprungen, Rest läuft durch |
 | Score < Baseline | PR blockiert + Kommentar ins Issue |
 | Kein `agent_eval.json` | Eval übersprungen |
 | Fehler in `evaluation.py` | Warnung ins Issue — PR wird trotzdem erstellt |
@@ -1101,7 +1101,7 @@ Jeder Plan-Kommentar und Abschluss-Kommentar enthält einen `<details>`-Block:
 **Commit:** abc1234
 **Zeitstempel:** 2026-03-20T14:23:00
 **Token-Schätzung:** ~4200 (Kontext: files.md, starter.md)
-**Gelesene Dateien:** nanoclaw/server.py, nanoclaw/router.py
+**Gelesene Dateien:** myproject/server.py, myproject/router.py
 </details>
 ```
 
@@ -1177,22 +1177,6 @@ mein-projekt/
 ```
 
 Der Agent erkennt die neue Struktur automatisch wenn `PROJECT_ROOT/agent/` existiert.
-Fallback: alte Submodul-Struktur (`tests/`, `tools/`, `contexts/` neben agent_start.py).
-
-### Legacy-Struktur (Submodul / Rückwärtskompatibilität)
-
-```
-mein-projekt/
-├── Helper-tools/        # gitea-agent als Submodul
-│   ├── contexts/        # Kontext-Dateien (Laufzeit)
-│   └── gitea-agent.log  # Log-Datei (Laufzeit)
-├── tests/
-│   ├── agent_eval.json
-│   ├── baseline.json
-│   └── score_history.json
-└── tools/
-    └── log_analyzer.py
-```
 
 **Typen** (aus Gitea-Label): `bug`, `feature_request`, `enhancement`, `docs`, `task`
 
