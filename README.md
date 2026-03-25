@@ -565,6 +565,8 @@ python3 agent_start.py --changelog 1.2.0      # Versionierter Release-Eintrag
 ### Live-Dashboard
 Für die lokale Entwicklung generiert der Agent eine `dashboard.html`. Diese Seite bietet eine Live-Übersicht über den Systemzustand und wird im `--watch`-Modus automatisch bei jedem Lauf aktualisiert. Sie kann auch manuell mit `--dashboard` erstellt werden.
 
+![Dashboard Preview](Documentation/dashboard-preview.svg)
+
 **Inhalt:**
 - **Score-Verlauf:** Interaktiver Chart der letzten 24 Stunden.
 - **System-Status:** Live-Ping von Server und Backend-Workern.
