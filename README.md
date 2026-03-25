@@ -1132,6 +1132,33 @@ Jede starter.md enthält automatisch einen PFLICHTREGELN-Block:
 
 ---
 
+## Architektur: Ein Agent, beliebig viele Projekte
+
+gitea-agent wird **einmalig installiert** und verwaltet beliebig viele Projekte. Der Agent-Code liegt zentral — jedes Projekt hat nur sein eigenes `agent/`-Verzeichnis für Konfiguration und Laufzeitdaten.
+
+```
+/home/user/
+├── gitea-agent/          ← einmalig klonen, nie löschen (der Motor)
+│   ├── agent_start.py
+│   ├── .env              ← aktives Projekt (GITEA_REPO, PROJECT_ROOT)
+│   └── .env.agent        ← nur für gitea-agent Selbstentwicklung (--self)
+│
+├── projekt-a/            ← dein Projekt
+│   ├── agent/
+│   │   ├── config/       ← versioniert (agent_eval.json, log_analyzer.py)
+│   │   └── data/         ← .gitignore (contexts, logs, session, scores)
+│   └── .env              ← symlink oder Kopie mit PROJECT_ROOT=/home/user/projekt-a
+│
+└── projekt-b/            ← weiteres Projekt (einfach .env wechseln)
+    └── agent/
+        ├── config/
+        └── data/
+```
+
+**Projekt wechseln:** `.env` im gitea-agent-Verzeichnis anpassen (`GITEA_REPO`, `PROJECT_ROOT`) — fertig. `--setup` richtet das `agent/`-Verzeichnis im neuen Projekt automatisch ein.
+
+---
+
 ## Dateistruktur
 
 ### gitea-agent (zentraler Clone)

@@ -44,6 +44,16 @@ Referenzprojekt: Skynet (LLM WhatsApp-Bot, Jetson Nano + Raspberry Pi 5).
 
 ## 1. Agent auf neues Projekt portieren
 
+**Architektur:** gitea-agent wird **einmalig installiert** und bleibt dauerhaft bestehen. Für jedes neue Projekt reicht es, die `.env` umzustellen und `--setup` im neuen Projekt auszuführen — der Agent-Code selbst wird nicht kopiert oder neu installiert.
+
+```
+gitea-agent/   ← einmalig, bleibt immer bestehen
+    .env       ← hier GITEA_REPO + PROJECT_ROOT auf das aktive Projekt zeigen
+
+projekt-a/     ← nur agent/config/ + agent/data/ nötig (via --setup angelegt)
+projekt-b/     ← dasselbe, einfach .env wechseln
+```
+
 **Kontext:** Du willst den gitea-agent für ein neues Projekt nutzen.
 
 ### Empfohlen: Setup-Wizard
