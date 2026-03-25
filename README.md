@@ -920,6 +920,9 @@ python3 agent_start.py --pr 16 --branch fix/... \
   --restart-before-eval                                    # Server neu starten, dann Eval
 
 # Codesegment-Strategie:
+python3 agent_start.py --generate-tests 16                 # Test-Prompt für Issue generieren
+
+# Codesegment-Strategie:
 python3 agent_start.py --build-skeleton                    # Projektweites repo_skeleton.json erstellen
 python3 agent_start.py --get-slice agent_start.py:100-200 # Zeilenbereiche nachladen
 
@@ -1287,6 +1290,9 @@ Funktioniert für Text-Antworten — kein direktes Datei-Editing. Sinnvoll für 
 - **SEARCH/REPLACE Protokoll & Chirurgisches Refactoring** (#58/#47) — LLM-agnostisches Patch-Format (`<<<<<<< SEARCH / ======= / >>>>>>> REPLACE`). Parser + Whitespace-Normalisierung + `ast.parse()`-Syntax-Check + `.bak`-Backup. `--apply-patch NR [--dry-run]`.
 - **Flächendeckende Codesegment-Strategie** (#72) — LLM bekommt niemals mehr Volltext. `files.md` enthält nur Skelett + Slice-Hinweise. `--build-skeleton` erstellt projektweites `repo_skeleton.json` (alle .py-Dateien, kein Größen-Limit). Watch-Loop aktualisiert inkrementell. `session.json` protokolliert Slice-Anforderungen pro Issue. Technische Schranke warnt bei ungesliceten Dateiänderungen.
 - **Gitea-Versionsvergleich** (#59) — Bei Score-Regression wird die alte Dateiversion via Gitea-API geladen und AST-Skelette verglichen. Struktureller Diff (`+ neu`, `- entfernt`, `~ gewachsen`) erscheint automatisch im Auto-Issue. Opt-in via `agent_eval.json: gitea_version_compare.enabled`.
+- **Unit-Tests für kritische Funktionen** (#78) — `pytest`-Suite für `patch.py`, `changelog.py`, `agent_self_check.py` und das Repository-Skelett. Deterministisch, ohne Netzwerk- oder Datei-I/O.
+- **Plugin-Architektur: patch + changelog** (#79) — `plugins/patch.py` + `plugins/changelog.py` ausgelagert (~300 Zeilen aus `agent_start.py`). `settings.py`: `DOCTOR_RESULT_PATH`. `dashboard.py`: `--doctor` Sektion.
+- **Setup-Wizard & Health-Check** (#77) — `--setup`: Interaktiver 6-Schritt-Wizard (Gitea-Verbindung → Repo → Projektverzeichnis → Labels → `agent_eval.json` → `.env`). `--doctor`: 6 Prüfpunkte, speichert `doctor_last.json`, zeigt strukturierten Report.
 
 ### ⚠️ Bekannte Einschränkungen
 
