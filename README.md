@@ -572,14 +572,51 @@ Für die lokale Entwicklung generiert der Agent eine `dashboard.html`. Diese Sei
 
 ---
 
+### Health-Check — `--doctor`
+Vollständige Zustandsprüfung in einem Befehl: Gitea-Verbindung, Repository, Labels, `.env`, `agent_eval.json`, Skeleton-Aktualität.
+
+```bash
+python3 agent_start.py --doctor
+# → [✓] Gitea-Verbindung OK
+# → [✓] Repository gefunden
+# → [✓] Labels vollständig (6/6)
+# → [!] agent_eval.json: server_url nicht erreichbar
+```
+
+Jeder Check wird einzeln ausgewertet — fehlende Konfiguration wird mit Hinweis auf den entsprechenden Setup-Schritt ausgegeben.
+
+---
+
+### Setup-Wizard — `--setup`
+Interaktiver 6-Schritt-Wizard für die vollständige Ersteinrichtung — ohne manuelle `.env`-Arbeit.
+
+```bash
+python3 agent_start.py --setup
+```
+
+Schritt für Schritt: Gitea-Verbindung testen → Repository prüfen → Projektverzeichnis setzen → fehlende Labels anlegen → `agent_eval.json` erstellen → `.env` schreiben. Endet automatisch mit `--doctor` zur Verifikation. Details: [COOKBOOK Kapitel 19](Documentation/COOKBOOK.md#19-setup-wizard-issue-77).
+
+---
+
+### Plugin-Architektur
+`agent_start.py` lagert isolierte Funktionsgruppen in `plugins/` aus — sauber trennbar, einzeln testbar, erweiterbar.
+
+```
+plugins/
+├── patch.py      # SEARCH/REPLACE Protokoll (cmd_apply_patch)
+└── changelog.py  # Changelog-Generator (cmd_changelog)
+```
+
+Eigene Plugins folgen demselben Muster: neue Datei in `plugins/`, Import in `agent_start.py`. Details: [COOKBOOK Kapitel 20](Documentation/COOKBOOK.md#20-plugin-architektur-patch--changelog-issue-79).
+
+---
+
 ## Schnellstart
 
 ```bash
-git clone http://your-gitea/gitea-agent <---noch kein offizielles Git, da lokal auf giteaserver
-cd gitea-agent
-cp .env.example .env
-# .env befüllen (GITEA_URL, GITEA_USER, GITEA_TOKEN, GITEA_REPO)
-python3 agent_start.py
+git clone https://github.com/Alexander-Benesch/Gitea-Agent
+cd Gitea-Agent
+python3 agent_start.py --setup   # Interaktiver Wizard: .env + Labels + Verifikation
 ```
 
 Keine zusätzlichen Abhängigkeiten — nur Python 3.10+ Stdlib.
