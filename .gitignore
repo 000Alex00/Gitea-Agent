@@ -6,3 +6,4 @@ __pycache__/
 tests/score_history.json
 contexts/
 gitea-agent.log
+.env.agent
