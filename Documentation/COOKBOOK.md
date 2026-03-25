@@ -1425,3 +1425,81 @@ Für alle anderen Issues: Claude Code verwenden.
 - #68  AST-Skelett (neu erstellt — mit Claude Code abarbeiten)
 - context_export.sh: files.md wird nicht zuverlässig eingebettet
 - Gemini Scope-Drift: strikterer Prompt nötig in context_export.sh
+
+---
+
+## 19. Setup-Wizard (Issue #77)
+
+### Zweck
+
+`--setup` führt interaktiv durch die vollständige Ersteinrichtung des Agents für ein neues Projekt — ohne manuelle `.env`-Arbeit, ohne fehlende Labels, ohne Rätselraten.
+
+### Aufruf
+
+```bash
+python3 agent_start.py --setup
+```
+
+### Wizard-Schritte
+
+| Schritt | Was passiert |
+|---------|-------------|
+| 1. Gitea-Verbindung | URL + Username + Token eingeben, Verbindung wird sofort getestet |
+| 2. Repository | `user/repo` eingeben, Existenz wird via API geprüft |
+| 3. Projektverzeichnis | Lokaler Pfad, git-Repository wird überprüft |
+| 4. Labels | Fehlende Labels werden angezeigt, mit Bestätigung automatisch angelegt |
+| 5. agent_eval.json | Server-URL, Log-Pfad und Start-Script eingeben → Template wird geschrieben |
+| 6. .env | Alle Credentials werden in `.env` geschrieben (mit Bestätigungsabfrage bei Überschreiben) |
+| Ende | `--doctor` läuft automatisch zur Verifikation |
+
+### Sicherheitsverhalten
+
+- Bestehende `.env` wird **nicht ohne Nachfrage** überschrieben
+- Bestehende `agent_eval.json` wird **nicht ohne Nachfrage** überschrieben
+- `.env` enthält Secrets — nie in Git committen (`.gitignore` prüfen)
+
+### Nach dem Setup
+
+```bash
+# Verifikation (läuft automatisch am Ende von --setup):
+python3 agent_start.py --doctor
+
+# Skeleton erstellen:
+python3 agent_start.py --build-skeleton
+
+# Loslegen:
+python3 agent_start.py --list
+```
+
+---
+
+## 20. Plugin-Architektur: patch + changelog (Issue #79)
+
+### Hintergrund
+
+`agent_start.py` hatte 3960+ Zeilen. Als erster Schritt eines inkrementellen Refactorings wurden die zwei isoliertesten Funktionsgruppen in eigene Module ausgelagert.
+
+### Neue Struktur
+
+```
+plugins/
+├── __init__.py
+├── patch.py      # SEARCH/REPLACE Protokoll (~170 Zeilen)
+└── changelog.py  # Changelog-Generator (~130 Zeilen)
+```
+
+### Was wohin
+
+**`plugins/patch.py`**
+- `_SR_SEARCH`, `_SR_SEP`, `_SR_REPLACE` (Konstanten)
+- `_normalize_ws`, `_parse_search_replace`, `_apply_patch`, `cmd_apply_patch`
+
+**`plugins/changelog.py`**
+- `_COMMIT_GROUPS`, `_GROUP_ORDER` (Konstanten)
+- `_git_log_since_tag`, `_classify_commit`, `_build_changelog_block`, `cmd_changelog`
+
+`agent_start.py` importiert alles per `from plugins.patch import ...` — Rückwärtskompatibilität bleibt durch Re-Export im Namespace erhalten.
+
+### Für eigene Plugins
+
+Gleiches Muster: neue Datei in `plugins/`, `_HERE = Path(__file__).parent.parent` für Pfad-Auflösung, `PROJECT` lokal berechnen via `settings.PROJECT_ROOT`.
