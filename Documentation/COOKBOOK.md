@@ -46,44 +46,59 @@ Referenzprojekt: Skynet (LLM WhatsApp-Bot, Jetson Nano + Raspberry Pi 5).
 
 **Kontext:** Du willst den gitea-agent für ein neues Projekt nutzen.
 
-**Dateien:** `.env`, `agent_eval.template.json`
-
-**Schritte:**
+### Empfohlen: Setup-Wizard
 
 ```bash
-# 1. gitea-agent klonen (oder bestehende Kopie verwenden)
-git clone http://192.168.1.x:3001/youruser/gitea-agent
-cd gitea-agent
+# 1. gitea-agent klonen
+git clone https://github.com/Alexander-Benesch/Gitea-Agent
+cd Gitea-Agent
+
+# 2. Wizard starten — führt durch alle Schritte interaktiv
+python3 agent_start.py --setup
+```
+
+Der Wizard erledigt alles in 6 Schritten:
+1. Gitea-Verbindung testen (URL + Token)
+2. Repository prüfen
+3. Projektverzeichnis setzen (`PROJECT_ROOT`)
+4. Fehlende Labels automatisch anlegen
+5. `agent_eval.json` erstellen (Server-URL, Log-Pfad, Start-Script)
+6. `.env` schreiben — endet mit `--doctor` zur Verifikation
+
+Details: [Kapitel 19 — Setup-Wizard](#19-setup-wizard-issue-77)
+
+---
+
+### Manuell (Fallback)
+
+```bash
+# 1. gitea-agent klonen
+git clone https://github.com/Alexander-Benesch/Gitea-Agent
+cd Gitea-Agent
 
 # 2. .env befüllen
 cp .env.example .env
-# → Werte anpassen (GITEA_URL, GITEA_TOKEN, etc.)
+# → GITEA_URL, GITEA_TOKEN, GITEA_REPO, PROJECT_ROOT anpassen
 
-# 3. agent_eval.json aus Vorlage erstellen
-cp agent_eval.template.json /pfad/zu/deinem/projekt/agent/config/agent_eval.json
-# → Pfade in der neuen Datei anpassen (log_path, restart_script)
-```
+# 3. agent_eval.json erstellen
+cp agent_eval.template.json /pfad/zum/projekt/tests/agent_eval.json
+# → log_path, restart_script, server_url anpassen
+# → Jeder Test braucht ein tag-Feld (Pflicht für Fehleranalyse)
 
-**Wichtiger Hinweis zu `agent_eval.json`:**
-- **`tag` ist Pflicht:** Jeder Test in `agent_eval.json` muss ein `tag`-Feld haben. Dieses Feld ist entscheidend für die systematische Fehlererkennung und das Performance-Monitoring. Der `agent_self_check.py` gibt eine Warnung aus, wenn Tags fehlen.
+# 4. Labels anlegen
+# Gitea → Repo → Issues → Labels → manuell erstellen
+# oder: python3 agent_start.py --setup (nur Label-Schritt)
 
-```bash
-# 4. Labels in Gitea anlegen
-# Gitea → Repo → Issues → Labels → folgende erstellen:
-#   ready-for-agent   (grün)
-#   agent-proposed    (blau)
-#   in-progress       (gelb)
-#   needs-review      (orange)
-
-# 5. Ersten Testlauf
+# 5. Verifikation
+python3 agent_start.py --doctor
 python3 agent_start.py --list
 ```
 
 **Pitfalls:**
-- `PROJECT_ROOT` in `.env` muss der absolute Pfad zum Zielprojekt sein.
-- `tag`-Felder in den Tests sind essenziell für die Fehleranalyse. Nicht vergessen!
-- Token braucht Scopes: `issue` (read+write) + `repository` (read+write).
-- Labels müssen exakt so heißen wie in `settings.py` definiert.
+- `PROJECT_ROOT` muss absoluter Pfad zum Zielprojekt sein
+- Token-Scopes: `issue` (read+write) + `repository` (read+write)
+- Labels müssen exakt wie in `settings.py` heißen
+- `tag`-Felder in Tests sind Pflicht für systematische Fehleranalyse
 
 ---
 
