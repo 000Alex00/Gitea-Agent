@@ -3467,9 +3467,8 @@ def cmd_doctor() -> None:
 
     # 1. Gitea-Verbindung
     try:
-        info = _api_get(settings.GITEA_URL, settings.GITEA_USER, settings.GITEA_TOKEN,
-                        f"/repos/{settings.GITEA_REPO}")
-        _chk("Gitea-Verbindung", "ok", f"{settings.GITEA_URL} → {info.get('full_name','?')}")
+        info = gitea._request("GET", f"/repos/{gitea.REPO}") or {}
+        _chk("Gitea-Verbindung", "ok", f"{gitea.GITEA_URL} → {info.get('full_name','?')}")
     except Exception as exc:
         _chk("Gitea-Verbindung", "fail", str(exc), "GITEA_URL / GITEA_TOKEN prüfen")
 
@@ -3492,8 +3491,10 @@ def cmd_doctor() -> None:
         _chk("repo_skeleton.json", "warn", "Nicht vorhanden",
              "python3 agent_start.py --build-skeleton ausführen")
 
-    # 4. agent_eval.json
-    eval_cfg = PROJECT / "tests" / "agent_eval.json"
+    # 4. agent_eval.json (neue Struktur: agent/config/, Fallback: tests/)
+    eval_cfg = (PROJECT / "agent" / "config" / "agent_eval.json"
+                if (PROJECT / "agent" / "config" / "agent_eval.json").exists()
+                else PROJECT / "tests" / "agent_eval.json")
     if eval_cfg.exists():
         try:
             with eval_cfg.open(encoding="utf-8") as f:
@@ -3509,9 +3510,7 @@ def cmd_doctor() -> None:
     required = {settings.LABEL_READY, settings.LABEL_PROPOSED,
                 settings.LABEL_PROGRESS, settings.LABEL_REVIEW, settings.LABEL_HELP}
     try:
-        existing = {lbl["name"] for lbl in _api_get(
-            settings.GITEA_URL, settings.GITEA_USER, settings.GITEA_TOKEN,
-            f"/repos/{settings.GITEA_REPO}/labels")}
+        existing = set(gitea.get_all_labels().keys())
         missing = required - existing
         if missing:
             _chk("Labels", "warn", f"Fehlend: {', '.join(sorted(missing))}",
