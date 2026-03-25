@@ -3452,6 +3452,273 @@ def _apply_auto_approve() -> None:
     log.debug(f"AUTO_APPROVE={'true' if settings.AUTO_APPROVE else 'false'} → {target}")
 
 
+# ---------------------------------------------------------------------------
+# Health-Check
+# ---------------------------------------------------------------------------
+
+def cmd_doctor() -> None:
+    """--doctor: Vollständigen Zustand des Agents prüfen und Report ausgeben."""
+    import datetime as _dt
+
+    checks: list[dict] = []
+
+    def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:
+        checks.append({"name": name, "status": status, "detail": detail, "fix": fix})
+
+    # 1. Gitea-Verbindung
+    try:
+        info = _api_get(settings.GITEA_URL, settings.GITEA_USER, settings.GITEA_TOKEN,
+                        f"/repos/{settings.GITEA_REPO}")
+        _chk("Gitea-Verbindung", "ok", f"{settings.GITEA_URL} → {info.get('full_name','?')}")
+    except Exception as exc:
+        _chk("Gitea-Verbindung", "fail", str(exc), "GITEA_URL / GITEA_TOKEN prüfen")
+
+    # 2. Projekt-Verzeichnis
+    proj = settings.PROJECT_ROOT
+    if proj and Path(proj).is_dir():
+        if (Path(proj) / ".git").exists():
+            _chk("Projekt-Verzeichnis", "ok", str(proj))
+        else:
+            _chk("Projekt-Verzeichnis", "warn", f"{proj} ist kein git-Repo", "git init oder PROJECT_ROOT korrigieren")
+    else:
+        _chk("Projekt-Verzeichnis", "fail", str(proj), "PROJECT_ROOT in .env setzen")
+
+    # 3. repo_skeleton.json
+    skel = PROJECT / "repo_skeleton.json"
+    if skel.exists():
+        size = skel.stat().st_size
+        _chk("repo_skeleton.json", "ok", f"{size} Bytes")
+    else:
+        _chk("repo_skeleton.json", "warn", "Nicht vorhanden",
+             "python3 agent_start.py --build-skeleton ausführen")
+
+    # 4. agent_eval.json
+    eval_cfg = PROJECT / "tests" / "agent_eval.json"
+    if eval_cfg.exists():
+        try:
+            with eval_cfg.open(encoding="utf-8") as f:
+                cfg = json.load(f)
+            _chk("agent_eval.json", "ok", f"server_url={cfg.get('server_url','?')}")
+        except Exception as exc:
+            _chk("agent_eval.json", "warn", f"Ungültig: {exc}", "agent_eval.json reparieren")
+    else:
+        _chk("agent_eval.json", "warn", "Nicht vorhanden",
+             "python3 agent_start.py --setup oder manuell erstellen")
+
+    # 5. Labels
+    required = {settings.LABEL_READY, settings.LABEL_PROPOSED,
+                settings.LABEL_PROGRESS, settings.LABEL_REVIEW, settings.LABEL_HELP}
+    try:
+        existing = {lbl["name"] for lbl in _api_get(
+            settings.GITEA_URL, settings.GITEA_USER, settings.GITEA_TOKEN,
+            f"/repos/{settings.GITEA_REPO}/labels")}
+        missing = required - existing
+        if missing:
+            _chk("Labels", "warn", f"Fehlend: {', '.join(sorted(missing))}",
+                 "python3 agent_start.py --setup ausführen")
+        else:
+            _chk("Labels", "ok", f"Alle {len(required)} vorhanden")
+    except Exception as exc:
+        _chk("Labels", "fail", str(exc), "Gitea-Verbindung prüfen")
+
+    # 6. .env
+    env_file = PROJECT / ".env"
+    if env_file.exists():
+        _chk(".env", "ok", str(env_file))
+    else:
+        _chk(".env", "fail", ".env fehlt", "cp .env.example .env && python3 agent_start.py --setup")
+
+    # Ausgabe
+    summary = {"ok": 0, "warn": 0, "fail": 0}
+    for c in checks:
+        summary[c["status"]] = summary.get(c["status"], 0) + 1
+
+    _ICONS = {"ok": "✅", "warn": "⚠️", "fail": "❌"}
+    print(f"\n{'═' * 60}")
+    print("  gitea-agent Health-Check")
+    print(f"{'═' * 60}")
+    for c in checks:
+        icon = _ICONS.get(c["status"], "?")
+        print(f"  {icon}  {c['name']:<25} {c['detail']}")
+        if c["fix"] and c["status"] != "ok":
+            print(f"       → {c['fix']}")
+    print(f"{'─' * 60}")
+    print(f"  ✅ {summary['ok']}  ⚠️  {summary['warn']}  ❌ {summary['fail']}")
+    print()
+
+    # Ergebnis speichern
+    result = {
+        "timestamp": _dt.datetime.now().isoformat(timespec="seconds"),
+        "summary": summary,
+        "checks": checks,
+    }
+    out = getattr(settings, "DOCTOR_RESULT_PATH", None)
+    if out:
+        try:
+            Path(out).write_text(json.dumps(result, indent=2, ensure_ascii=False),
+                                 encoding="utf-8")
+        except Exception:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# Setup-Wizard
+# ---------------------------------------------------------------------------
+
+def cmd_setup() -> None:
+    """--setup: Interaktiver Einrichtungs-Wizard für neue Projekte (Issue #77)."""
+    import base64
+
+    def _ask(prompt: str, default: str = "") -> str:
+        disp = f" [{default}]" if default else ""
+        val = input(f"  {prompt}{disp}: ").strip()
+        return val or default
+
+    def _api_get_raw(url, user, token, path):
+        import urllib.request, urllib.error
+        req = urllib.request.Request(
+            f"{url.rstrip('/')}/api/v1{path}",
+            headers={"Authorization": f"token {token}", "Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read())
+
+    def _api_post_raw(url, user, token, path, data: dict):
+        import urllib.request
+        payload = json.dumps(data).encode()
+        req = urllib.request.Request(
+            f"{url.rstrip('/')}/api/v1{path}",
+            data=payload,
+            headers={"Authorization": f"token {token}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read())
+
+    print(f"\n{'═' * 60}")
+    print("  gitea-agent Setup-Wizard")
+    print(f"{'═' * 60}\n")
+
+    # ── Schritt 1: Gitea-Verbindung ────────────────────────────────
+    print("Schritt 1/6 — Gitea-Verbindung\n")
+    gitea_url   = _ask("Gitea URL (z.B. http://192.168.1.x:3001)")
+    gitea_user  = _ask("Gitea Benutzername")
+    gitea_token = _ask("Gitea API-Token")
+    bot_user    = _ask("Bot-User (leer = kein Bot)", "")
+    bot_token   = _ask("Bot-Token (leer = kein Bot)", "") if bot_user else ""
+
+    try:
+        _api_get_raw(gitea_url, gitea_user, gitea_token, "/user")
+        print("  ✅ Verbindung erfolgreich\n")
+    except Exception as exc:
+        print(f"  ❌ Verbindungsfehler: {exc}")
+        print("  ⚠️  Fortfahren trotz Fehler?\n")
+
+    # ── Schritt 2: Repository ──────────────────────────────────────
+    print("Schritt 2/6 — Repository\n")
+    gitea_repo = _ask("Repository (user/name, z.B. admin/myproject)")
+    try:
+        _api_get_raw(gitea_url, gitea_user, gitea_token, f"/repos/{gitea_repo}")
+        print("  ✅ Repository gefunden\n")
+    except Exception as exc:
+        print(f"  ❌ Repo nicht gefunden: {exc}\n")
+
+    # ── Schritt 3: Projektverzeichnis ─────────────────────────────
+    print("Schritt 3/6 — Projektverzeichnis\n")
+    project_root = _ask("Lokaler Pfad zum Projekt-Repo")
+    if Path(project_root).is_dir():
+        if (Path(project_root) / ".git").exists():
+            print("  ✅ git-Repo gefunden\n")
+        else:
+            print("  ⚠️  Kein git-Repo — PROJECT_ROOT trotzdem gesetzt\n")
+    else:
+        print("  ❌ Verzeichnis existiert nicht\n")
+
+    # ── Schritt 4: Labels ─────────────────────────────────────────
+    print("Schritt 4/6 — Labels\n")
+    required_labels = [
+        (settings.LABEL_READY,    "0075ca", "Bereit für Agent-Bearbeitung"),
+        (settings.LABEL_PROPOSED, "e4e669", "Agent hat Plan vorgeschlagen"),
+        (settings.LABEL_PROGRESS, "d93f0b", "Agent arbeitet daran"),
+        (settings.LABEL_REVIEW,   "0e8a16", "Bereit für Code-Review"),
+        (settings.LABEL_HELP,     "ee0701", "Manuelle Hilfe benötigt"),
+    ]
+
+    try:
+        existing_resp = _api_get_raw(gitea_url, gitea_user, gitea_token,
+                                     f"/repos/{gitea_repo}/labels")
+        existing_names = {lbl["name"] for lbl in existing_resp}
+        missing = [(n, c, d) for n, c, d in required_labels if n not in existing_names]
+
+        if not missing:
+            print(f"  ✅ Alle {len(required_labels)} Labels bereits vorhanden\n")
+        else:
+            print(f"  Fehlende Labels: {', '.join(n for n,_,_ in missing)}")
+            confirm = input("  Jetzt anlegen? [J/n]: ").strip().lower()
+            if confirm in ("", "j", "y"):
+                for name, color, desc in missing:
+                    _api_post_raw(gitea_url, gitea_user, gitea_token,
+                                  f"/repos/{gitea_repo}/labels",
+                                  {"name": name, "color": f"#{color}", "description": desc})
+                    print(f"  ✅ Label '{name}' angelegt")
+            print()
+    except Exception as exc:
+        print(f"  ❌ Label-Prüfung fehlgeschlagen: {exc}\n")
+
+    # ── Schritt 5: agent_eval.json ────────────────────────────────
+    print("Schritt 5/6 — agent_eval.json\n")
+    eval_file = PROJECT / "tests" / "agent_eval.json"
+    write_eval = True
+    if eval_file.exists():
+        confirm = input(f"  {eval_file} existiert bereits — überschreiben? [j/N]: ").strip().lower()
+        write_eval = confirm in ("j", "y")
+
+    if write_eval:
+        server_url  = _ask("Server-URL für Eval (z.B. http://localhost:8080)")
+        log_path    = _ask("Log-Pfad (z.B. /home/user/llm-chat/gitea-agent.log)")
+        start_script = _ask("Start-Script (z.B. /home/user/start_llm.sh)", "")
+        eval_data = {
+            "server_url": server_url,
+            "log_path": log_path,
+            "start_script": start_script,
+            "watch_interval_minutes": 60,
+        }
+        eval_file.parent.mkdir(parents=True, exist_ok=True)
+        eval_file.write_text(json.dumps(eval_data, indent=2), encoding="utf-8")
+        print(f"  ✅ {eval_file} geschrieben\n")
+    else:
+        print("  Übersprungen\n")
+
+    # ── Schritt 6: .env schreiben ─────────────────────────────────
+    print("Schritt 6/6 — .env\n")
+    env_file = PROJECT / ".env"
+    write_env = True
+    if env_file.exists():
+        confirm = input(f"  {env_file} existiert bereits — überschreiben? [j/N]: ").strip().lower()
+        write_env = confirm in ("j", "y")
+
+    if write_env:
+        env_lines = [
+            f"GITEA_URL={gitea_url}",
+            f"GITEA_USER={gitea_user}",
+            f"GITEA_TOKEN={gitea_token}",
+            f"GITEA_REPO={gitea_repo}",
+            f"GITEA_BOT_USER={bot_user}",
+            f"GITEA_BOT_TOKEN={bot_token}",
+            f"PROJECT_ROOT={project_root}",
+        ]
+        env_file.write_text("\n".join(env_lines) + "\n", encoding="utf-8")
+        print(f"  ✅ .env geschrieben: {env_file}")
+        print("  ⚠️  .env enthält Secrets — nicht in Git commiten!\n")
+    else:
+        print("  Übersprungen\n")
+
+    # ── Health-Check zum Abschluss ────────────────────────────────
+    print(f"{'═' * 60}")
+    print("  SETUP ABGESCHLOSSEN — starte Health-Check...\n")
+    cmd_doctor()
+
+
 def main():
     from log import setup as log_setup
 
@@ -3588,9 +3855,23 @@ Ohne Argumente: automatischer Modus.
         metavar="VERSION",
         help="CHANGELOG.md generieren/aktualisieren (z.B. --changelog 1.2.0)",
     )
+    parser.add_argument(
+        "--doctor",
+        action="store_true",
+        help="Health-Check: Vollständigen Zustand des Agents prüfen und Report ausgeben",
+    )
+    parser.add_argument(
+        "--setup",
+        action="store_true",
+        help="Interaktiver Einrichtungs-Wizard für neue Projekte",
+    )
     args = parser.parse_args()
 
-    if args.build_skeleton:
+    if args.setup:
+        cmd_setup()
+    elif args.doctor:
+        cmd_doctor()
+    elif args.build_skeleton:
         cmd_build_skeleton()
     elif args.install_service:
         cmd_install_service()

@@ -847,6 +847,14 @@ Du:     PR reviewen + mergen
 
 ## Installation & Konfiguration
 
+### Setup-Wizard (empfohlen)
+
+```bash
+python3 agent_start.py --setup
+```
+
+Interaktiver 6-Schritt-Wizard: Gitea-Verbindung → Repo → Projektverzeichnis → Labels → `agent_eval.json` → `.env`. Endet automatisch mit `--doctor` zur Verifikation. Details: [COOKBOOK Kapitel 19](Documentation/COOKBOOK.md#19-setup-wizard-issue-77).
+
 ### .env befüllen
 
 ```bash
@@ -946,6 +954,12 @@ python3 agent_start.py --install-service                   # Units installieren 
 
 # Dashboard:
 python3 agent_start.py --dashboard                         # Dashboard einmalig generieren
+
+# Health-Check:
+python3 agent_start.py --doctor                            # Vollständigen Zustand prüfen
+
+# Ersteinrichtung:
+python3 agent_start.py --setup                             # Interaktiver Setup-Wizard
 ```
 
 ---
