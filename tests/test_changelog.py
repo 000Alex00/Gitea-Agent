@@ -1,12 +1,12 @@
-"""Tests für _classify_commit, _build_changelog_block (agent_start.py)."""
+"""Tests für _classify_commit, _build_changelog_block (plugins/changelog.py)."""
 
 import sys
 
 import pytest
 
 sys.argv = ["x", "--self"]
-import agent_start
-from agent_start import _build_changelog_block, _classify_commit
+import agent_start  # noqa: F401 — sets up sys.path + env
+from plugins.changelog import _build_changelog_block, _classify_commit
 
 
 # ---------------------------------------------------------------------------

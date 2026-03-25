@@ -95,6 +95,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 </tbody>
             </table>
         </div>
+        <div class="card">
+            <h2>Health-Check (--doctor)</h2>
+            {DOCTOR_SECTION}
+        </div>
         <p class="text-muted">Zuletzt aktualisiert: {LAST_UPDATE}</p>
     </div>
 
@@ -228,6 +232,43 @@ def generate(project_root: Path):
             "<tr><td colspan='2'>Keine Tag-Fehler in den letzten 7 Tagen.</td></tr>"
         )
 
+    # Doctor section
+    _ICONS = {"ok": "✅", "warn": "⚠️", "fail": "❌"}
+    doctor_section = ""
+    doctor_path = getattr(settings, "DOCTOR_RESULT_PATH", None)
+    if doctor_path and Path(doctor_path).exists():
+        try:
+            with open(doctor_path, encoding="utf-8") as f:
+                dr = json.load(f)
+            ts_raw = dr.get("timestamp", "")
+            try:
+                ts_dt = datetime.datetime.fromisoformat(ts_raw)
+                ts_fmt = ts_dt.strftime("%H:%M:%S %d.%m.%Y")
+            except Exception:
+                ts_fmt = ts_raw
+            sm = dr.get("summary", {})
+            doctor_section = (
+                f"<p class='text-muted'>Letzte Prüfung: {ts_fmt} &nbsp;|&nbsp; "
+                f"✅ {sm.get('ok', 0)} &nbsp; ⚠️ {sm.get('warn', 0)} &nbsp; ❌ {sm.get('fail', 0)}</p>"
+                "<table><thead><tr><th>Status</th><th>Prüfpunkt</th><th>Detail</th><th>Hinweis</th></tr></thead><tbody>"
+            )
+            for chk in dr.get("checks", []):
+                icon = _ICONS.get(chk.get("status", ""), "?")
+                doctor_section += (
+                    f"<tr><td>{icon}</td>"
+                    f"<td>{chk.get('name', '')}</td>"
+                    f"<td>{chk.get('detail', '')}</td>"
+                    f"<td class='text-muted'>{chk.get('fix', '')}</td></tr>"
+                )
+            doctor_section += "</tbody></table>"
+        except Exception:
+            doctor_section = "<p class='text-muted'>doctor_last.json konnte nicht geladen werden.</p>"
+    else:
+        doctor_section = (
+            "<p class='text-muted'>Noch keine Health-Check-Daten vorhanden. "
+            "Ausführen mit: <code>python3 agent_start.py --doctor</code></p>"
+        )
+
     html = HTML_TEMPLATE.replace(
         "{SERVER_STATUS}", "Online" if server_ok else "Offline"
     )
@@ -246,6 +287,7 @@ def generate(project_root: Path):
     html = html.replace("{RECENT_RUNS}", recent_runs_html)
     html = html.replace("{RECENT_ERRORS}", recent_errors_html)
     html = html.replace("{TAG_AGGREGATION}", tag_html)
+    html = html.replace("{DOCTOR_SECTION}", doctor_section)
     html = html.replace("{LAST_UPDATE}", now.strftime("%H:%M:%S %d.%m.%Y"))
 
     dash_path = project_root / getattr(settings, "DASHBOARD_PATH", "dashboard.html")

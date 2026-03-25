@@ -1,4 +1,4 @@
-"""Tests für _parse_search_replace, _normalize_ws, _apply_patch (agent_start.py)."""
+"""Tests für _parse_search_replace, _normalize_ws, _apply_patch (plugins/patch.py)."""
 
 import sys
 import tempfile
@@ -7,8 +7,9 @@ from pathlib import Path
 import pytest
 
 sys.argv = ["x", "--self"]
-import agent_start
-from agent_start import _apply_patch, _normalize_ws, _parse_search_replace
+import agent_start  # noqa: F401 — sets up sys.path + env
+import plugins.patch as patch_module
+from plugins.patch import _apply_patch, _normalize_ws, _parse_search_replace
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +91,7 @@ def test_parse_incomplete_block_ignored():
 def _make_temp_py(content: str) -> Path:
     """Schreibt temporäre .py-Datei in PROJECT-Verzeichnis und gibt rel. Pfad zurück."""
     tmp = tempfile.NamedTemporaryFile(
-        suffix=".py", dir=str(agent_start.PROJECT), delete=False, mode="w", encoding="utf-8"
+        suffix=".py", dir=str(patch_module.PROJECT), delete=False, mode="w", encoding="utf-8"
     )
     tmp.write(content)
     tmp.close()
@@ -98,7 +99,7 @@ def _make_temp_py(content: str) -> Path:
 
 
 def test_apply_patch_happy_path(tmp_path, monkeypatch):
-    monkeypatch.setattr(agent_start, "PROJECT", tmp_path)
+    monkeypatch.setattr(patch_module, "PROJECT", tmp_path)
     (tmp_path / "target.py").write_text("def foo():\n    return 1\n", encoding="utf-8")
     patch = {"file": "target.py", "search": "def foo():\n    return 1", "replace": "def foo():\n    return 2"}
     ok, msg = _apply_patch(patch)
@@ -108,7 +109,7 @@ def test_apply_patch_happy_path(tmp_path, monkeypatch):
 
 
 def test_apply_patch_search_not_found(tmp_path, monkeypatch):
-    monkeypatch.setattr(agent_start, "PROJECT", tmp_path)
+    monkeypatch.setattr(patch_module, "PROJECT", tmp_path)
     (tmp_path / "f.py").write_text("def foo(): pass\n", encoding="utf-8")
     patch = {"file": "f.py", "search": "def bar(): pass", "replace": "def bar(): return 1"}
     ok, msg = _apply_patch(patch)
@@ -117,7 +118,7 @@ def test_apply_patch_search_not_found(tmp_path, monkeypatch):
 
 
 def test_apply_patch_file_not_found(tmp_path, monkeypatch):
-    monkeypatch.setattr(agent_start, "PROJECT", tmp_path)
+    monkeypatch.setattr(patch_module, "PROJECT", tmp_path)
     patch = {"file": "nonexistent.py", "search": "x", "replace": "y"}
     ok, msg = _apply_patch(patch)
     assert not ok
@@ -125,7 +126,7 @@ def test_apply_patch_file_not_found(tmp_path, monkeypatch):
 
 
 def test_apply_patch_dry_run(tmp_path, monkeypatch):
-    monkeypatch.setattr(agent_start, "PROJECT", tmp_path)
+    monkeypatch.setattr(patch_module, "PROJECT", tmp_path)
     (tmp_path / "g.py").write_text("x = 1\n", encoding="utf-8")
     patch = {"file": "g.py", "search": "x = 1", "replace": "x = 2"}
     ok, msg = _apply_patch(patch, dry_run=True)
@@ -135,7 +136,7 @@ def test_apply_patch_dry_run(tmp_path, monkeypatch):
 
 
 def test_apply_patch_syntax_error_rejected(tmp_path, monkeypatch):
-    monkeypatch.setattr(agent_start, "PROJECT", tmp_path)
+    monkeypatch.setattr(patch_module, "PROJECT", tmp_path)
     (tmp_path / "h.py").write_text("def foo():\n    pass\n", encoding="utf-8")
     patch = {"file": "h.py", "search": "def foo():\n    pass", "replace": "def foo(\n    broken syntax"}
     ok, msg = _apply_patch(patch)
@@ -144,7 +145,7 @@ def test_apply_patch_syntax_error_rejected(tmp_path, monkeypatch):
 
 
 def test_apply_patch_creates_backup(tmp_path, monkeypatch):
-    monkeypatch.setattr(agent_start, "PROJECT", tmp_path)
+    monkeypatch.setattr(patch_module, "PROJECT", tmp_path)
     (tmp_path / "bak.py").write_text("a = 1\n", encoding="utf-8")
     patch = {"file": "bak.py", "search": "a = 1", "replace": "a = 2"}
     _apply_patch(patch)
