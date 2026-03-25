@@ -149,16 +149,18 @@ if PROJECT_ROOT:
         _AGENT_DIR = _candidate
 
 if _AGENT_DIR:
-    CONTEXT_DIR_PATH  = _AGENT_DIR / "data" / "contexts"
-    LOG_FILE_PATH     = _AGENT_DIR / "data" / "gitea-agent.log"
-    SESSION_FILE_PATH = _AGENT_DIR / "data" / "session.json"
-    LOG_ANALYZER_PATH = _AGENT_DIR / "config" / "log_analyzer.py"
+    CONTEXT_DIR_PATH   = _AGENT_DIR / "data" / "contexts"
+    LOG_FILE_PATH      = _AGENT_DIR / "data" / "gitea-agent.log"
+    SESSION_FILE_PATH  = _AGENT_DIR / "data" / "session.json"
+    DOCTOR_RESULT_PATH = _AGENT_DIR / "data" / "doctor_last.json"
+    LOG_ANALYZER_PATH  = _AGENT_DIR / "config" / "log_analyzer.py"
 else:
     # Fallback: alte Pfade relativ zum Skript-Verzeichnis
-    CONTEXT_DIR_PATH  = _HERE_SETTINGS / _env("CONTEXT_DIR", "contexts")
-    LOG_FILE_PATH     = _HERE_SETTINGS / _env("LOG_FILE", "gitea-agent.log")
-    SESSION_FILE_PATH = _HERE_SETTINGS / "contexts" / "session.json"
-    LOG_ANALYZER_PATH = None  # agent_start.py prüft PROJECT/tools/ als Fallback
+    CONTEXT_DIR_PATH   = _HERE_SETTINGS / _env("CONTEXT_DIR", "contexts")
+    LOG_FILE_PATH      = _HERE_SETTINGS / _env("LOG_FILE", "gitea-agent.log")
+    SESSION_FILE_PATH  = _HERE_SETTINGS / "contexts" / "session.json"
+    DOCTOR_RESULT_PATH = _HERE_SETTINGS / "doctor_last.json"
+    LOG_ANALYZER_PATH  = None  # agent_start.py prüft PROJECT/tools/ als Fallback
 
 # Freigabe-Aufforderung am Ende des Plan-Kommentars
 APPROVAL_PROMPT = _env(
