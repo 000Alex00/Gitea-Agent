@@ -2,8 +2,9 @@
 """
 evaluation.py — Generisches Eval-System für den gitea-agent Workflow.
 
-Liest `tests/agent_eval.json` aus dem Zielprojekt und führt definierte
-HTTP-Tests gegen server.py aus. Vergleicht Score mit `tests/baseline.json`.
+Liest `agent/config/agent_eval.json` (neu) oder `tests/agent_eval.json` (Legacy)
+aus dem Zielprojekt und führt definierte HTTP-Tests gegen den konfigurierten
+Server aus. Vergleicht Score mit baseline.json.
 
 Aufgerufen von:
     agent_start.py -> cmd_pr() — vor jedem PR
@@ -381,8 +382,12 @@ def run(
         result.skipped = True
         return result
 
-    server_url = cfg.get("server_url", "http://localhost:8000")
-    pi5_url = cfg.get("pi5_url")
+    server_url = cfg.get("server_url")
+    if not server_url:
+        result.skipped = True
+        return result
+    # secondary_url: generischer Alias, pi5_url bleibt als Legacy-Fallback
+    secondary_url = cfg.get("secondary_url") or cfg.get("pi5_url")
     endpoint = cfg.get("chat_endpoint", DEFAULT_CHAT)
     tests = cfg.get("tests", [])
 
@@ -391,17 +396,17 @@ def run(
     if not server_ok:
         result.warned = True
         result.warn_reasons.append(
-            f"server.py nicht erreichbar ({server_url}) — Eval übersprungen"
+            f"Server nicht erreichbar ({server_url}) — Eval übersprungen"
         )
         return result
 
-    pi5_ok = True
-    if pi5_url:
-        pi5_ok = _ping(pi5_url)
-        if not pi5_ok:
+    secondary_ok = True
+    if secondary_url:
+        secondary_ok = _ping(secondary_url)
+        if not secondary_ok:
             result.warned = True
             result.warn_reasons.append(
-                f"Pi5 nicht erreichbar ({pi5_url}) — Pi5-Tests werden übersprungen"
+                f"Sekundärer Dienst nicht erreichbar ({secondary_url}) — abhängige Tests werden übersprungen"
             )
 
     # 3. Tests ausführen — eindeutiger User pro Lauf verhindert Kontext-Bleeding
@@ -414,19 +419,20 @@ def run(
         weight = t.get("weight", 1)
         message = t.get("message", "")
         keywords = t.get("expected_keywords", [])
-        pi5_req = t.get("pi5_required", False)
+        # secondary_required: generischer Alias, pi5_required bleibt als Legacy-Fallback
+        secondary_req = t.get("secondary_required") or t.get("pi5_required", False)
         max_resp_ms = t.get("max_response_ms")
         tag = t.get("tag", "")
         total_weight += weight
 
-        if pi5_req and not pi5_ok:
+        if secondary_req and not secondary_ok:
             tr = TestResult(
                 name=name,
                 weight=weight,
                 passed=False,
                 skipped=True,
-                reason="Pi5 offline",
-                category="pi5_offline",
+                reason="Sekundärer Dienst offline",
+                category="secondary_offline",
                 tag=tag,
             )
             result.all_tests.append(tr)
@@ -464,7 +470,7 @@ def run(
                     name=name,
                     weight=weight,
                     passed=False,
-                    reason="Keine Antwort von server.py",
+                    reason="Keine Antwort vom Server",
                     category="timeout",
                     actual_response="",
                     response_ms=resp_ms,
