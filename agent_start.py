@@ -3317,7 +3317,7 @@ def cmd_dashboard() -> None:
     print(f"[→] Generiere Live-Dashboard...")
     try:
         dashboard.generate(PROJECT)
-        print(f"[✓] Dashboard erfolgreich erstellt: {getattr(settings, 'DASHBOARD_PATH', 'dashboard.html')}")
+        print(f"[✓] Dashboard erfolgreich erstellt: {settings.DASHBOARD_PATH}")
     except Exception as e:
         print(f"[!] Fehler bei Dashboard-Generierung: {e}")
 

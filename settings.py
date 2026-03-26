@@ -149,6 +149,7 @@ if _AGENT_DIR:
     LOG_FILE_PATH      = _AGENT_DIR / "data" / "gitea-agent.log"
     SESSION_FILE_PATH  = _AGENT_DIR / "data" / "session.json"
     DOCTOR_RESULT_PATH = _AGENT_DIR / "data" / "doctor_last.json"
+    DASHBOARD_PATH     = _AGENT_DIR / "data" / "dashboard.html"
     LOG_ANALYZER_PATH  = _AGENT_DIR / "config" / "log_analyzer.py"
 else:
     # Fallback: alte Pfade relativ zum Skript-Verzeichnis
@@ -156,6 +157,7 @@ else:
     LOG_FILE_PATH      = _HERE_SETTINGS / _env("LOG_FILE", "gitea-agent.log")
     SESSION_FILE_PATH  = _HERE_SETTINGS / "contexts" / "session.json"
     DOCTOR_RESULT_PATH = _HERE_SETTINGS / "doctor_last.json"
+    DASHBOARD_PATH     = _HERE_SETTINGS / "dashboard.html"
     LOG_ANALYZER_PATH  = None  # agent_start.py prüft PROJECT/tools/ als Fallback
 
 # Freigabe-Aufforderung am Ende des Plan-Kommentars
