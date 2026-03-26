@@ -15,7 +15,11 @@ Verwendung in anderen Modulen:
 
 import logging
 import sys
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
+
+# Maximale Anzahl rotierter Log-Dateien (älteste wird überschrieben)
+_LOG_BACKUP_COUNT = 10
 
 
 def setup(log_file: str = "gitea-agent.log", level: str = "INFO") -> None:
@@ -28,6 +32,11 @@ def setup(log_file: str = "gitea-agent.log", level: str = "INFO") -> None:
     Args:
         log_file: Pfad zur Log-Datei (relativ zum Script-Verzeichnis)
         level:    Log-Level für File-Handler (DEBUG/INFO/WARNING/ERROR)
+
+    Rotation:
+        Täglich um Mitternacht wird eine neue Datei angelegt.
+        Dateien erhalten Suffix .YYYY-MM-DD (z.B. gitea-agent.log.2026-03-26).
+        Nach 10 rotierten Dateien wird die älteste überschrieben.
     """
     numeric = getattr(logging, level.upper(), logging.INFO)
     root    = logging.getLogger()
@@ -41,12 +50,17 @@ def setup(log_file: str = "gitea-agent.log", level: str = "INFO") -> None:
     console.setLevel(logging.WARNING)
     console.setFormatter(fmt)
 
-    # File: INFO+ (vollständiger Audit-Trail)
-    # Absoluter Pfad → direkt nutzen; relativer Pfad → relativ zum Skript-Verzeichnis
+    # File: INFO+ mit täglicher Rotation — max. 10 Backup-Dateien
     _p = Path(log_file)
     log_path = _p if _p.is_absolute() else Path(__file__).parent / log_file
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    file_h   = logging.FileHandler(log_path, encoding="utf-8")
+    file_h = TimedRotatingFileHandler(
+        log_path,
+        when="midnight",
+        backupCount=_LOG_BACKUP_COUNT,
+        encoding="utf-8",
+    )
+    file_h.suffix = "%Y-%m-%d"
     file_h.setLevel(numeric)
     file_h.setFormatter(fmt)
 

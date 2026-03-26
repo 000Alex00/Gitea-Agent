@@ -282,11 +282,11 @@
 - **Funktion** `main` Zeilen 587-600
   `def main() -> None:`
 
-## log.py  *(67 Zeilen)*
+## log.py  *(81 Zeilen)*
 
-- **Funktion** `setup` Zeilen 21-54
+- **Funktion** `setup` Zeilen 25-68
   `def setup(log_file: str = "gitea-agent.log", level: str = "INFO") -> None:`
-- **Funktion** `get_logger` Zeilen 57-67
+- **Funktion** `get_logger` Zeilen 71-81
   `def get_logger(name: str) -> logging.Logger:`
 
 ## plugins/patch.py  *(200 Zeilen)*

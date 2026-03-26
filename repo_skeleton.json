@@ -842,19 +842,19 @@
   {
     "path": "log.py",
     "truncated": false,
-    "lines": 67,
+    "lines": 81,
     "size_kb": 2,
     "symbols": [
       {
         "type": "function",
         "name": "setup",
-        "lines": "21-54",
+        "lines": "25-68",
         "signature": "def setup(log_file: str = \"gitea-agent.log\", level: str = \"INFO\") -> None:"
       },
       {
         "type": "function",
         "name": "get_logger",
-        "lines": "57-67",
+        "lines": "71-81",
         "signature": "def get_logger(name: str) -> logging.Logger:"
       }
     ]

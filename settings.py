@@ -152,11 +152,11 @@ if _AGENT_DIR:
     DASHBOARD_PATH     = _AGENT_DIR / "data" / "dashboard.html"
     LOG_ANALYZER_PATH  = _AGENT_DIR / "config" / "log_analyzer.py"
 else:
-    # Fallback: Laufzeit-Dateien in data/ (gitea-agent Root-Betrieb)
+    # Fallback: Root-Betrieb — workspace/ auf oberster Ebene, Laufzeitdaten in data/
     _DATA_DIR          = _HERE_SETTINGS / "data"
-    CONTEXT_DIR_PATH   = _DATA_DIR / _env("CONTEXT_DIR", "workspace")
+    CONTEXT_DIR_PATH   = _HERE_SETTINGS / "workspace"
     LOG_FILE_PATH      = _DATA_DIR / _env("LOG_FILE", "gitea-agent.log")
-    SESSION_FILE_PATH  = _DATA_DIR / "workspace" / "session.json"
+    SESSION_FILE_PATH  = _HERE_SETTINGS / "workspace" / "session.json"
     DOCTOR_RESULT_PATH = _DATA_DIR / "doctor_last.json"
     DASHBOARD_PATH     = _DATA_DIR / "dashboard.html"
     LOG_ANALYZER_PATH  = None  # agent_start.py prüft PROJECT/tools/ als Fallback
