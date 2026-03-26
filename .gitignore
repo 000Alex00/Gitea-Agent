@@ -1,9 +1,17 @@
 .env
+.env.agent
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
-tests/score_history.json
+
+# Laufzeit-Daten (gitea-agent Root-Betrieb)
+data/*
+!data/.gitkeep
 contexts/
+
+# Legacy (Root-Betrieb vor Strukturbereinigung)
 gitea-agent.log
-.env.agent
+dashboard.html
+doctor_last.json
+tests/score_history.json

@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4037,
-    "size_kb": 142,
+    "lines": 3927,
+    "size_kb": 138,
     "symbols": [
       {
         "type": "function",
@@ -471,32 +471,32 @@
       },
       {
         "type": "function",
-        "name": "cmd_doctor",
-        "lines": "3324-3485",
-        "signature": "def cmd_doctor() -> None:"
-      },
-      {
-        "type": "function",
         "name": "cmd_auto",
-        "lines": "3488-3580",
+        "lines": "3324-3416",
         "signature": "def cmd_auto() -> None:"
       },
       {
         "type": "function",
         "name": "_apply_auto_approve",
-        "lines": "3588-3616",
+        "lines": "3424-3452",
         "signature": "def _apply_auto_approve() -> None:"
       },
       {
         "type": "function",
+        "name": "cmd_doctor",
+        "lines": "3459-3560",
+        "signature": "def cmd_doctor() -> None:"
+      },
+      {
+        "type": "function",
         "name": "cmd_setup",
-        "lines": "3623-3828",
+        "lines": "3567-3718",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "3831-4033",
+        "lines": "3721-3923",
         "signature": "def main():"
       },
       {
@@ -507,33 +507,27 @@
       },
       {
         "type": "function",
-        "name": "_check",
-        "lines": "3337-3345",
-        "signature": "def _check(status: str, name: str, detail: str, fix: str = \"\") -> None:"
+        "name": "_chk",
+        "lines": "3465-3466",
+        "signature": "def _chk(name: str, status: str, detail: str = \"\", fix: str = \"\") -> None:"
       },
       {
         "type": "function",
         "name": "_ask",
-        "lines": "3632-3635",
+        "lines": "3571-3574",
         "signature": "def _ask(prompt: str, default: str = \"\") -> str:"
       },
       {
         "type": "function",
-        "name": "_ask_secret",
-        "lines": "3637-3638",
-        "signature": "def _ask_secret(prompt: str) -> str:"
+        "name": "_api_get_raw",
+        "lines": "3576-3583",
+        "signature": "def _api_get_raw(url, user, token, path):"
       },
       {
         "type": "function",
-        "name": "_api_get",
-        "lines": "3640-3647",
-        "signature": "def _api_get(url: str, user: str, token: str, path: str):"
-      },
-      {
-        "type": "function",
-        "name": "_api_post",
-        "lines": "3649-3663",
-        "signature": "def _api_post(url: str, user: str, token: str, path: str, data: dict):"
+        "name": "_api_post_raw",
+        "lines": "3585-3595",
+        "signature": "def _api_post_raw(url, user, token, path, data: dict):"
       },
       {
         "type": "function",
@@ -669,13 +663,13 @@
   {
     "path": "dashboard.py",
     "truncated": false,
-    "lines": 302,
+    "lines": 299,
     "size_kb": 10,
     "symbols": [
       {
         "type": "function",
         "name": "generate",
-        "lines": "139-298",
+        "lines": "139-295",
         "signature": "def generate(project_root: Path):"
       }
     ]
@@ -683,7 +677,7 @@
   {
     "path": "settings.py",
     "truncated": false,
-    "lines": 260,
+    "lines": 258,
     "size_kb": 10,
     "symbols": [
       {
@@ -1362,6 +1356,38 @@
         "name": "test_build_changelog_block_empty_commits",
         "lines": "94-97",
         "signature": "def test_build_changelog_block_empty_commits():"
+      }
+    ]
+  },
+  {
+    "path": "tests/test_settings.py",
+    "truncated": false,
+    "lines": 35,
+    "size_kb": 0,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "test_dashboard_path_is_absolute",
+        "lines": "10-11",
+        "signature": "def test_dashboard_path_is_absolute():"
+      },
+      {
+        "type": "function",
+        "name": "test_dashboard_path_ends_with_html",
+        "lines": "14-15",
+        "signature": "def test_dashboard_path_ends_with_html():"
+      },
+      {
+        "type": "function",
+        "name": "test_dashboard_path_inside_agent_or_root",
+        "lines": "18-21",
+        "signature": "def test_dashboard_path_inside_agent_or_root():"
+      },
+      {
+        "type": "function",
+        "name": "test_all_paths_consistent",
+        "lines": "24-35",
+        "signature": "def test_all_paths_consistent():"
       }
     ]
   }
