@@ -2,6 +2,7 @@
     "_comment": "Vorlage für llm_routing.json — nach agent/config/llm_routing.json kopieren und anpassen",
     "_comment_providers": "Unterstützte Provider: claude, openai, gemini, local (Ollama-Format)",
     "_comment_fallback": "Ohne diese Datei → CLAUDE_API_ENABLED / LLM_LOCAL_URL aus .env",
+    "_comment_system_prompt": "system_prompt: relativer Pfad zu einer .md-Datei im Projekt-Root (z.B. config/llm/prompts/senior_python.md)",
 
     "default": {
         "provider": "claude",
@@ -16,32 +17,38 @@
         "issue_analysis": {
             "provider": "claude",
             "model": "claude-haiku-4-5-20251001",
+            "system_prompt": "config/llm/prompts/analyst.md",
             "_comment": "Günstig + schnell für Issue-Analyse"
         },
         "implementation": {
             "provider": "claude",
             "model": "claude-sonnet-4-6",
+            "system_prompt": "config/llm/prompts/senior_python.md",
             "_comment": "Stark für Code-Implementierung"
         },
         "pr_review": {
             "provider": "claude",
             "model": "claude-sonnet-4-6",
+            "system_prompt": "config/llm/prompts/reviewer.md",
             "_comment": "Analytisch für PR-Reviews"
         },
         "test_generation": {
             "provider": "local",
             "model": "llama3",
             "base_url": "http://localhost:11434",
+            "system_prompt": "config/llm/prompts/senior_python.md",
             "_comment": "Lokal für deterministischen Test-Code"
         },
         "log_analysis": {
             "provider": "claude",
             "model": "claude-haiku-4-5-20251001",
+            "system_prompt": "config/llm/prompts/log_analyst.md",
             "_comment": "Günstig für Log-Mustererkennung"
         },
         "healing": {
             "provider": "claude",
             "model": "claude-sonnet-4-6",
+            "system_prompt": "config/llm/prompts/healer.md",
             "_comment": "Präzise für Self-Healing Entscheidungen"
         }
     },

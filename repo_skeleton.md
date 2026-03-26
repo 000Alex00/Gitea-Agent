@@ -338,53 +338,55 @@
 - **Funktion** `all_passed` Zeilen 50-51
   `def all_passed(self) -> bool:`
 
-## plugins/llm.py  *(346 Zeilen)*
+## plugins/llm.py  *(391 Zeilen)*
 
-- **Funktion** `_load_routing` Zeilen 36-45
+- **Funktion** `_load_routing` Zeilen 40-49
   `def _load_routing(extra_path: Optional[Path] = None) -> dict:`
-- **Funktion** `_resolve_task_config` Zeilen 48-59
+- **Funktion** `_resolve_task_config` Zeilen 52-63
   `def _resolve_task_config(task: str, routing: dict) -> dict:`
-- **Klasse** `LLMResponse` Zeilen 67-76
+- **Funktion** `_load_system_prompt` Zeilen 66-81
+  `def _load_system_prompt(cfg: dict) -> str:`
+- **Klasse** `LLMResponse` Zeilen 89-98
   `class LLMResponse:`
-- **Funktion** `_http_post` Zeilen 83-87
+- **Funktion** `_http_post` Zeilen 105-109
   `def _http_post(url: str, payload: dict, headers: dict, timeout: int) -> dict:`
-- **Klasse** `ClaudeClient` Zeilen 90-123
+- **Klasse** `ClaudeClient` Zeilen 112-150
   `class ClaudeClient:`
-- **Klasse** `OpenAIClient` Zeilen 126-157
+- **Klasse** `OpenAIClient` Zeilen 153-189
   `class OpenAIClient:`
-- **Klasse** `GeminiClient` Zeilen 160-188
+- **Klasse** `GeminiClient` Zeilen 192-225
   `class GeminiClient:`
-- **Klasse** `LocalClient` Zeilen 191-217
+- **Klasse** `LocalClient` Zeilen 228-258
   `class LocalClient:`
-- **Funktion** `_client_from_env` Zeilen 224-251
+- **Funktion** `_client_from_env` Zeilen 265-292
   `def _client_from_env() -> Optional["ClaudeClient | LocalClient"]:`
-- **Funktion** `_build_client` Zeilen 254-295
+- **Funktion** `_build_client` Zeilen 295-340
   `def _build_client(cfg: dict) -> "ClaudeClient | OpenAIClient | GeminiClient | LocalClient":`
-- **Funktion** `get_client` Zeilen 302-331
+- **Funktion** `get_client` Zeilen 347-376
   `def get_client(`
-- **Funktion** `complete` Zeilen 334-346
+- **Funktion** `complete` Zeilen 379-391
   `def complete(`
-- **Funktion** `ok` Zeilen 75-76
+- **Funktion** `ok` Zeilen 97-98
   `def ok(self) -> bool:`
-- **Funktion** `__init__` Zeilen 96-100
-  `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):`
-- **Funktion** `complete` Zeilen 102-123
+- **Funktion** `__init__` Zeilen 118-124
+  `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,`
+- **Funktion** `complete` Zeilen 126-150
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 129-135
+- **Funktion** `__init__` Zeilen 156-163
   `def __init__(self, model: str, api_key: str, base_url: str = "https://api.openai.com/v1",`
-- **Funktion** `complete` Zeilen 137-157
+- **Funktion** `complete` Zeilen 165-189
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 165-169
-  `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):`
-- **Funktion** `complete` Zeilen 171-188
+- **Funktion** `__init__` Zeilen 197-203
+  `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,`
+- **Funktion** `complete` Zeilen 205-225
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 194-199
+- **Funktion** `__init__` Zeilen 231-237
   `def __init__(self, model: str, base_url: str = "http://localhost:11434",`
-- **Funktion** `complete` Zeilen 201-217
+- **Funktion** `complete` Zeilen 239-258
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `_get` Zeilen 240-241
+- **Funktion** `_get` Zeilen 281-282
   `def _get(key: str, default: str = "") -> str:`
-- **Funktion** `_get_key` Zeilen 258-268
+- **Funktion** `_get_key` Zeilen 298-308
   `def _get_key(env_var: str) -> str:`
 
 ## plugins/__init__.py  *(0 Zeilen)*

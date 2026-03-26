@@ -10,6 +10,10 @@ Bietet eine einheitliche Schnittstelle für verschiedene LLM-Anbieter:
 Aufgaben-Routing via agent/config/llm_routing.json (optional):
     Ohne Konfiguration → Fallback auf CLAUDE_API_ENABLED / lokale LLM aus .env
 
+System-Prompts (Issue #111):
+    Jeder Task kann einen system_prompt Pfad in llm_routing.json referenzieren.
+    Die Datei (z.B. config/llm/prompts/senior_python.md) wird als Rollen-Instruktion geladen.
+
 Aufgerufen von:
     plugins/healing.py, log_analyzer.template.py, agent_start.py
     Direkt: get_client(task="implementation").complete(prompt)
@@ -20,7 +24,7 @@ from __future__ import annotations
 import json
 import urllib.request
 import urllib.error
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -59,6 +63,24 @@ def _resolve_task_config(task: str, routing: dict) -> dict:
     return {}
 
 
+def _load_system_prompt(cfg: dict) -> str:
+    """
+    Lädt System-Prompt aus Datei wenn 'system_prompt' in cfg gesetzt.
+    Sucht relativ zum Projekt-Root (zwei Ebenen über plugins/).
+    """
+    sp = cfg.get("system_prompt", "")
+    if not sp:
+        return ""
+    base = Path(__file__).parent.parent  # gitea-agent/
+    candidate = base / sp
+    if candidate.exists():
+        try:
+            return candidate.read_text(encoding="utf-8").strip()
+        except Exception:
+            pass
+    return ""
+
+
 # ---------------------------------------------------------------------------
 # Antwort-Datenklasse
 # ---------------------------------------------------------------------------
@@ -93,21 +115,26 @@ class ClaudeClient:
     BASE_URL = "https://api.anthropic.com/v1/messages"
     API_VERSION = "2023-06-01"
 
-    def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):
+    def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,
+                 system_prompt: str = ""):
         self.model = model
         self.api_key = api_key
         self.max_tokens = max_tokens
         self.timeout = timeout
+        self.system_prompt = system_prompt
 
     def complete(self, prompt: str) -> LLMResponse:
         try:
+            payload: dict = {
+                "model": self.model,
+                "max_tokens": self.max_tokens,
+                "messages": [{"role": "user", "content": prompt}],
+            }
+            if self.system_prompt:
+                payload["system"] = self.system_prompt
             result = _http_post(
                 self.BASE_URL,
-                {
-                    "model": self.model,
-                    "max_tokens": self.max_tokens,
-                    "messages": [{"role": "user", "content": prompt}],
-                },
+                payload,
                 {
                     "x-api-key": self.api_key,
                     "anthropic-version": self.API_VERSION,
@@ -127,21 +154,26 @@ class OpenAIClient:
     """OpenAI-kompatible Chat-Completions API."""
 
     def __init__(self, model: str, api_key: str, base_url: str = "https://api.openai.com/v1",
-                 max_tokens: int = 1024, timeout: int = 60):
+                 max_tokens: int = 1024, timeout: int = 60, system_prompt: str = ""):
         self.model = model
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.max_tokens = max_tokens
         self.timeout = timeout
+        self.system_prompt = system_prompt
 
     def complete(self, prompt: str) -> LLMResponse:
         try:
+            messages = []
+            if self.system_prompt:
+                messages.append({"role": "system", "content": self.system_prompt})
+            messages.append({"role": "user", "content": prompt})
             result = _http_post(
                 f"{self.base_url}/chat/completions",
                 {
                     "model": self.model,
                     "max_tokens": self.max_tokens,
-                    "messages": [{"role": "user", "content": prompt}],
+                    "messages": messages,
                     "temperature": 0.2,
                 },
                 {
@@ -162,21 +194,26 @@ class GeminiClient:
 
     BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
-    def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):
+    def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,
+                 system_prompt: str = ""):
         self.model = model
         self.api_key = api_key
         self.max_tokens = max_tokens
         self.timeout = timeout
+        self.system_prompt = system_prompt
 
     def complete(self, prompt: str) -> LLMResponse:
         try:
             url = f"{self.BASE_URL}/{self.model}:generateContent?key={self.api_key}"
+            payload: dict = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"maxOutputTokens": self.max_tokens, "temperature": 0.2},
+            }
+            if self.system_prompt:
+                payload["systemInstruction"] = {"parts": [{"text": self.system_prompt}]}
             result = _http_post(
                 url,
-                {
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"maxOutputTokens": self.max_tokens, "temperature": 0.2},
-                },
+                payload,
                 {"Content-Type": "application/json"},
                 self.timeout,
             )
@@ -192,22 +229,26 @@ class LocalClient:
     """Ollama/llama.cpp-kompatible HTTP-API (generate-Endpunkt)."""
 
     def __init__(self, model: str, base_url: str = "http://localhost:11434",
-                 max_tokens: int = 1024, timeout: int = 60):
+                 max_tokens: int = 1024, timeout: int = 60, system_prompt: str = ""):
         self.model = model
         self.base_url = base_url.rstrip("/")
         self.max_tokens = max_tokens
         self.timeout = timeout
+        self.system_prompt = system_prompt
 
     def complete(self, prompt: str) -> LLMResponse:
         try:
+            payload: dict = {
+                "model": self.model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.2, "num_predict": self.max_tokens},
+            }
+            if self.system_prompt:
+                payload["system"] = self.system_prompt
             result = _http_post(
                 f"{self.base_url}/api/generate",
-                {
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": 0.2, "num_predict": self.max_tokens},
-                },
+                payload,
                 {"Content-Type": "application/json"},
                 self.timeout,
             )
@@ -252,8 +293,7 @@ def _client_from_env() -> Optional["ClaudeClient | LocalClient"]:
 
 
 def _build_client(cfg: dict) -> "ClaudeClient | OpenAIClient | GeminiClient | LocalClient":
-    """Baut Client-Objekt aus Routing-Config-Dict."""
-    import os
+    """Baut Client-Objekt aus Routing-Config-Dict (inkl. system_prompt)."""
 
     def _get_key(env_var: str) -> str:
         import os as _os
@@ -271,28 +311,33 @@ def _build_client(cfg: dict) -> "ClaudeClient | OpenAIClient | GeminiClient | Lo
     model = cfg.get("model", "")
     max_tokens = int(cfg.get("max_tokens", 1024))
     timeout = int(cfg.get("timeout", 60))
+    system_prompt = _load_system_prompt(cfg)
 
     if provider == "claude":
         api_key = _get_key("ANTHROPIC_API_KEY")
         return ClaudeClient(model=model or "claude-sonnet-4-6",
-                            api_key=api_key, max_tokens=max_tokens, timeout=timeout)
+                            api_key=api_key, max_tokens=max_tokens, timeout=timeout,
+                            system_prompt=system_prompt)
     elif provider == "openai":
         api_key = _get_key("OPENAI_API_KEY")
         base_url = cfg.get("base_url", "https://api.openai.com/v1")
         return OpenAIClient(model=model or "gpt-4o-mini",
                             api_key=api_key, base_url=base_url,
-                            max_tokens=max_tokens, timeout=timeout)
+                            max_tokens=max_tokens, timeout=timeout,
+                            system_prompt=system_prompt)
     elif provider == "gemini":
         api_key = _get_key("GEMINI_API_KEY")
         return GeminiClient(model=model or "gemini-1.5-flash",
-                            api_key=api_key, max_tokens=max_tokens, timeout=timeout)
+                            api_key=api_key, max_tokens=max_tokens, timeout=timeout,
+                            system_prompt=system_prompt)
     elif provider in ("local", "ollama"):
         base_url = cfg.get("base_url", "http://localhost:11434")
         return LocalClient(model=model or "llama3",
-                           base_url=base_url, max_tokens=max_tokens, timeout=timeout)
+                           base_url=base_url, max_tokens=max_tokens, timeout=timeout,
+                           system_prompt=system_prompt)
     else:
         # Unbekannter Provider → lokaler Fallback
-        return LocalClient(model=model or "llama3")
+        return LocalClient(model=model or "llama3", system_prompt=system_prompt)
 
 
 # ---------------------------------------------------------------------------
