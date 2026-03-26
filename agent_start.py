@@ -1992,8 +1992,22 @@ def _current_issue_from_branch() -> int | None:
     return None
 
 
+def _estimate_slice_tokens(spec: str) -> int:
+    """Schätzt die Token-Anzahl eines Slices anhand der Zeilenzahl (Zeilen × TOKEN_LINES_FACTOR)."""
+    try:
+        _, range_part = spec.rsplit(":", 1)
+        if "-" in range_part:
+            start, end = (int(x) for x in range_part.split("-", 1))
+            line_count = max(0, end - start + 1)
+        else:
+            line_count = 1
+        return line_count * settings.TOKEN_LINES_FACTOR
+    except Exception:
+        return 0
+
+
 def _log_slice_request(spec: str) -> None:
-    """Loggt eine --get-slice Anfrage in session.json des aktuellen Issues."""
+    """Loggt eine --get-slice Anfrage in session.json und summiert Token-Schätzung."""
     try:
         issue_num = _current_issue_from_branch()
         if issue_num is None:
@@ -2009,9 +2023,30 @@ def _log_slice_request(spec: str) -> None:
             except Exception:
                 data = {}
         slices = data.get("slices_requested", [])
-        slices.append({"spec": spec, "timestamp": datetime.datetime.now().isoformat()})
+        token_estimate = _estimate_slice_tokens(spec)
+        slices.append({
+            "spec": spec,
+            "timestamp": datetime.datetime.now().isoformat(),
+            "estimated_tokens": token_estimate,
+        })
         data["slices_requested"] = slices
+        total_tokens = sum(s.get("estimated_tokens", 0) for s in slices)
+        data["estimated_tokens"] = total_tokens
+        data["budget_warn_threshold"] = settings.TOKEN_BUDGET_WARN
         session_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+        threshold = settings.TOKEN_BUDGET_WARN
+        if total_tokens >= threshold:
+            print(
+                f"[!] Token-Budget: ~{total_tokens:,} / {threshold:,} — "
+                f"Limit erreicht. Neue Session empfohlen."
+            )
+            log.warning(f"Token-Budget überschritten: {total_tokens} >= {threshold}")
+        elif total_tokens >= int(threshold * 0.9):
+            print(
+                f"[!] Token-Budget: ~{total_tokens:,} / {threshold:,} — "
+                f"Nächster Slice könnte Limit überschreiten."
+            )
     except Exception:
         pass
 

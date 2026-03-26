@@ -209,6 +209,15 @@ SESSION_LIMIT       = _env_int("SESSION_LIMIT",       2)
 SESSION_RESET_HOURS = _env_int("SESSION_RESET_HOURS", 4)
 
 # ---------------------------------------------------------------------------
+# Token-Budget-Tracker (Issue #85)
+# ---------------------------------------------------------------------------
+
+# Geschätzte Token pro Zeile (Näherung: 4 Zeichen ~ 1 Token, ~40 Zeichen/Zeile)
+TOKEN_LINES_FACTOR  = _env_int("TOKEN_LINES_FACTOR",  10)   # Zeilen × 10 ≈ Token
+# Warnschwelle in Token (Sonnet 4.x: 200K Kontextfenster)
+TOKEN_BUDGET_WARN   = _env_int("TOKEN_BUDGET_WARN",   150000)
+
+# ---------------------------------------------------------------------------
 # Prozess-Enforcement (Issue #6)
 # ---------------------------------------------------------------------------
 
