@@ -290,12 +290,9 @@ def generate(project_root: Path):
     html = html.replace("{DOCTOR_SECTION}", doctor_section)
     html = html.replace("{LAST_UPDATE}", now.strftime("%H:%M:%S %d.%m.%Y"))
 
-    dash_path = project_root / getattr(settings, "DASHBOARD_PATH", "dashboard.html")
+    dash_path = Path(settings.DASHBOARD_PATH)
+    dash_path.parent.mkdir(parents=True, exist_ok=True)
     dash_path.write_text(html, encoding="utf-8")
-
-    local_path = Path(__file__).parent / "dashboard.html"
-    if dash_path.resolve() != local_path.resolve():
-        local_path.write_text(html, encoding="utf-8")
 
 
 if __name__ == "__main__":
