@@ -2,38 +2,49 @@
 # context_export.sh — LLM-agnostischer Kontext-Export + Dual-Repo-Unterstützung
 #
 # Nutzung:
-#   ./context_export.sh NR              → plain text ausgeben (copy/paste)
-#   ./context_export.sh NR gemini       → Gemini CLI direkt starten
-#   ./context_export.sh NR file         → context_NR.md zum Hochladen erzeugen
-#   ./context_export.sh NR --self       → gitea-agent Repo statt jetson-llm-chat
-#   ./context_export.sh NR --self gemini
-#   ./context_export.sh NR --self file
+#   ./context_export.sh NR                   → plain text ausgeben (copy/paste)
+#   ./context_export.sh NR llm [TASK]        → LLM-CLI aus llm_routing.json starten
+#   ./context_export.sh NR gemini            → (veraltet) Alias für: llm docs
+#   ./context_export.sh NR file              → context_NR.md zum Hochladen erzeugen
+#   ./context_export.sh NR --self            → gitea-agent Repo statt Projekt
+#   ./context_export.sh NR --self llm [TASK]
+#
+# LLM-Routing: agent/config/llm_routing.json — cli_cmd Feld pro Task.
+# Ohne cli_cmd → Fehler mit Hinweis welches Feld fehlt.
 
 set -euo pipefail
 
-AGENT_DIR="$(cd "$(dirname "$0")" && pwd)"
+AGENT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # --- Argumente parsen ---
 NR=""
 FORMAT="plain"
+LLM_TASK="implementation"
 SELF=0
 
 for ARG in "$@"; do
     case "$ARG" in
         --self) SELF=1 ;;
-        gemini|file|plain) FORMAT="$ARG" ;;
+        llm)    FORMAT="llm" ;;
+        gemini) FORMAT="llm"; LLM_TASK="docs"
+                echo "[!] Hinweis: 'gemini' ist veraltet — nutze: $0 $NR llm docs" ;;
+        file|plain) FORMAT="$ARG" ;;
         [0-9]*) NR="$ARG" ;;
+        implementation|deep_coding|docs|log_analysis|healing|pr_review|test_generation)
+                LLM_TASK="$ARG" ;;
     esac
 done
 
 if [ -z "$NR" ]; then
-    echo "Nutzung: $0 NR [plain|gemini|file] [--self]"
+    echo "Nutzung: $0 NR [plain|llm [TASK]|file] [--self]"
     echo ""
     echo "  NR       Issue-Nummer"
     echo "  plain    Kontext im Terminal ausgeben (Standard)"
-    echo "  gemini   Gemini CLI direkt starten"
+    echo "  llm      LLM-CLI aus llm_routing.json starten (TASK: implementation)"
     echo "  file     context_NR.md erzeugen (für Web-Chats)"
-    echo "  --self   gitea-agent Repo statt jetson-llm-chat"
+    echo "  --self   gitea-agent Repo statt Projekt"
+    echo ""
+    echo "  LLM-Tasks: implementation, deep_coding, docs, log_analysis, healing"
     exit 1
 fi
 
@@ -153,19 +164,98 @@ case "$FORMAT" in
         done
         ;;
 
-    gemini)
-        echo "$PROMPT_HEADER"
-        [ -n "${FILES:-}" ] && echo "  Dateien: $FILES"
-        echo ""
-        cd "$PROJECT_ROOT"
-        INSTRUCTION="Du arbeitest auf Branch ${BRANCH:-unbekannt} in $PROJECT_ROOT. NIEMALS auf main committen. Nach jeder Dateiänderung committen. Am Ende diesen PR-Befehl ausführen: $PR_CMD"
-        SLICE_HINT="files.md enthält nur Skelett. Fordere Code-Slices an mit: 'SLICE: datei.py:START-END'. Der Agent liefert den Zeilenbereich."
-        INSTRUCTION="$INSTRUCTION $SLICE_HINT"
-        if [ -n "${FILES:-}" ]; then
-            gemini "@$STARTER @$FILES $INSTRUCTION"
-        else
-            gemini "@$STARTER $INSTRUCTION"
+    llm)
+        # cli_cmd aus llm_routing.json lesen
+        LLM_CMD=$(python3 "$AGENT_DIR/agent_start.py" ${SELF:+--self} --get-llm-cmd "$LLM_TASK" 2>/dev/null || true)
+        if [ -z "${LLM_CMD:-}" ]; then
+            echo "[✗] Kein cli_cmd für Task '$LLM_TASK' in llm_routing.json konfiguriert."
+            echo "    Beispiel in agent/config/llm_routing.json:"
+            echo "      \"$LLM_TASK\": {\"provider\": \"deepseek\", \"model\": \"deepseek-chat\", \"cli_cmd\": \"lmstudio\"}"
+            exit 1
         fi
+
+        # Slice-Loop VOR dem LLM-Start
+        echo "$PROMPT_HEADER"
+        echo "--- starter.md ---"
+        cat "$STARTER"
+        if [ -n "${FILES:-}" ]; then
+            echo ""
+            echo "--- files.md ---"
+            cat "$FILES"
+        fi
+        echo ""
+        echo "=========================================="
+        echo "  SLICE-MODUS — Zeile eingeben:"
+        echo "  SLICE: datei.py:START-END   → Code laden"
+        echo "  READY                       → LLM starten ($LLM_CMD)"
+        echo "=========================================="
+        SLICE_CONTENT=""
+        while true; do
+            printf "> "
+            read -r INPUT
+            if [ "$INPUT" = "READY" ] || [ -z "$INPUT" ]; then
+                break
+            fi
+            SLICE=$(echo "$INPUT" | sed -n 's/^SLICE: //p')
+            if [ -n "$SLICE" ]; then
+                SLICE_OUT=$(python3 "$AGENT_DIR/agent_start.py" ${SELF:+--self} --get-slice "$SLICE" 2>/dev/null || echo "[Slice nicht gefunden: $SLICE]")
+                echo "$SLICE_OUT"
+                SLICE_CONTENT="$SLICE_CONTENT
+
+--- SLICE: $SLICE ---
+$SLICE_OUT"
+            fi
+        done
+
+        # PFLICHTREGELN + vollständiger Prompt für LLM
+        PFLICHTREGELN=$(python3 -c "
+import sys; sys.path.insert(0,'$AGENT_DIR')
+import os; os.environ.setdefault('AGENT_ENV_FILE','$AGENT_DIR/.env.agent')
+import settings; print(settings.STARTER_MD_PFLICHTREGELN)
+" 2>/dev/null || echo "NIEMALS auf main committen. NIEMALS curl statt agent_start.py. NIEMALS PR manuell erstellen.")
+
+        LLM_PROMPT="$PFLICHTREGELN
+
+$PROMPT_HEADER
+
+--- starter.md ---
+$(cat "$STARTER")
+$([ -n "${FILES:-}" ] && echo "
+--- files.md ---
+$(cat "$FILES")" || true)
+$SLICE_CONTENT
+
+--- AUFGABE ---
+Branch: ${BRANCH:-unbekannt}
+Arbeitsverzeichnis: $PROJECT_ROOT
+NIEMALS auf main committen.
+Nach jeder Dateiänderung: git add <datei> && git commit -m \"...\"
+
+PR-Befehl nach Abschluss:
+$PR_CMD
+"
+        # Temporäre Prompt-Datei (für CLIs die Dateien lesen)
+        PROMPT_FILE=$(mktemp /tmp/context_export_XXXXXX.md)
+        echo "$LLM_PROMPT" > "$PROMPT_FILE"
+
+        echo ""
+        echo "[→] Starte LLM: $LLM_CMD  (Task: $LLM_TASK)"
+        echo "    Prompt-Datei: $PROMPT_FILE"
+        echo ""
+
+        cd "$PROJECT_ROOT"
+        # CLI starten — Argumente je nach Binary
+        case "$LLM_CMD" in
+            gemini)
+                $LLM_CMD "@$PROMPT_FILE" ;;
+            claude)
+                $LLM_CMD --file "$PROMPT_FILE" 2>/dev/null || $LLM_CMD "@$PROMPT_FILE" ;;
+            *)
+                # Generisch: Prompt-Datei als erstes Argument
+                $LLM_CMD "$PROMPT_FILE" ;;
+        esac
+
+        rm -f "$PROMPT_FILE"
         ;;
 
     file)
