@@ -3698,13 +3698,27 @@ def cmd_doctor() -> None:
     else:
         _chk("Projekt-Verzeichnis", "fail", str(proj), "PROJECT_ROOT in .env setzen")
 
-    # 3. repo_skeleton.json
+    # 3. repo_skeleton.json + Staleness
     skel = PROJECT / "repo_skeleton.json"
+    skel_md = PROJECT / "repo_skeleton.md"
     if skel.exists():
         size = skel.stat().st_size
-        _chk("repo_skeleton.json", "ok", f"{size} Bytes")
+        try:
+            from plugins.llm_config_guard import check_skeleton_fresh as _skel_check
+            sr = _skel_check(PROJECT)
+            if sr.stale:
+                import math as _math
+                age = sr.age_seconds
+                age_str = f"{age}s" if age < 60 else (f"{age//60}min" if age < 3600 else f"{age//3600}h")
+                _chk("repo_skeleton.md", "warn",
+                     f"Veraltet — {age_str} hinter {sr.newest_py.name if sr.newest_py else '?'}",
+                     "python3 agent_start.py --build-skeleton ausführen")
+            else:
+                _chk("repo_skeleton.md", "ok", f"{size} Bytes, aktuell")
+        except Exception:
+            _chk("repo_skeleton.json", "ok", f"{size} Bytes")
     else:
-        _chk("repo_skeleton.json", "warn", "Nicht vorhanden",
+        _chk("repo_skeleton.md", "warn", "Nicht vorhanden",
              "python3 agent_start.py --build-skeleton ausführen")
 
     # 4. agent_eval.json (neue Struktur: agent/config/, Fallback: tests/)

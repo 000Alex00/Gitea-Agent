@@ -9,6 +9,10 @@ Pflichtabschnitte (REQUIRED_MARKERS):
     Jede LLM-Config-Datei muss alle definierten Marker-Strings enthalten.
     Fehlt einer → check() meldet ihn, repair() hängt den Abschnitt an.
 
+Skeleton-Staleness:
+    check_skeleton_fresh() prüft ob repo_skeleton.md neuer ist als die
+    zuletzt geänderte .py-Datei im Projekt. Ist er veraltet → Warnung.
+
 Aufgerufen von:
     agent_start.py -> cmd_doctor()
     pre-commit Hook
@@ -18,6 +22,7 @@ Aufgerufen von:
 from __future__ import annotations
 
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -47,6 +52,10 @@ LLM_CONFIG_FILES: dict[str, str] = {
     "Cursor":         ".cursorrules",
     "Cline":          ".clinerules",
     "GitHub Copilot": ".github/copilot-instructions.md",
+    "Windsurf":       ".windsurfrules",
+    "Aider":          "CONVENTIONS.md",
+    "Gemini CLI":     "GEMINI.md",
+    "OpenHands":      "AGENTS.md",
 }
 
 # Pfad zu den kanonischen Templates (relativ zu diesem Skript)
@@ -58,6 +67,10 @@ _TEMPLATES: dict[str, str] = {
     "Cursor":         "cursorrules",
     "Cline":          "clinerules",
     "GitHub Copilot": "copilot-instructions.md",
+    "Windsurf":       "windsurfrules",
+    "Aider":          "CONVENTIONS.md",
+    "Gemini CLI":     "GEMINI.md",
+    "OpenHands":      "AGENTS.md",
 }
 
 # ---------------------------------------------------------------------------
@@ -78,12 +91,28 @@ class ConfigFileResult:
 
 
 @dataclass
+class SkeletonResult:
+    skeleton_path: Path
+    exists: bool
+    stale: bool = False
+    newest_py: Optional[Path] = None
+    age_seconds: int = 0   # wie viele Sekunden ist skeleton älter als neueste .py
+
+    @property
+    def ok(self) -> bool:
+        return self.exists and not self.stale
+
+
+@dataclass
 class GuardResult:
     results: list[ConfigFileResult] = field(default_factory=list)
+    skeleton: Optional[SkeletonResult] = None
 
     @property
     def all_ok(self) -> bool:
-        return all(r.ok for r in self.results)
+        config_ok = all(r.ok for r in self.results)
+        skel_ok = self.skeleton.ok if self.skeleton else True
+        return config_ok and skel_ok
 
     @property
     def failures(self) -> list[ConfigFileResult]:
@@ -92,10 +121,48 @@ class GuardResult:
 
 
 # ---------------------------------------------------------------------------
+# Skeleton-Staleness
+# ---------------------------------------------------------------------------
+
+def check_skeleton_fresh(project_root: Path) -> SkeletonResult:
+    """
+    Prüft ob repo_skeleton.md neuer ist als die zuletzt geänderte .py-Datei.
+    Ignoriert: migrations/, __pycache__/, .git/, venv/, node_modules/
+    """
+    skeleton = project_root / "repo_skeleton.md"
+    if not skeleton.exists():
+        return SkeletonResult(skeleton_path=skeleton, exists=False)
+
+    skel_mtime = skeleton.stat().st_mtime
+
+    _IGNORE_DIRS = {"__pycache__", ".git", "venv", ".venv", "node_modules", "migrations"}
+    newest_mtime = 0.0
+    newest_path: Optional[Path] = None
+
+    for py in project_root.rglob("*.py"):
+        if any(part in _IGNORE_DIRS for part in py.parts):
+            continue
+        mtime = py.stat().st_mtime
+        if mtime > newest_mtime:
+            newest_mtime = mtime
+            newest_path = py
+
+    stale = newest_mtime > skel_mtime
+    age = int(newest_mtime - skel_mtime) if stale else 0
+    return SkeletonResult(
+        skeleton_path=skeleton,
+        exists=True,
+        stale=stale,
+        newest_py=newest_path,
+        age_seconds=age,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Kern-Logik
 # ---------------------------------------------------------------------------
 
-def check(project_root: Path) -> GuardResult:
+def check(project_root: Path, check_skeleton: bool = True) -> GuardResult:
     """
     Prüft alle bekannten LLM-Config-Dateien im project_root.
     Gibt GuardResult zurück — auch wenn Dateien nicht existieren.
@@ -116,6 +183,10 @@ def check(project_root: Path) -> GuardResult:
         result.results.append(ConfigFileResult(
             name=name, path=abs_path, exists=True, missing_markers=missing
         ))
+
+    if check_skeleton:
+        result.skeleton = check_skeleton_fresh(project_root)
+
     return result
 
 
@@ -223,6 +294,14 @@ def _build_minimal_block(missing_markers: list[str]) -> str:
 # CLI
 # ---------------------------------------------------------------------------
 
+def _fmt_age(seconds: int) -> str:
+    if seconds < 60:
+        return f"{seconds}s"
+    if seconds < 3600:
+        return f"{seconds // 60}min"
+    return f"{seconds // 3600}h {(seconds % 3600) // 60}min"
+
+
 def _print_result(result: GuardResult, verbose: bool = False) -> None:
     for r in result.results:
         if not r.exists:
@@ -235,6 +314,17 @@ def _print_result(result: GuardResult, verbose: bool = False) -> None:
             print(f"  ❌ {r.name}: fehlende Pflichtabschnitte:")
             for m in r.missing_markers:
                 print(f"       – {m!r}")
+
+    if result.skeleton is not None:
+        s = result.skeleton
+        if not s.exists:
+            print("  ⚠️  repo_skeleton.md: nicht vorhanden")
+            print("       → python3 agent_start.py --build-skeleton ausführen")
+        elif s.stale:
+            print(f"  ⚠️  repo_skeleton.md: veraltet ({_fmt_age(s.age_seconds)} hinter {s.newest_py.name if s.newest_py else '?'})")
+            print("       → python3 agent_start.py --build-skeleton ausführen")
+        else:
+            print("  ✅ repo_skeleton.md: aktuell")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -262,13 +352,24 @@ def main(argv: list[str] | None = None) -> int:
             for p in repaired:
                 print(f"  🔧 {p}")
             print(f"\n✅ {len(repaired)} Datei(en) repariert.\n")
+        # Skeleton-Warnung auch im repair-Modus ausgeben (nicht blockierend)
+        if result.skeleton and result.skeleton.stale:
+            print("  ⚠️  Skeleton ist veraltet — bitte neu bauen:")
+            print("      python3 agent_start.py --build-skeleton\n")
         return 0
 
-    failures = len(result.failures)
-    print(f"\n❌ {failures} LLM-Config-Datei(en) mit fehlenden Pflichtabschnitten.")
-    print("   → Ausführen mit --repair um fehlende Abschnitte zu ergänzen.")
-    print("   → Ausführen mit --repair --create um fehlende Dateien aus Template zu erstellen.\n")
-    return 1
+    # Config-Fehler blockieren Commit; veraltetes Skeleton nur Warnung
+    config_failures = len(result.failures)
+    if config_failures:
+        print(f"\n❌ {config_failures} LLM-Config-Datei(en) mit fehlenden Pflichtabschnitten.")
+        print("   → Ausführen mit --repair um fehlende Abschnitte zu ergänzen.")
+        print("   → Ausführen mit --repair --create um fehlende Dateien aus Template zu erstellen.\n")
+        return 1
+
+    # Nur Skeleton veraltet → exit 0 (Warnung reicht, kein Commit-Block)
+    print("\n⚠️  repo_skeleton.md ist veraltet.")
+    print("   → python3 agent_start.py --build-skeleton ausführen\n")
+    return 0
 
 
 if __name__ == "__main__":

@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4229,
-    "size_kb": 151,
+    "lines": 4243,
+    "size_kb": 152,
     "symbols": [
       {
         "type": "function",
@@ -496,19 +496,19 @@
       {
         "type": "function",
         "name": "cmd_doctor",
-        "lines": "3675-3809",
+        "lines": "3675-3823",
         "signature": "def cmd_doctor() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "3816-4011",
+        "lines": "3830-4025",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "4014-4225",
+        "lines": "4028-4239",
         "signature": "def main():"
       },
       {
@@ -526,19 +526,19 @@
       {
         "type": "function",
         "name": "_ask",
-        "lines": "3820-3823",
+        "lines": "3834-3837",
         "signature": "def _ask(prompt: str, default: str = \"\") -> str:"
       },
       {
         "type": "function",
         "name": "_api_get_raw",
-        "lines": "3825-3832",
+        "lines": "3839-3846",
         "signature": "def _api_get_raw(url, user, token, path):"
       },
       {
         "type": "function",
         "name": "_api_post_raw",
-        "lines": "3834-3844",
+        "lines": "3848-3858",
         "signature": "def _api_post_raw(url, user, token, path, data: dict):"
       },
       {
@@ -1165,79 +1165,103 @@
   {
     "path": "plugins/llm_config_guard.py",
     "truncated": false,
-    "lines": 275,
-    "size_kb": 10,
+    "lines": 376,
+    "size_kb": 13,
     "symbols": [
       {
         "type": "class",
         "name": "ConfigFileResult",
-        "lines": "68-77",
+        "lines": "81-90",
         "signature": "class ConfigFileResult:"
       },
       {
         "type": "class",
+        "name": "SkeletonResult",
+        "lines": "94-103",
+        "signature": "class SkeletonResult:"
+      },
+      {
+        "type": "class",
         "name": "GuardResult",
-        "lines": "81-91",
+        "lines": "107-120",
         "signature": "class GuardResult:"
       },
       {
         "type": "function",
+        "name": "check_skeleton_fresh",
+        "lines": "127-158",
+        "signature": "def check_skeleton_fresh(project_root: Path) -> SkeletonResult:"
+      },
+      {
+        "type": "function",
         "name": "check",
-        "lines": "98-119",
-        "signature": "def check(project_root: Path) -> GuardResult:"
+        "lines": "165-190",
+        "signature": "def check(project_root: Path, check_skeleton: bool = True) -> GuardResult:"
       },
       {
         "type": "function",
         "name": "repair",
-        "lines": "122-169",
+        "lines": "193-240",
         "signature": "def repair(project_root: Path, create_missing: bool = False) -> list[str]:"
       },
       {
         "type": "function",
         "name": "_extract_missing_sections",
-        "lines": "172-203",
+        "lines": "243-274",
         "signature": "def _extract_missing_sections("
       },
       {
         "type": "function",
         "name": "_build_minimal_block",
-        "lines": "206-219",
+        "lines": "277-290",
         "signature": "def _build_minimal_block(missing_markers: list[str]) -> str:"
       },
       {
         "type": "function",
+        "name": "_fmt_age",
+        "lines": "297-302",
+        "signature": "def _fmt_age(seconds: int) -> str:"
+      },
+      {
+        "type": "function",
         "name": "_print_result",
-        "lines": "226-237",
+        "lines": "305-327",
         "signature": "def _print_result(result: GuardResult, verbose: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "240-271",
+        "lines": "330-372",
         "signature": "def main(argv: list[str] | None = None) -> int:"
       },
       {
         "type": "function",
         "name": "ok",
-        "lines": "75-77",
+        "lines": "88-90",
+        "signature": "def ok(self) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "ok",
+        "lines": "102-103",
         "signature": "def ok(self) -> bool:"
       },
       {
         "type": "function",
         "name": "all_ok",
-        "lines": "85-86",
+        "lines": "112-115",
         "signature": "def all_ok(self) -> bool:"
       },
       {
         "type": "function",
         "name": "failures",
-        "lines": "89-91",
+        "lines": "118-120",
         "signature": "def failures(self) -> list[ConfigFileResult]:"
       },
       {
         "type": "function",
         "name": "_flush",
-        "lines": "184-193",
+        "lines": "255-264",
         "signature": "def _flush():"
       }
     ]
