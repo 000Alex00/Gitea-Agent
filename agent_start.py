@@ -325,7 +325,7 @@ def print_context(issue: dict) -> None:
 
 def _context_dir() -> Path:
     """
-    Gibt den Pfad zum contexts/-Verzeichnis zurück.
+    Gibt den Pfad zum workspace/-Verzeichnis zurück.
 
     Relativ → wird relativ zu agent_start.py aufgelöst.
     Absolut → wird direkt verwendet.
@@ -339,7 +339,7 @@ def _context_dir() -> Path:
 def _issue_dir(issue: dict) -> Path:
     """Gibt den Issue-Unterordner zurück und erstellt ihn falls nötig.
 
-    Format: contexts/open/{num}-{typ}/  z.B. contexts/open/32-feature_request/
+    Format: workspace/open/{num}-{typ}/  z.B. workspace/open/32-feature_request/
     """
     d = _context_dir() / "open" / f"{issue['number']}-{issue_type(issue)}"
     d.mkdir(parents=True, exist_ok=True)
@@ -349,7 +349,7 @@ def _issue_dir(issue: dict) -> Path:
 def _find_issue_dir(number: int) -> Path | None:
     """Findet den Issue-Ordner anhand der Nummer (Typ unbekannt → glob).
 
-    Sucht zuerst in contexts/open/, dann direkt in contexts/ (Fallback für alte Struktur).
+    Sucht zuerst in workspace/open/, dann direkt in workspace/ (Fallback für alte Struktur).
     """
     matches = list((_context_dir() / "open").glob(f"{number}-*"))
     if matches:
@@ -370,7 +370,7 @@ def save_plan_context(issue: dict) -> Path:
     """
     Speichert einen kompakten Kontext für die Plan-Phase.
 
-    Erstellt contexts/{num}-{typ}/starter.md mit Status ⏳.
+    Erstellt workspace/{num}-{typ}/starter.md mit Status ⏳.
     Kein Quellcode — nur Metadaten für den Plan-Schritt.
 
     Args:
@@ -467,8 +467,8 @@ def save_implement_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:
     Speichert Kontext + Quellcode für die Implementierungs-Phase.
 
     Erstellt:
-        contexts/{num}-{typ}/starter.md — Metadaten, Status 🔧 READY
-        contexts/{num}-{typ}/files.md   — Quellcode (max settings.MAX_FILE_LINES pro Datei)
+        workspace/{num}-{typ}/starter.md — Metadaten, Status 🔧 READY
+        workspace/{num}-{typ}/files.md   — Quellcode (max settings.MAX_FILE_LINES pro Datei)
 
     Args:
         issue:      Issue-dict aus Gitea API
@@ -606,9 +606,9 @@ _EXCLUDE_DIRS_DEFAULT = {
     "vendor",
     "llama-cpp-python-build",
     "agent",
-    "contexts",
+    "workspace",
     ".claude",
-    "Documentation",
+    "docs",
     ".mypy_cache",
     ".pytest_cache",
     "dist",
@@ -1445,7 +1445,7 @@ def _validate_pr_completion(
         log.warning(f"Label-Prüfung fehlgeschlagen: {e}")
 
     if not idir_moved:
-        fehlend.append("Context-Ordner nicht verschoben (contexts/ → contexts/done/)")
+        fehlend.append("Context-Ordner nicht verschoben (workspace/ → workspace/done/)")
 
     if fehlend:
         warnung = (
@@ -1736,7 +1736,7 @@ def cmd_implement(number: int) -> None:
 
 ## Nächste Schritte
 - Branch auschecken: `git checkout {branch}`
-- Kontext lesen: `contexts/{num}-{typ}/starter.md`
+- Kontext lesen: `workspace/{num}-{typ}/starter.md`
 - Implementieren + nach jeder Datei committen
 - PR erstellen: `python3 agent_start.py --pr {num} --branch {branch} --summary "..."`
 """,
@@ -1852,7 +1852,7 @@ Implementierung für Issue #{number}.
 ## Issue
 {gitea.GITEA_URL}/{gitea.REPO}/issues/{number}
 """
-    # Prüfen ob Documentation/ seit Abzweig von main aktualisiert wurde
+    # Prüfen ob docs/ seit Abzweig von main aktualisiert wurde
     docs_warning = ""
     changed = []
     try:
@@ -1865,14 +1865,14 @@ Implementierung für Issue #{number}.
             .decode()
             .splitlines()
         )
-        code_changed = [f for f in changed if not f.startswith("Documentation/")]
-        docs_changed = [f for f in changed if f.startswith("Documentation/")]
+        code_changed = [f for f in changed if not f.startswith("docs/")]
+        docs_changed = [f for f in changed if f.startswith("docs/")]
         if code_changed and not docs_changed:
-            log.warning("Code geändert aber Documentation/ nicht aktualisiert")
+            log.warning("Code geändert aber docs/ nicht aktualisiert")
             print(
-                "[!] Warnung: Code geändert aber keine Documentation/*.md aktualisiert."
+                "[!] Warnung: Code geändert aber keine docs/*.md aktualisiert."
             )
-            docs_warning = "\n> ⚠️ **Hinweis:** `Documentation/` wurde nicht aktualisiert — bitte vor dem Merge nachholen."
+            docs_warning = "\n> ⚠️ **Hinweis:** `docs/` wurde nicht aktualisiert — bitte vor dem Merge nachholen."
     except Exception:
         pass
 
@@ -1959,7 +1959,7 @@ Implementierung für Issue #{number}.
         f"{history_block}\n\n"
         f"**Neustart erforderlich:** {_neustart_required(changed)}\n\n"
         f"**Nächster Schritt:** {settings.COMPLETION_NEXT_STEP}\n"
-        f"- Bei Revert: `Documentation/` synchron zurücksetzen"
+        f"- Bei Revert: `docs/` synchron zurücksetzen"
         f"{metadata}"
     )
     comment = gitea.post_comment(number, abschluss)
@@ -2501,7 +2501,7 @@ def _build_metadata(
 
 
 def _session_path() -> Path:
-    """Gibt den Pfad zur session.json zurück (neu: agent/data/, Fallback: contexts/)."""
+    """Gibt den Pfad zur session.json zurück (neu: agent/data/, Fallback: workspace/)."""
     return settings.SESSION_FILE_PATH
 
 
@@ -3449,7 +3449,7 @@ def cmd_auto() -> None:
     print("=" * 70)
     log.info("Auto-Scan gestartet")
 
-    # Aufräumen: geschlossene Issues → contexts/done/
+    # Aufräumen: geschlossene Issues → workspace/done/
     contexts = _context_dir()
     if contexts.exists():
         for idir in contexts.iterdir():
@@ -3460,8 +3460,8 @@ def cmd_auto() -> None:
                 issue = gitea.get_issue(num)
                 if issue.get("state") == "closed":
                     shutil.move(str(idir), str(_done_dir() / idir.name))
-                    log.info(f"Issue #{num} geschlossen → contexts/done/{idir.name}/")
-                    print(f"[✓] Issue #{num} geschlossen → contexts/done/{idir.name}/")
+                    log.info(f"Issue #{num} geschlossen → workspace/done/{idir.name}/")
+                    print(f"[✓] Issue #{num} geschlossen → workspace/done/{idir.name}/")
             except Exception:
                 pass
 

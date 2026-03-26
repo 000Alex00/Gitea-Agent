@@ -1,1 +1,0 @@
-scripts/stop_agent.sh

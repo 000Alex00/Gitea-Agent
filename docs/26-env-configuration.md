@@ -1,0 +1,262 @@
+## .env-Konfiguration (Field-Referenz)
+
+Alle Umgebungsvariablen erklärt.
+
+---
+
+### Voraussetzungen
+
+> [!IMPORTANT]
+> - Basis-Setup durchgeführt ([Rezept 02](02-first-setup.md))
+
+---
+
+### Problem
+
+Du willst wissen: welche .env-Felder gibt es? Was ist optional?
+
+---
+
+### Lösung
+
+```bash
+# ──────────────────────────────────────────────────────────
+# ~/mein-projekt/.env
+# ──────────────────────────────────────────────────────────
+
+# ══════════════════════════════════════════════════════════
+# PFLICHTFELDER
+# ══════════════════════════════════════════════════════════
+
+# Gitea-Server-URL (ohne trailing slash)
+GITEA_URL=https://gitea.example.com
+
+# Gitea-API-Token (Scopes: repo, write:issue, write:pull_request)
+GITEA_TOKEN=abc123def456...
+
+# LLM-API-Endpunkt (OpenAI-kompatibel)
+LLM_API_URL=http://localhost:8000/v1/chat/completions
+
+# (Optional) LLM-API-Key (falls Server authentifiziert)
+LLM_API_KEY=sk-...
+
+# ══════════════════════════════════════════════════════════
+# REPOSITORY-KONFIGURATION
+# ══════════════════════════════════════════════════════════
+
+# Gitea-Repo (Format: owner/repo)
+GITEA_REPO=myuser/my-project
+
+# Lokaler Repo-Pfad (absolut)
+PROJECT_PATH=/home/user/my-project
+
+# ══════════════════════════════════════════════════════════
+# WATCH-MODUS
+# ══════════════════════════════════════════════════════════
+
+# Eval-Intervall (Sekunden)
+EVAL_INTERVAL=3600
+
+# Night-Modus aktivieren (nur low-risk Issues)
+NIGHT_MODE=false
+
+# Consecutive-Pass-Gate (Issue-Schließ-Schwelle)
+CONSECUTIVE_PASSES=2
+
+# ══════════════════════════════════════════════════════════
+# LLM-PARAMETER
+# ══════════════════════════════════════════════════════════
+
+# Model-Name (für API-Request)
+LLM_MODEL=gpt-4
+
+# Temperature (0.0-2.0, höher = kreativer)
+LLM_TEMPERATURE=0.7
+
+# Max-Tokens (Response-Länge)
+LLM_MAX_TOKENS=2048
+
+# Context-Window (Input-Limit)
+LLM_CONTEXT_WINDOW=8192
+
+# ══════════════════════════════════════════════════════════
+# LABELS & WORKFLOW
+# ══════════════════════════════════════════════════════════
+
+# Label-Präfix für Agent-Issues
+LABEL_PREFIX=agent
+
+# Auto-Merge aktivieren (VORSICHT!)
+AUTO_MERGE=false
+
+# Branch-Präfix für Agent-Branches
+BRANCH_PREFIX=agent
+
+# ══════════════════════════════════════════════════════════
+# EVAL-KONFIGURATION
+# ══════════════════════════════════════════════════════════
+
+# Pfad zu agent_eval.json (relativ zu PROJECT_PATH)
+EVAL_CONFIG=agent/config/agent_eval.json
+
+# Baseline-Datei (relativ zu PROJECT_PATH)
+BASELINE_FILE=agent/data/baseline.json
+
+# Score-History (relativ zu PROJECT_PATH)
+SCORE_HISTORY=agent/data/score_history.json
+
+# ══════════════════════════════════════════════════════════
+# ERWEITERTE FEATURES
+# ══════════════════════════════════════════════════════════
+
+# AST-Skeleton aktivieren
+USE_SKELETON=true
+
+# Skeleton-Datei (relativ zu PROJECT_PATH)
+SKELETON_FILE=agent/data/repo_skeleton.json
+
+# Diff-Validation (strict / warn / off)
+DIFF_VALIDATION=warn
+
+# Tag-Aggregation aktivieren
+TAG_AGGREGATION=true
+
+# Tag-Threshold (AnzahlFailedTests für Meta-Issue)
+TAG_THRESHOLD=3
+
+# Version-Compare aktivieren
+VERSION_COMPARE=true
+
+# Staleness-Check aktivieren
+STALENESS_CHECK=true
+
+# Staleness-Intervall (Sekunden)
+STALENESS_INTERVAL=7200
+
+# ══════════════════════════════════════════════════════════
+# LOGGING
+# ══════════════════════════════════════════════════════════
+
+# Log-Level (DEBUG / INFO / WARNING / ERROR)
+LOG_LEVEL=INFO
+
+# Log-Datei (relativ zu PROJECT_PATH)
+LOG_FILE=agent/data/agent.log
+
+# Log-Rotation (MB)
+LOG_MAX_SIZE=10
+
+# Log-Backup-Count
+LOG_BACKUP_COUNT=5
+
+# ══════════════════════════════════════════════════════════
+# NETZWERK
+# ══════════════════════════════════════════════════════════
+
+# HTTP-Timeout (Sekunden)
+HTTP_TIMEOUT=30
+
+# Retry-Count (bei Netzwerkfehlern)
+HTTP_RETRIES=3
+
+# Retry-Delay (Sekunden)
+HTTP_RETRY_DELAY=5
+```
+
+---
+
+### Erklärung
+
+**Feld-Kategorien:**
+
+### Pflichtfelder
+- `GITEA_URL`, `GITEA_TOKEN`, `LLM_API_URL`
+- Agent startet nicht ohne diese
+
+### Watch-Modus
+- `EVAL_INTERVAL`: Wie oft Eval läuft
+- `NIGHT_MODE`: Filter auf low-risk Issues
+- `CONSECUTIVE_PASSES`: Stabilität vor Issue-Close
+
+### LLM-Parameter
+- `LLM_TEMPERATURE`: Kreativität (0.0 = deterministisch, 2.0 = chaotisch)
+- `LLM_MAX_TOKENS`: Längere Responses = mehr Tokens/Kosten
+- `LLM_CONTEXT_WINDOW`: Model-abhängig (GPT-4: 8k/32k, Llama-2: 4k)
+
+### Features
+- `USE_SKELETON`: Token-Reduktion ([Rezept 20](20-ast-skeleton.md))
+- `TAG_AGGREGATION`: Mehrere Failures → 1 Issue ([Rezept 18](18-tag-aggregation.md))
+- `VERSION_COMPARE`: Code-Diff bei Regression ([Rezept 24](24-gitea-version-compare.md))
+
+---
+
+### Best Practice
+
+> [!TIP]
+> **.env.template versionieren:**
+> ```bash
+> # ~/mein-projekt/.env.template
+> GITEA_URL=https://gitea.example.com
+> GITEA_TOKEN=<your_token>
+> LLM_API_URL=http://localhost:8000/v1/chat/completions
+> 
+> # .gitignore
+> .env
+> ```
+
+> [!TIP]
+> **Multi-Environment Setup:**
+> ```bash
+> .env.dev
+> .env.staging
+> .env.prod
+> 
+> # Laden:
+> python3 agent_start.py --env-file .env.staging
+> ```
+
+> [!TIP]
+> **Validierung mit --doctor:**
+> ```bash
+> python3 agent_start.py --project ~/proj --doctor
+> # [✓] .env vorhanden
+> # [✓] GITEA_TOKEN gültig
+> # [✓] LLM_API_URL erreichbar
+> # [✗] PROJECT_PATH existiert nicht
+> ```
+
+---
+
+### Warnung
+
+> [!WARNING]
+> **.env in .gitignore:**
+> ```
+> ✗ .env committed → Tokens öffentlich
+> ✓ .env.template committed → Struktur dokumentiert
+> ```
+
+> [!WARNING]
+> **AUTO_MERGE=true:**
+> ```
+> Agent merged PRs ohne Review
+> → Breaking Changes in main
+> → NUR für Repos ohne Prod-Traffic
+> ```
+
+> [!WARNING]
+> **LLM_CONTEXT_WINDOW zu klein:**
+> ```
+> LLM_CONTEXT_WINDOW=2048
+> Agent sendet 4096 Tokens
+> → API-Error: Context length exceeded
+> ```
+
+---
+
+### Nächste Schritte
+
+✅ .env-Felder verstanden  
+→ [27 — agent_eval.json-Referenz](27-eval-json-reference.md)  
+→ [28 — Labels und Workflow](28-labels-and-workflow.md)  
+→ [04 — Health-Check](04-health-check.md)

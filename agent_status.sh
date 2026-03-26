@@ -1,1 +1,0 @@
-scripts/agent_status.sh

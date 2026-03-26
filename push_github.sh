@@ -1,1 +1,0 @@
-scripts/push_github.sh

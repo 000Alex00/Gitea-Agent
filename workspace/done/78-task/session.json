@@ -1,0 +1,36 @@
+{
+  "slices_requested": [
+    {
+      "spec": "agent_start.py:2053-2169",
+      "timestamp": "2026-03-25T15:55:52.114827"
+    },
+    {
+      "spec": "agent_start.py:2285-2320",
+      "timestamp": "2026-03-25T15:55:52.463815"
+    },
+    {
+      "spec": "agent_start.py:657-679",
+      "timestamp": "2026-03-25T15:55:56.260271"
+    },
+    {
+      "spec": "agent_start.py:739-758",
+      "timestamp": "2026-03-25T15:55:56.528277"
+    },
+    {
+      "spec": "agent_start.py:95-217",
+      "timestamp": "2026-03-25T15:56:06.306020"
+    },
+    {
+      "spec": "agent_start.py:1412-1435",
+      "timestamp": "2026-03-25T15:56:06.729948"
+    },
+    {
+      "spec": "agent_start.py:2043-2052",
+      "timestamp": "2026-03-25T15:56:13.086941"
+    },
+    {
+      "spec": "agent_start.py:2227-2244",
+      "timestamp": "2026-03-25T15:56:13.809315"
+    }
+  ]
+}

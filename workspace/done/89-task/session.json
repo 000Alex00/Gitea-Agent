@@ -1,0 +1,16 @@
+{
+  "slices_requested": [
+    {
+      "spec": "evaluation.py:353-520",
+      "timestamp": "2026-03-26T20:23:09.621736"
+    },
+    {
+      "spec": "evaluation.py:1-45",
+      "timestamp": "2026-03-26T20:23:19.311666"
+    },
+    {
+      "spec": "agent_eval.template.json:1-50",
+      "timestamp": "2026-03-26T20:23:36.425912"
+    }
+  ]
+}
