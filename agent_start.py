@@ -3101,11 +3101,16 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
 
     while True:
         ts = time.strftime("%H:%M:%S")
-        print(f"[{ts}] Eval läuft...")
 
         try:
-            result = evaluation.run(PROJECT, trigger="watch")
-            print(evaluation.format_terminal(result))
+            if not settings.FEATURES.get("eval", True):
+                print(f"[{ts}] Eval deaktiviert (project.json: eval=false) — übersprungen")
+                result = evaluation.EvalResult()
+                result.skipped = True
+            else:
+                print(f"[{ts}] Eval läuft...")
+                result = evaluation.run(PROJECT, trigger="watch")
+                print(evaluation.format_terminal(result))
 
             if not result.skipped and not result.warned:
                 try:
@@ -3113,11 +3118,13 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
                 except Exception as e:
                     pass
 
-                if not patch_mode:
+                if not patch_mode and settings.FEATURES.get("auto_issues", True):
                     _close_resolved_auto_issues(result)
 
                 for t in result.all_tests:
                     if patch_mode:
+                        continue
+                    if not settings.FEATURES.get("auto_issues", True):
                         continue
                     if t.skipped:
                         continue
@@ -3543,6 +3550,16 @@ def cmd_doctor() -> None:
             print(f"       → {c['fix']}")
     print(f"{'─' * 60}")
     print(f"  ✅ {summary['ok']}  ⚠️  {summary['warn']}  ❌ {summary['fail']}")
+
+    # Feature-Flags anzeigen
+    feat_on  = [k for k, v in settings.FEATURES.items() if v]
+    feat_off = [k for k, v in settings.FEATURES.items() if not v]
+    if feat_off:
+        print(f"\n  Features aktiv:      {', '.join(feat_on)}")
+        print(f"  Features deaktiviert: {', '.join(feat_off)}")
+    else:
+        print(f"\n  Features: alle aktiv ({', '.join(feat_on)})")
+    print(f"  Projekttyp: {settings.PROJECT_TYPE}")
     print()
 
     # Ergebnis speichern
@@ -3711,6 +3728,50 @@ def cmd_setup() -> None:
         print("  ⚠️  .env enthält Secrets — nicht in Git commiten!\n")
     else:
         print("  Übersprungen\n")
+
+    # ── Schritt 7: Projekttyp + Feature-Flags ──────────────────────
+    print("Schritt 7/7 — Projekttyp & Feature-Flags\n")
+    print("  Projekttypen:")
+    print("    1) web_api    — REST-API / Web-Server")
+    print("    2) llm_chat   — LLM-Chat mit Eval-Tests")
+    print("    3) cli_tool   — Kommandozeilen-Tool")
+    print("    4) library    — Python-Bibliothek")
+    print("    5) custom     — Eigene Konfiguration")
+    type_map = {"1": "web_api", "2": "llm_chat", "3": "cli_tool", "4": "library", "5": "custom"}
+    type_choice = _ask("Projekttyp (1-5)", "1")
+    proj_type = type_map.get(type_choice, "custom")
+
+    feature_defaults = {
+        "web_api":  {"eval": True,  "health_checks": True,  "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
+        "llm_chat": {"eval": True,  "health_checks": True,  "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
+        "cli_tool": {"eval": False, "health_checks": False, "auto_issues": True,  "changelog": True, "watch": False, "pr_workflow": True},
+        "library":  {"eval": False, "health_checks": False, "auto_issues": True,  "changelog": True, "watch": False, "pr_workflow": True},
+        "custom":   {"eval": True,  "health_checks": False, "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
+    }
+    features = feature_defaults.get(proj_type, feature_defaults["custom"])
+    print(f"\n  Voreinstellungen für '{proj_type}':")
+    for k, v in features.items():
+        print(f"    {k:<15} {'✅ aktiv' if v else '❌ deaktiviert'}")
+
+    confirm = _ask("\n  Features übernehmen? (ja/nein)", "ja")
+    if confirm.lower() not in ("ja", "j", "yes", "y"):
+        print("  Manuelle Konfiguration: project.json nach agent/config/ kopieren und anpassen.")
+    else:
+        project_json = {
+            "type": proj_type,
+            "features": features,
+        }
+        agent_config = Path(project_root) / "agent" / "config"
+        agent_config.mkdir(parents=True, exist_ok=True)
+        proj_file = agent_config / "project.json"
+        if proj_file.exists():
+            overwrite = _ask(f"  project.json existiert bereits. Überschreiben? (ja/nein)", "nein")
+            if overwrite.lower() not in ("ja", "j", "yes", "y"):
+                print("  Übersprungen\n")
+                proj_file = None
+        if proj_file:
+            proj_file.write_text(json.dumps(project_json, indent=4, ensure_ascii=False), encoding="utf-8")
+            print(f"  ✅ project.json geschrieben: {proj_file}\n")
 
     # ── Health-Check zum Abschluss ────────────────────────────────
     print(f"{'═' * 60}")

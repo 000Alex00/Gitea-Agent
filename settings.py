@@ -250,6 +250,48 @@ Falls etwas fehlt: im Issue nachfragen, nicht raten.
 # Output-Validierung (Issue #8)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Feature-Flags: aus agent/config/project.json oder alle aktiv (Fallback)
+# ---------------------------------------------------------------------------
+
+def _load_features() -> dict:
+    """Lädt Feature-Flags aus project.json — fehlende Einträge → True (aktiv)."""
+    import json
+    defaults = {
+        "eval": True, "health_checks": False, "auto_issues": True,
+        "changelog": True, "watch": True, "pr_workflow": True,
+    }
+    config_path = (
+        (_AGENT_DIR / "config" / "project.json") if _AGENT_DIR
+        else (_HERE_SETTINGS / "agent" / "config" / "project.json")
+    )
+    if config_path and config_path.exists():
+        try:
+            data = json.loads(config_path.read_text(encoding="utf-8"))
+            flags = data.get("features", {})
+            defaults.update({k: v for k, v in flags.items() if k in defaults})
+        except Exception:
+            pass
+    return defaults
+
+FEATURES: dict[str, bool] = _load_features()
+PROJECT_TYPE: str = "custom"
+
+def _load_project_type() -> str:
+    import json
+    config_path = (
+        (_AGENT_DIR / "config" / "project.json") if _AGENT_DIR
+        else (_HERE_SETTINGS / "agent" / "config" / "project.json")
+    )
+    if config_path and config_path.exists():
+        try:
+            return json.loads(config_path.read_text(encoding="utf-8")).get("type", "custom")
+        except Exception:
+            pass
+    return "custom"
+
+PROJECT_TYPE = _load_project_type()
+
 # Pflichtfelder pro Kommentar-Typ — _validate_comment() prüft ob alle enthalten
 COMMENT_REQUIRED_FIELDS: dict[str, list[str]] = {
     "plan":       ["Risikostufe", "Betroffene Dateien", "OK zum Implementieren?"],

@@ -1,0 +1,14 @@
+{
+    "_comment": "Vorlage für project.json — nach agent/config/project.json kopieren und anpassen",
+    "type": "web_api",
+    "_comment_type": "Projekttyp: web_api | cli_tool | llm_chat | library | custom",
+    "features": {
+        "eval":         true,
+        "health_checks": false,
+        "auto_issues":  true,
+        "changelog":    true,
+        "watch":        true,
+        "pr_workflow":  true
+    },
+    "_comment_features": "Fehlende project.json oder fehlende Einträge → alle Features aktiv (Rückwärtskompatibilität)"
+}
