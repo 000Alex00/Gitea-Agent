@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4302 Zeilen)*
+## agent_start.py  *(4206 Zeilen)*
 
 - **Funktion** `_project_root` Zeilen 70-92
   `def _project_root() -> Path:`
@@ -167,9 +167,9 @@
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
 - **Funktion** `cmd_doctor` Zeilen 3675-3786
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 3793-4084
+- **Funktion** `cmd_setup` Zeilen 3793-3988
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4087-4298
+- **Funktion** `main` Zeilen 3991-4202
   `def main():`
 - **Funktion** `_sym_map` Zeilen 2959-2961
   `def _sym_map(content: str) -> dict[str, dict]:`
