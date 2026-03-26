@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4206,
-    "size_kb": 150,
+    "lines": 4229,
+    "size_kb": 151,
     "symbols": [
       {
         "type": "function",
@@ -496,19 +496,19 @@
       {
         "type": "function",
         "name": "cmd_doctor",
-        "lines": "3675-3786",
+        "lines": "3675-3809",
         "signature": "def cmd_doctor() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "3793-3988",
+        "lines": "3816-4011",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "3991-4202",
+        "lines": "4014-4225",
         "signature": "def main():"
       },
       {
@@ -526,19 +526,19 @@
       {
         "type": "function",
         "name": "_ask",
-        "lines": "3797-3800",
+        "lines": "3820-3823",
         "signature": "def _ask(prompt: str, default: str = \"\") -> str:"
       },
       {
         "type": "function",
         "name": "_api_get_raw",
-        "lines": "3802-3809",
+        "lines": "3825-3832",
         "signature": "def _api_get_raw(url, user, token, path):"
       },
       {
         "type": "function",
         "name": "_api_post_raw",
-        "lines": "3811-3821",
+        "lines": "3834-3844",
         "signature": "def _api_post_raw(url, user, token, path, data: dict):"
       },
       {
@@ -1161,6 +1161,86 @@
     "lines": 0,
     "size_kb": 0,
     "symbols": []
+  },
+  {
+    "path": "plugins/llm_config_guard.py",
+    "truncated": false,
+    "lines": 275,
+    "size_kb": 10,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "ConfigFileResult",
+        "lines": "68-77",
+        "signature": "class ConfigFileResult:"
+      },
+      {
+        "type": "class",
+        "name": "GuardResult",
+        "lines": "81-91",
+        "signature": "class GuardResult:"
+      },
+      {
+        "type": "function",
+        "name": "check",
+        "lines": "98-119",
+        "signature": "def check(project_root: Path) -> GuardResult:"
+      },
+      {
+        "type": "function",
+        "name": "repair",
+        "lines": "122-169",
+        "signature": "def repair(project_root: Path, create_missing: bool = False) -> list[str]:"
+      },
+      {
+        "type": "function",
+        "name": "_extract_missing_sections",
+        "lines": "172-203",
+        "signature": "def _extract_missing_sections("
+      },
+      {
+        "type": "function",
+        "name": "_build_minimal_block",
+        "lines": "206-219",
+        "signature": "def _build_minimal_block(missing_markers: list[str]) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_print_result",
+        "lines": "226-237",
+        "signature": "def _print_result(result: GuardResult, verbose: bool = False) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "main",
+        "lines": "240-271",
+        "signature": "def main(argv: list[str] | None = None) -> int:"
+      },
+      {
+        "type": "function",
+        "name": "ok",
+        "lines": "75-77",
+        "signature": "def ok(self) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "all_ok",
+        "lines": "85-86",
+        "signature": "def all_ok(self) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "failures",
+        "lines": "89-91",
+        "signature": "def failures(self) -> list[ConfigFileResult]:"
+      },
+      {
+        "type": "function",
+        "name": "_flush",
+        "lines": "184-193",
+        "signature": "def _flush():"
+      }
+    ]
   },
   {
     "path": "plugins/healing.py",

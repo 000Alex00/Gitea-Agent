@@ -3743,6 +3743,29 @@ def cmd_doctor() -> None:
     else:
         _chk(".env", "fail", ".env fehlt", "cp .env.example .env && python3 agent_start.py --setup")
 
+    # 7. LLM-Config-Guard
+    try:
+        from plugins.llm_config_guard import check as _guard_check
+        guard = _guard_check(PROJECT)
+        for r in guard.results:
+            if not r.exists:
+                continue  # nicht vorhandene Dateien sind kein Fehler
+            if r.ok:
+                _chk(f"LLM-Config {r.name}", "ok", str(r.path.relative_to(PROJECT)))
+            else:
+                missing_preview = ", ".join(r.missing_markers[:2])
+                if len(r.missing_markers) > 2:
+                    missing_preview += "…"
+                _chk(
+                    f"LLM-Config {r.name}", "warn",
+                    f"Fehlende Abschnitte: {missing_preview}",
+                    f"python3 plugins/llm_config_guard.py --repair {PROJECT}",
+                )
+    except ImportError:
+        pass
+    except Exception as exc:
+        _chk("LLM-Config-Guard", "warn", str(exc))
+
     # Ausgabe
     summary = {"ok": 0, "warn": 0, "fail": 0}
     for c in checks:
