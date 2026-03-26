@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4206 Zeilen)*
+## agent_start.py  *(4243 Zeilen)*
 
 - **Funktion** `_project_root` Zeilen 70-92
   `def _project_root() -> Path:`
@@ -165,21 +165,21 @@
   `def _apply_auto_approve() -> None:`
 - **Funktion** `cmd_heal` Zeilen 3573-3672
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
-- **Funktion** `cmd_doctor` Zeilen 3675-3786
+- **Funktion** `cmd_doctor` Zeilen 3675-3823
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 3793-3988
+- **Funktion** `cmd_setup` Zeilen 3830-4025
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 3991-4202
+- **Funktion** `main` Zeilen 4028-4239
   `def main():`
 - **Funktion** `_sym_map` Zeilen 2959-2961
   `def _sym_map(content: str) -> dict[str, dict]:`
 - **Funktion** `_chk` Zeilen 3681-3682
   `def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:`
-- **Funktion** `_ask` Zeilen 3797-3800
+- **Funktion** `_ask` Zeilen 3834-3837
   `def _ask(prompt: str, default: str = "") -> str:`
-- **Funktion** `_api_get_raw` Zeilen 3802-3809
+- **Funktion** `_api_get_raw` Zeilen 3839-3846
   `def _api_get_raw(url, user, token, path):`
-- **Funktion** `_api_post_raw` Zeilen 3811-3821
+- **Funktion** `_api_post_raw` Zeilen 3848-3858
   `def _api_post_raw(url, user, token, path, data: dict):`
 - **Funktion** `_len` Zeilen 2972-2977
   `def _len(s: dict) -> int:`
@@ -392,6 +392,41 @@
 ## plugins/__init__.py  *(0 Zeilen)*
 
 *(keine Klassen/Funktionen erkannt)*
+
+## plugins/llm_config_guard.py  *(376 Zeilen)*
+
+- **Klasse** `ConfigFileResult` Zeilen 81-90
+  `class ConfigFileResult:`
+- **Klasse** `SkeletonResult` Zeilen 94-103
+  `class SkeletonResult:`
+- **Klasse** `GuardResult` Zeilen 107-120
+  `class GuardResult:`
+- **Funktion** `check_skeleton_fresh` Zeilen 127-158
+  `def check_skeleton_fresh(project_root: Path) -> SkeletonResult:`
+- **Funktion** `check` Zeilen 165-190
+  `def check(project_root: Path, check_skeleton: bool = True) -> GuardResult:`
+- **Funktion** `repair` Zeilen 193-240
+  `def repair(project_root: Path, create_missing: bool = False) -> list[str]:`
+- **Funktion** `_extract_missing_sections` Zeilen 243-274
+  `def _extract_missing_sections(`
+- **Funktion** `_build_minimal_block` Zeilen 277-290
+  `def _build_minimal_block(missing_markers: list[str]) -> str:`
+- **Funktion** `_fmt_age` Zeilen 297-302
+  `def _fmt_age(seconds: int) -> str:`
+- **Funktion** `_print_result` Zeilen 305-327
+  `def _print_result(result: GuardResult, verbose: bool = False) -> None:`
+- **Funktion** `main` Zeilen 330-372
+  `def main(argv: list[str] | None = None) -> int:`
+- **Funktion** `ok` Zeilen 88-90
+  `def ok(self) -> bool:`
+- **Funktion** `ok` Zeilen 102-103
+  `def ok(self) -> bool:`
+- **Funktion** `all_ok` Zeilen 112-115
+  `def all_ok(self) -> bool:`
+- **Funktion** `failures` Zeilen 118-120
+  `def failures(self) -> list[ConfigFileResult]:`
+- **Funktion** `_flush` Zeilen 255-264
+  `def _flush():`
 
 ## plugins/healing.py  *(474 Zeilen)*
 
