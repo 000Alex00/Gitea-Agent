@@ -4,7 +4,6 @@
 # Nutzung:
 #   ./context_export.sh NR                   → plain text ausgeben (copy/paste)
 #   ./context_export.sh NR llm [TASK]        → LLM-CLI aus llm_routing.json starten
-#   ./context_export.sh NR gemini            → (veraltet) Alias für: llm docs
 #   ./context_export.sh NR file              → context_NR.md zum Hochladen erzeugen
 #   ./context_export.sh NR --self            → gitea-agent Repo statt Projekt
 #   ./context_export.sh NR --self llm [TASK]
@@ -26,8 +25,6 @@ for ARG in "$@"; do
     case "$ARG" in
         --self) SELF=1 ;;
         llm)    FORMAT="llm" ;;
-        gemini) FORMAT="llm"; LLM_TASK="docs"
-                echo "[!] Hinweis: 'gemini' ist veraltet — nutze: $0 $NR llm docs" ;;
         file|plain) FORMAT="$ARG" ;;
         [0-9]*) NR="$ARG" ;;
         implementation|deep_coding|docs|log_analysis|healing|pr_review|test_generation)

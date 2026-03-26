@@ -3275,7 +3275,7 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
                             print(f"[!] Auto-Issue erstellt: #{issue['number']} — {t.name}")
                             _dashboard_event("Auto-Issue erstellt")
                             if _build_issue_context_silent(issue):
-                                print(f"    [✓] Context gebaut: contexts/open/{issue['number']}-*/starter.md")
+                                print(f"    [✓] Context gebaut: workspace/open/{issue['number']}-*/starter.md")
 
                     # 2. Performance Regression
                     if t.max_response_ms is not None and t.response_ms > t.max_response_ms:
@@ -3297,7 +3297,7 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
                             print(f"[!] Auto-Perf Issue erstellt: #{issue['number']} — {t.name}")
                             _dashboard_event("Auto-Perf-Issue erstellt")
                             if _build_issue_context_silent(issue):
-                                print(f"    [✓] Context gebaut: contexts/open/{issue['number']}-*/starter.md")
+                                print(f"    [✓] Context gebaut: workspace/open/{issue['number']}-*/starter.md")
 
         except Exception as e:
             log.error(f"Watch-Lauf Fehler: {e}")
