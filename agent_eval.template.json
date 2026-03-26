@@ -82,5 +82,19 @@
     },
     "context_loader": {
         "exclude_dirs": ["Backup", "Documentation", "node_modules", ".venv"]
-    }
+    },
+    "log_analysis": {
+        "_comment": "Konfiguration für log_analyzer.py — optional",
+        "tail_lines": 200,
+        "_comment_tail": "Anzahl der letzten Log-Zeilen die analysiert werden",
+        "llm_enabled": false,
+        "_comment_llm": "LLM-Modus aktivieren (true = lokale/Claude LLM wird gefragt)",
+        "llm_url": "http://localhost:11434/api/generate",
+        "_comment_url": "Lokale LLM-API (Ollama-Format). Wird ignoriert wenn claude_api_enabled=true",
+        "llm_model": "llama3",
+        "llm_timeout": 30
+    },
+    "claude_api_enabled": false,
+    "_comment_claude": "true = Claude API statt lokaler LLM. Erfordert ANTHROPIC_API_KEY in .env",
+    "claude_model": "claude-sonnet-4-6"
 }
