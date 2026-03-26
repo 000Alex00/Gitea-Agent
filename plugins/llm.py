@@ -12,7 +12,7 @@ Aufgaben-Routing via agent/config/llm_routing.json (optional):
 
 System-Prompts (Issue #111):
     Jeder Task kann einen system_prompt Pfad in llm_routing.json referenzieren.
-    Die Datei (z.B. prompts/senior_python.md) wird als Rollen-Instruktion geladen.
+    Die Datei (z.B. config/llm/prompts/senior_python.md) wird als Rollen-Instruktion geladen.
 
 Aufgerufen von:
     plugins/healing.py, log_analyzer.template.py, agent_start.py
