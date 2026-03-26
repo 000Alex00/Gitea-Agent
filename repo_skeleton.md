@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4243 Zeilen)*
+## agent_start.py  *(4265 Zeilen)*
 
 - **Funktion** `_project_root` Zeilen 70-92
   `def _project_root() -> Path:`
@@ -47,141 +47,145 @@
   `def save_tests_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:`
 - **Funktion** `save_implement_context` Zeilen 465-591
   `def save_implement_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:`
-- **Funktion** `_get_exclude_dirs` Zeilen 619-639
+- **Funktion** `_build_issue_context_silent` Zeilen 594-620
+  `def _build_issue_context_silent(issue: dict) -> bool:`
+- **Funktion** `_get_exclude_dirs` Zeilen 648-668
   `def _get_exclude_dirs(project: Path) -> set[str]:`
-- **Funktion** `_extract_ast_symbols` Zeilen 665-687
+- **Funktion** `_extract_ast_symbols` Zeilen 694-716
   `def _extract_ast_symbols(content: str) -> list[dict]:`
-- **Funktion** `_create_repo_skeleton` Zeilen 690-744
+- **Funktion** `_create_repo_skeleton` Zeilen 719-773
   `def _create_repo_skeleton(files: list[Path], output_dir: Path, max_size_kb: int = _MAX_SKELETON_FILE_SIZE_KB) -> Path:`
-- **Funktion** `_skeleton_to_md` Zeilen 747-766
+- **Funktion** `_skeleton_to_md` Zeilen 776-795
   `def _skeleton_to_md(skeleton_data: list[dict]) -> str:`
-- **Funktion** `cmd_build_skeleton` Zeilen 769-777
+- **Funktion** `cmd_build_skeleton` Zeilen 798-806
   `def cmd_build_skeleton() -> None:`
-- **Funktion** `_update_skeleton_incremental` Zeilen 780-812
+- **Funktion** `_update_skeleton_incremental` Zeilen 809-841
   `def _update_skeleton_incremental(changed_files: list[str]) -> None:`
-- **Funktion** `_load_skeleton_map` Zeilen 815-826
+- **Funktion** `_load_skeleton_map` Zeilen 844-855
   `def _load_skeleton_map(issue_dir: Path | None = None) -> dict:`
-- **Funktion** `_find_imports` Zeilen 829-869
+- **Funktion** `_find_imports` Zeilen 858-898
   `def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:`
-- **Funktion** `_search_keywords` Zeilen 872-922
+- **Funktion** `_search_keywords` Zeilen 901-951
   `def _search_keywords(issue_text: str, repo_path: Path) -> list[Path]:`
-- **Funktion** `_build_analyse_comment` Zeilen 930-1007
+- **Funktion** `_build_analyse_comment` Zeilen 959-1036
   `def _build_analyse_comment(issue: dict, files: list[Path]) -> str:`
-- **Funktion** `_has_detailed_plan` Zeilen 1015-1034
+- **Funktion** `_has_detailed_plan` Zeilen 1044-1063
   `def _has_detailed_plan(number: int) -> bool:`
-- **Funktion** `_parse_diff_changed_lines` Zeilen 1042-1073
+- **Funktion** `_parse_diff_changed_lines` Zeilen 1071-1102
   `def _parse_diff_changed_lines(branch: str) -> dict[str, list[int]]:`
-- **Funktion** `_warn_diff_out_of_scope` Zeilen 1076-1162
+- **Funktion** `_warn_diff_out_of_scope` Zeilen 1105-1191
   `def _warn_diff_out_of_scope(number: int, branch: str) -> None:`
-- **Funktion** `_warn_slices_not_requested` Zeilen 1165-1258
+- **Funktion** `_warn_slices_not_requested` Zeilen 1194-1287
   `def _warn_slices_not_requested(number: int, branch: str) -> bool:`
-- **Funktion** `_check_pr_preconditions` Zeilen 1261-1412
+- **Funktion** `_check_pr_preconditions` Zeilen 1290-1441
   `def _check_pr_preconditions(number: int, branch: str) -> None:`
-- **Funktion** `_validate_pr_completion` Zeilen 1415-1459
+- **Funktion** `_validate_pr_completion` Zeilen 1444-1488
   `def _validate_pr_completion(`
-- **Funktion** `_validate_comment` Zeilen 1462-1485
+- **Funktion** `_validate_comment` Zeilen 1491-1514
   `def _validate_comment(body: str, comment_type: str, *, critical: bool = False) -> None:`
-- **Funktion** `_update_discussion` Zeilen 1488-1523
+- **Funktion** `_update_discussion` Zeilen 1517-1552
   `def _update_discussion(issue: dict, starter_path: Path) -> None:`
-- **Funktion** `cmd_list` Zeilen 1531-1549
+- **Funktion** `cmd_list` Zeilen 1560-1578
   `def cmd_list() -> None:`
-- **Funktion** `cmd_plan` Zeilen 1552-1656
+- **Funktion** `cmd_plan` Zeilen 1581-1685
   `def cmd_plan(number: int) -> None:`
-- **Funktion** `cmd_implement` Zeilen 1659-1802
+- **Funktion** `cmd_implement` Zeilen 1688-1831
   `def cmd_implement(number: int) -> None:`
-- **Funktion** `_neustart_required` Zeilen 1815-1820
+- **Funktion** `_neustart_required` Zeilen 1844-1849
   `def _neustart_required(changed_files: list[str]) -> str:`
-- **Funktion** `cmd_pr` Zeilen 1823-1988
+- **Funktion** `cmd_pr` Zeilen 1852-2017
   `def cmd_pr(`
-- **Funktion** `cmd_generate_tests` Zeilen 1992-2017
+- **Funktion** `cmd_generate_tests` Zeilen 2021-2046
   `def cmd_generate_tests(number: int) -> None:`
-- **Funktion** `_current_issue_from_branch` Zeilen 2019-2034
+- **Funktion** `_current_issue_from_branch` Zeilen 2048-2063
   `def _current_issue_from_branch() -> int | None:`
-- **Funktion** `_estimate_slice_tokens` Zeilen 2037-2048
+- **Funktion** `_estimate_slice_tokens` Zeilen 2066-2077
   `def _estimate_slice_tokens(spec: str) -> int:`
-- **Funktion** `_log_slice_request` Zeilen 2051-2093
+- **Funktion** `_log_slice_request` Zeilen 2080-2122
   `def _log_slice_request(spec: str) -> None:`
-- **Funktion** `cmd_get_slice` Zeilen 2096-2126
+- **Funktion** `cmd_get_slice` Zeilen 2125-2155
   `def cmd_get_slice(spec: str) -> None:`
-- **Funktion** `cmd_fixup` Zeilen 2135-2179
+- **Funktion** `cmd_get_llm_cmd` Zeilen 2158-2172
+  `def cmd_get_llm_cmd(task: str) -> None:`
+- **Funktion** `cmd_fixup` Zeilen 2181-2225
   `def cmd_fixup(number: int) -> None:`
-- **Funktion** `_auto_issue_exists` Zeilen 2187-2191
+- **Funktion** `_auto_issue_exists` Zeilen 2233-2237
   `def _auto_issue_exists(test_name: str) -> bool:`
-- **Funktion** `_auto_perf_issue_exists` Zeilen 2193-2197
+- **Funktion** `_auto_perf_issue_exists` Zeilen 2239-2243
   `def _auto_perf_issue_exists(test_name: str) -> bool:`
-- **Funktion** `_auto_improvement_issue_exists` Zeilen 2201-2204
+- **Funktion** `_auto_improvement_issue_exists` Zeilen 2247-2250
   `def _auto_improvement_issue_exists(tag: str) -> bool:`
-- **Funktion** `_check_systematic_tag_failures` Zeilen 2206-2280
+- **Funktion** `_check_systematic_tag_failures` Zeilen 2252-2326
   `def _check_systematic_tag_failures(project_root) -> None:`
-- **Funktion** `_sync_closed_contexts` Zeilen 2283-2308
+- **Funktion** `_sync_closed_contexts` Zeilen 2329-2354
   `def _sync_closed_contexts() -> None:`
-- **Funktion** `_consecutive_passes_for_test` Zeilen 2311-2336
+- **Funktion** `_consecutive_passes_for_test` Zeilen 2357-2382
   `def _consecutive_passes_for_test(test_name: str) -> int:`
-- **Funktion** `_close_resolved_auto_issues` Zeilen 2339-2418
+- **Funktion** `_close_resolved_auto_issues` Zeilen 2385-2464
   `def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:`
-- **Funktion** `_build_metadata` Zeilen 2421-2500
+- **Funktion** `_build_metadata` Zeilen 2467-2546
   `def _build_metadata(`
-- **Funktion** `_session_path` Zeilen 2503-2505
+- **Funktion** `_session_path` Zeilen 2549-2551
   `def _session_path() -> Path:`
-- **Funktion** `_session_load` Zeilen 2508-2532
+- **Funktion** `_session_load` Zeilen 2554-2578
   `def _session_load() -> dict:`
-- **Funktion** `_session_increment` Zeilen 2535-2545
+- **Funktion** `_session_increment` Zeilen 2581-2591
   `def _session_increment() -> dict:`
-- **Funktion** `_session_status_line` Zeilen 2548-2561
+- **Funktion** `_session_status_line` Zeilen 2594-2607
   `def _session_status_line(data: dict) -> str:`
-- **Funktion** `_format_history_block` Zeilen 2564-2600
+- **Funktion** `_format_history_block` Zeilen 2610-2646
   `def _format_history_block(project_root: Path, n: int = 5) -> str:`
-- **Funktion** `_last_chat_inactive_minutes` Zeilen 2603-2651
+- **Funktion** `_last_chat_inactive_minutes` Zeilen 2649-2697
   `def _last_chat_inactive_minutes(log_path: str | Path) -> float | None:`
-- **Funktion** `_server_start_time` Zeilen 2654-2702
+- **Funktion** `_server_start_time` Zeilen 2700-2748
   `def _server_start_time(log_path: str | Path) -> datetime.datetime | None:`
-- **Funktion** `_check_server_staleness` Zeilen 2705-2773
+- **Funktion** `_check_server_staleness` Zeilen 2751-2819
   `def _check_server_staleness(branch: str, force: bool = False) -> None:`
-- **Funktion** `_restart_server_for_eval` Zeilen 2776-2798
+- **Funktion** `_restart_server_for_eval` Zeilen 2822-2844
   `def _restart_server_for_eval() -> None:`
-- **Funktion** `_has_new_commits_since_last_eval` Zeilen 2801-2832
+- **Funktion** `_has_new_commits_since_last_eval` Zeilen 2847-2878
   `def _has_new_commits_since_last_eval(project_root: Path) -> bool:`
-- **Funktion** `_wait_for_server` Zeilen 2835-2880
+- **Funktion** `_wait_for_server` Zeilen 2881-2926
   `def _wait_for_server(`
-- **Funktion** `cmd_eval_after_restart` Zeilen 2883-2945
+- **Funktion** `cmd_eval_after_restart` Zeilen 2929-2991
   `def cmd_eval_after_restart(number: int | None = None) -> None:`
-- **Funktion** `_ast_diff` Zeilen 2948-2988
+- **Funktion** `_ast_diff` Zeilen 2994-3034
   `def _ast_diff(old_content: str, new_content: str) -> list[str]:`
-- **Funktion** `_gitea_version_compare` Zeilen 2991-3042
+- **Funktion** `_gitea_version_compare` Zeilen 3037-3088
   `def _gitea_version_compare(commit: str, changed_files: list[str]) -> str:`
-- **Funktion** `_build_auto_issue_body` Zeilen 3045-3160
+- **Funktion** `_build_auto_issue_body` Zeilen 3091-3206
   `def _build_auto_issue_body(`
-- **Funktion** `cmd_watch` Zeilen 3163-3336
+- **Funktion** `cmd_watch` Zeilen 3209-3386
   `def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:`
-- **Funktion** `_dashboard_event` Zeilen 3344-3351
+- **Funktion** `_dashboard_event` Zeilen 3394-3401
   `def _dashboard_event(context: str = "") -> None:`
-- **Funktion** `cmd_install_service` Zeilen 3377-3422
+- **Funktion** `cmd_install_service` Zeilen 3427-3472
   `def cmd_install_service() -> None:`
-- **Funktion** `cmd_dashboard` Zeilen 3430-3436
+- **Funktion** `cmd_dashboard` Zeilen 3480-3486
   `def cmd_dashboard() -> None:`
-- **Funktion** `cmd_auto` Zeilen 3438-3530
+- **Funktion** `cmd_auto` Zeilen 3488-3580
   `def cmd_auto() -> None:`
-- **Funktion** `_apply_auto_approve` Zeilen 3538-3566
+- **Funktion** `_apply_auto_approve` Zeilen 3588-3616
   `def _apply_auto_approve() -> None:`
-- **Funktion** `cmd_heal` Zeilen 3573-3672
+- **Funktion** `cmd_heal` Zeilen 3623-3722
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
-- **Funktion** `cmd_doctor` Zeilen 3675-3823
+- **Funktion** `cmd_doctor` Zeilen 3725-3836
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 3830-4025
+- **Funktion** `cmd_setup` Zeilen 3843-4038
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4028-4239
+- **Funktion** `main` Zeilen 4041-4261
   `def main():`
-- **Funktion** `_sym_map` Zeilen 2959-2961
+- **Funktion** `_sym_map` Zeilen 3005-3007
   `def _sym_map(content: str) -> dict[str, dict]:`
-- **Funktion** `_chk` Zeilen 3681-3682
+- **Funktion** `_chk` Zeilen 3731-3732
   `def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:`
-- **Funktion** `_ask` Zeilen 3834-3837
+- **Funktion** `_ask` Zeilen 3847-3850
   `def _ask(prompt: str, default: str = "") -> str:`
-- **Funktion** `_api_get_raw` Zeilen 3839-3846
+- **Funktion** `_api_get_raw` Zeilen 3852-3859
   `def _api_get_raw(url, user, token, path):`
-- **Funktion** `_api_post_raw` Zeilen 3848-3858
+- **Funktion** `_api_post_raw` Zeilen 3861-3871
   `def _api_post_raw(url, user, token, path, data: dict):`
-- **Funktion** `_len` Zeilen 2972-2977
+- **Funktion** `_len` Zeilen 3018-3023
   `def _len(s: dict) -> int:`
 
 ## gitea_api.py  *(425 Zeilen)*
@@ -222,6 +226,31 @@
   `def get_file_contents(path: str, ref: str) -> str | None:`
 - **Funktion** `create_pr` Zeilen 396-425
   `def create_pr(branch: str, title: str, body: str, base: str | None = None) -> dict:`
+
+## log_analyzer.template.py  *(317 Zeilen)*
+
+- **Funktion** `_load_eval_cfg` Zeilen 39-46
+  `def _load_eval_cfg() -> dict:`
+- **Klasse** `LogFinding` Zeilen 104-110
+  `class LogFinding:`
+- **Klasse** `LogAnalysisResult` Zeilen 114-129
+  `class LogAnalysisResult:`
+- **Funktion** `_analyze_rules` Zeilen 136-154
+  `def _analyze_rules(lines: list[str]) -> list[LogFinding]:`
+- **Funktion** `_call_llm_local` Zeilen 161-177
+  `def _call_llm_local(url: str, model: str, prompt: str, timeout: int) -> str:`
+- **Funktion** `_call_llm_claude` Zeilen 180-189
+  `def _call_llm_claude(model: str, prompt: str, max_tokens: int = 512) -> str:`
+- **Funktion** `_analyze_llm` Zeilen 192-231
+  `def _analyze_llm(lines: list[str], rule_findings: list[LogFinding], cfg: dict) -> tuple[str, str]:`
+- **Funktion** `run` Zeilen 238-283
+  `def run() -> LogAnalysisResult:`
+- **Funktion** `format_terminal` Zeilen 290-317
+  `def format_terminal(result: LogAnalysisResult) -> str:`
+- **Funktion** `error_count` Zeilen 124-125
+  `def error_count(self) -> int:`
+- **Funktion** `tags` Zeilen 128-129
+  `def tags(self) -> list[str]:`
 
 ## dashboard.py  *(299 Zeilen)*
 
@@ -282,11 +311,11 @@
 - **Funktion** `main` Zeilen 587-600
   `def main() -> None:`
 
-## log.py  *(81 Zeilen)*
+## log.py  *(67 Zeilen)*
 
-- **Funktion** `setup` Zeilen 25-68
+- **Funktion** `setup` Zeilen 21-54
   `def setup(log_file: str = "gitea-agent.log", level: str = "INFO") -> None:`
-- **Funktion** `get_logger` Zeilen 71-81
+- **Funktion** `get_logger` Zeilen 57-67
   `def get_logger(name: str) -> logging.Logger:`
 
 ## plugins/patch.py  *(200 Zeilen)*
@@ -338,95 +367,66 @@
 - **Funktion** `all_passed` Zeilen 50-51
   `def all_passed(self) -> bool:`
 
-## plugins/llm.py  *(391 Zeilen)*
+## plugins/llm.py  *(393 Zeilen)*
 
-- **Funktion** `_load_routing` Zeilen 40-49
+- **Funktion** `_load_routing` Zeilen 36-45
   `def _load_routing(extra_path: Optional[Path] = None) -> dict:`
-- **Funktion** `_resolve_task_config` Zeilen 52-63
+- **Funktion** `_resolve_task_config` Zeilen 48-59
   `def _resolve_task_config(task: str, routing: dict) -> dict:`
-- **Funktion** `_load_system_prompt` Zeilen 66-81
-  `def _load_system_prompt(cfg: dict) -> str:`
-- **Klasse** `LLMResponse` Zeilen 89-98
+- **Klasse** `LLMResponse` Zeilen 67-76
   `class LLMResponse:`
-- **Funktion** `_http_post` Zeilen 105-109
+- **Funktion** `_http_post` Zeilen 83-87
   `def _http_post(url: str, payload: dict, headers: dict, timeout: int) -> dict:`
-- **Klasse** `ClaudeClient` Zeilen 112-150
+- **Klasse** `ClaudeClient` Zeilen 90-123
   `class ClaudeClient:`
-- **Klasse** `OpenAIClient` Zeilen 153-189
+- **Klasse** `OpenAIClient` Zeilen 126-159
   `class OpenAIClient:`
-- **Klasse** `GeminiClient` Zeilen 192-225
+- **Klasse** `DeepseekClient` Zeilen 162-171
+  `class DeepseekClient(OpenAIClient):`
+- **Klasse** `LMStudioClient` Zeilen 174-184
+  `class LMStudioClient(OpenAIClient):`
+- **Klasse** `GeminiClient` Zeilen 187-215
   `class GeminiClient:`
-- **Klasse** `LocalClient` Zeilen 228-258
+- **Klasse** `LocalClient` Zeilen 218-244
   `class LocalClient:`
-- **Funktion** `_client_from_env` Zeilen 265-292
+- **Funktion** `_client_from_env` Zeilen 251-290
   `def _client_from_env() -> Optional["ClaudeClient | LocalClient"]:`
-- **Funktion** `_build_client` Zeilen 295-340
+- **Funktion** `_build_client` Zeilen 293-342
   `def _build_client(cfg: dict) -> "ClaudeClient | OpenAIClient | GeminiClient | LocalClient":`
-- **Funktion** `get_client` Zeilen 347-376
+- **Funktion** `get_client` Zeilen 349-378
   `def get_client(`
-- **Funktion** `complete` Zeilen 379-391
+- **Funktion** `complete` Zeilen 381-393
   `def complete(`
-- **Funktion** `ok` Zeilen 97-98
+- **Funktion** `ok` Zeilen 75-76
   `def ok(self) -> bool:`
-- **Funktion** `__init__` Zeilen 118-124
-  `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,`
-- **Funktion** `complete` Zeilen 126-150
+- **Funktion** `__init__` Zeilen 96-100
+  `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):`
+- **Funktion** `complete` Zeilen 102-123
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 156-163
+- **Funktion** `__init__` Zeilen 131-137
   `def __init__(self, model: str, api_key: str, base_url: str = "https://api.openai.com/v1",`
-- **Funktion** `complete` Zeilen 165-189
+- **Funktion** `complete` Zeilen 139-159
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 197-203
-  `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,`
-- **Funktion** `complete` Zeilen 205-225
+- **Funktion** `__init__` Zeilen 168-171
+  `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):`
+- **Funktion** `__init__` Zeilen 180-184
+  `def __init__(self, model: str, api_key: str = "lm-studio",`
+- **Funktion** `__init__` Zeilen 192-196
+  `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):`
+- **Funktion** `complete` Zeilen 198-215
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 231-237
+- **Funktion** `__init__` Zeilen 221-226
   `def __init__(self, model: str, base_url: str = "http://localhost:11434",`
-- **Funktion** `complete` Zeilen 239-258
+- **Funktion** `complete` Zeilen 228-244
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `_get` Zeilen 281-282
+- **Funktion** `_get` Zeilen 267-268
   `def _get(key: str, default: str = "") -> str:`
-- **Funktion** `_get_key` Zeilen 298-308
+- **Funktion** `_get_key` Zeilen 297-307
   `def _get_key(env_var: str) -> str:`
 
 ## plugins/__init__.py  *(0 Zeilen)*
 
 *(keine Klassen/Funktionen erkannt)*
-
-## plugins/llm_config_guard.py  *(376 Zeilen)*
-
-- **Klasse** `ConfigFileResult` Zeilen 81-90
-  `class ConfigFileResult:`
-- **Klasse** `SkeletonResult` Zeilen 94-103
-  `class SkeletonResult:`
-- **Klasse** `GuardResult` Zeilen 107-120
-  `class GuardResult:`
-- **Funktion** `check_skeleton_fresh` Zeilen 127-158
-  `def check_skeleton_fresh(project_root: Path) -> SkeletonResult:`
-- **Funktion** `check` Zeilen 165-190
-  `def check(project_root: Path, check_skeleton: bool = True) -> GuardResult:`
-- **Funktion** `repair` Zeilen 193-240
-  `def repair(project_root: Path, create_missing: bool = False) -> list[str]:`
-- **Funktion** `_extract_missing_sections` Zeilen 243-274
-  `def _extract_missing_sections(`
-- **Funktion** `_build_minimal_block` Zeilen 277-290
-  `def _build_minimal_block(missing_markers: list[str]) -> str:`
-- **Funktion** `_fmt_age` Zeilen 297-302
-  `def _fmt_age(seconds: int) -> str:`
-- **Funktion** `_print_result` Zeilen 305-327
-  `def _print_result(result: GuardResult, verbose: bool = False) -> None:`
-- **Funktion** `main` Zeilen 330-372
-  `def main(argv: list[str] | None = None) -> int:`
-- **Funktion** `ok` Zeilen 88-90
-  `def ok(self) -> bool:`
-- **Funktion** `ok` Zeilen 102-103
-  `def ok(self) -> bool:`
-- **Funktion** `all_ok` Zeilen 112-115
-  `def all_ok(self) -> bool:`
-- **Funktion** `failures` Zeilen 118-120
-  `def failures(self) -> list[ConfigFileResult]:`
-- **Funktion** `_flush` Zeilen 255-264
-  `def _flush():`
 
 ## plugins/healing.py  *(474 Zeilen)*
 
@@ -589,87 +589,109 @@
 - **Funktion** `test_failed` Zeilen 237-243
   `def test_failed(self):`
 
-## tests/test_llm.py  *(264 Zeilen)*
+## tests/test_llm.py  *(337 Zeilen)*
 
-- **Klasse** `TestLLMResponse` Zeilen 27-38
+- **Klasse** `TestLLMResponse` Zeilen 29-40
   `class TestLLMResponse(unittest.TestCase):`
-- **Klasse** `TestLoadRouting` Zeilen 41-64
+- **Klasse** `TestLoadRouting` Zeilen 43-66
   `class TestLoadRouting(unittest.TestCase):`
-- **Klasse** `TestResolveTaskConfig` Zeilen 67-94
+- **Klasse** `TestResolveTaskConfig` Zeilen 69-96
   `class TestResolveTaskConfig(unittest.TestCase):`
-- **Klasse** `TestBuildClient` Zeilen 97-123
+- **Klasse** `TestBuildClient` Zeilen 99-142
   `class TestBuildClient(unittest.TestCase):`
-- **Klasse** `TestClaudeClient` Zeilen 126-158
+- **Klasse** `TestClaudeClient` Zeilen 145-177
   `class TestClaudeClient(unittest.TestCase):`
-- **Klasse** `TestOpenAIClient` Zeilen 161-181
+- **Klasse** `TestOpenAIClient` Zeilen 180-200
   `class TestOpenAIClient(unittest.TestCase):`
-- **Klasse** `TestGeminiClient` Zeilen 184-198
+- **Klasse** `TestGeminiClient` Zeilen 203-217
   `class TestGeminiClient(unittest.TestCase):`
-- **Klasse** `TestLocalClient` Zeilen 201-218
+- **Klasse** `TestDeepseekClient` Zeilen 220-246
+  `class TestDeepseekClient(unittest.TestCase):`
+- **Klasse** `TestLMStudioClient` Zeilen 249-271
+  `class TestLMStudioClient(unittest.TestCase):`
+- **Klasse** `TestLocalClient` Zeilen 274-291
   `class TestLocalClient(unittest.TestCase):`
-- **Klasse** `TestGetClient` Zeilen 221-248
+- **Klasse** `TestGetClient` Zeilen 294-321
   `class TestGetClient(unittest.TestCase):`
-- **Klasse** `TestCompleteConvenience` Zeilen 251-260
+- **Klasse** `TestCompleteConvenience` Zeilen 324-333
   `class TestCompleteConvenience(unittest.TestCase):`
-- **Funktion** `test_ok_with_text` Zeilen 28-30
+- **Funktion** `test_ok_with_text` Zeilen 30-32
   `def test_ok_with_text(self):`
-- **Funktion** `test_not_ok_empty` Zeilen 32-34
+- **Funktion** `test_not_ok_empty` Zeilen 34-36
   `def test_not_ok_empty(self):`
-- **Funktion** `test_not_ok_with_error` Zeilen 36-38
+- **Funktion** `test_not_ok_with_error` Zeilen 38-40
   `def test_not_ok_with_error(self):`
-- **Funktion** `test_no_config` Zeilen 42-44
+- **Funktion** `test_no_config` Zeilen 44-46
   `def test_no_config(self):`
-- **Funktion** `test_valid_config` Zeilen 46-56
+- **Funktion** `test_valid_config` Zeilen 48-58
   `def test_valid_config(self):`
-- **Funktion** `test_invalid_json` Zeilen 58-64
+- **Funktion** `test_invalid_json` Zeilen 60-66
   `def test_invalid_json(self):`
-- **Funktion** `setUp` Zeilen 68-75
+- **Funktion** `setUp` Zeilen 70-77
   `def setUp(self):`
-- **Funktion** `test_known_task` Zeilen 77-79
+- **Funktion** `test_known_task` Zeilen 79-81
   `def test_known_task(self):`
-- **Funktion** `test_unknown_task_falls_back_to_default` Zeilen 81-84
+- **Funktion** `test_unknown_task_falls_back_to_default` Zeilen 83-86
   `def test_unknown_task_falls_back_to_default(self):`
-- **Funktion** `test_default_as_string` Zeilen 86-90
+- **Funktion** `test_default_as_string` Zeilen 88-92
   `def test_default_as_string(self):`
-- **Funktion** `test_empty_routing` Zeilen 92-94
+- **Funktion** `test_empty_routing` Zeilen 94-96
   `def test_empty_routing(self):`
-- **Funktion** `test_claude` Zeilen 98-101
+- **Funktion** `test_claude` Zeilen 100-103
   `def test_claude(self):`
-- **Funktion** `test_openai` Zeilen 103-105
+- **Funktion** `test_openai` Zeilen 105-107
   `def test_openai(self):`
-- **Funktion** `test_gemini` Zeilen 107-109
+- **Funktion** `test_gemini` Zeilen 109-111
   `def test_gemini(self):`
-- **Funktion** `test_local` Zeilen 111-115
+- **Funktion** `test_local` Zeilen 113-117
   `def test_local(self):`
-- **Funktion** `test_ollama_alias` Zeilen 117-119
+- **Funktion** `test_ollama_alias` Zeilen 119-121
   `def test_ollama_alias(self):`
-- **Funktion** `test_unknown_provider_falls_back_to_local` Zeilen 121-123
+- **Funktion** `test_deepseek` Zeilen 123-127
+  `def test_deepseek(self):`
+- **Funktion** `test_lmstudio` Zeilen 129-132
+  `def test_lmstudio(self):`
+- **Funktion** `test_lmstudio_custom_url` Zeilen 134-138
+  `def test_lmstudio_custom_url(self):`
+- **Funktion** `test_unknown_provider_falls_back_to_local` Zeilen 140-142
   `def test_unknown_provider_falls_back_to_local(self):`
-- **Funktion** `_mock_response` Zeilen 127-135
+- **Funktion** `_mock_response` Zeilen 146-154
   `def _mock_response(self, text: str, input_tokens: int = 10, output_tokens: int = 20):`
-- **Funktion** `test_success` Zeilen 137-144
+- **Funktion** `test_success` Zeilen 156-163
   `def test_success(self):`
-- **Funktion** `test_api_error` Zeilen 146-152
+- **Funktion** `test_api_error` Zeilen 165-171
   `def test_api_error(self):`
-- **Funktion** `test_connection_error` Zeilen 154-158
+- **Funktion** `test_connection_error` Zeilen 173-177
   `def test_connection_error(self):`
-- **Funktion** `test_success` Zeilen 162-175
+- **Funktion** `test_success` Zeilen 181-194
   `def test_success(self):`
-- **Funktion** `test_connection_error` Zeilen 177-181
+- **Funktion** `test_connection_error` Zeilen 196-200
   `def test_connection_error(self):`
-- **Funktion** `test_success` Zeilen 185-198
+- **Funktion** `test_success` Zeilen 204-217
   `def test_success(self):`
-- **Funktion** `test_success` Zeilen 202-212
+- **Funktion** `test_success` Zeilen 221-235
   `def test_success(self):`
-- **Funktion** `test_connection_error` Zeilen 214-218
+- **Funktion** `test_uses_deepseek_base_url` Zeilen 237-239
+  `def test_uses_deepseek_base_url(self):`
+- **Funktion** `test_connection_error` Zeilen 241-246
   `def test_connection_error(self):`
-- **Funktion** `test_no_routing_falls_back_to_env` Zeilen 222-228
+- **Funktion** `test_success` Zeilen 250-263
+  `def test_success(self):`
+- **Funktion** `test_default_url` Zeilen 265-267
+  `def test_default_url(self):`
+- **Funktion** `test_no_api_key_required` Zeilen 269-271
+  `def test_no_api_key_required(self):`
+- **Funktion** `test_success` Zeilen 275-285
+  `def test_success(self):`
+- **Funktion** `test_connection_error` Zeilen 287-291
+  `def test_connection_error(self):`
+- **Funktion** `test_no_routing_falls_back_to_env` Zeilen 295-301
   `def test_no_routing_falls_back_to_env(self):`
-- **Funktion** `test_routing_selects_correct_provider` Zeilen 230-237
+- **Funktion** `test_routing_selects_correct_provider` Zeilen 303-310
   `def test_routing_selects_correct_provider(self):`
-- **Funktion** `test_default_used_for_unknown_task` Zeilen 239-248
+- **Funktion** `test_default_used_for_unknown_task` Zeilen 312-321
   `def test_default_used_for_unknown_task(self):`
-- **Funktion** `test_delegates_to_client` Zeilen 252-260
+- **Funktion** `test_delegates_to_client` Zeilen 325-333
   `def test_delegates_to_client(self):`
 
 ## tests/test_patch.py  *(152 Zeilen)*
@@ -941,28 +963,3 @@
   `def test_dashboard_path_inside_agent_or_root():`
 - **Funktion** `test_all_paths_consistent` Zeilen 24-35
   `def test_all_paths_consistent():`
-
-## config/log_analyzer.py  *(317 Zeilen)*
-
-- **Funktion** `_load_eval_cfg` Zeilen 39-46
-  `def _load_eval_cfg() -> dict:`
-- **Klasse** `LogFinding` Zeilen 104-110
-  `class LogFinding:`
-- **Klasse** `LogAnalysisResult` Zeilen 114-129
-  `class LogAnalysisResult:`
-- **Funktion** `_analyze_rules` Zeilen 136-154
-  `def _analyze_rules(lines: list[str]) -> list[LogFinding]:`
-- **Funktion** `_call_llm_local` Zeilen 161-177
-  `def _call_llm_local(url: str, model: str, prompt: str, timeout: int) -> str:`
-- **Funktion** `_call_llm_claude` Zeilen 180-189
-  `def _call_llm_claude(model: str, prompt: str, max_tokens: int = 512) -> str:`
-- **Funktion** `_analyze_llm` Zeilen 192-231
-  `def _analyze_llm(lines: list[str], rule_findings: list[LogFinding], cfg: dict) -> tuple[str, str]:`
-- **Funktion** `run` Zeilen 238-283
-  `def run() -> LogAnalysisResult:`
-- **Funktion** `format_terminal` Zeilen 290-317
-  `def format_terminal(result: LogAnalysisResult) -> str:`
-- **Funktion** `error_count` Zeilen 124-125
-  `def error_count(self) -> int:`
-- **Funktion** `tags` Zeilen 128-129
-  `def tags(self) -> list[str]:`

@@ -12,7 +12,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from plugins.llm import (
     ClaudeClient,
+    DeepseekClient,
     GeminiClient,
+    LMStudioClient,
     LocalClient,
     LLMResponse,
     OpenAIClient,
@@ -118,6 +120,23 @@ class TestBuildClient(unittest.TestCase):
         client = _build_client({"provider": "ollama", "model": "mistral"})
         self.assertIsInstance(client, LocalClient)
 
+    def test_deepseek(self):
+        client = _build_client({"provider": "deepseek", "model": "deepseek-chat"})
+        self.assertIsInstance(client, DeepseekClient)
+        self.assertEqual(client.model, "deepseek-chat")
+        self.assertEqual(client.base_url, "https://api.deepseek.com/v1")
+
+    def test_lmstudio(self):
+        client = _build_client({"provider": "lmstudio", "model": "mistral-7b"})
+        self.assertIsInstance(client, LMStudioClient)
+        self.assertEqual(client.model, "mistral-7b")
+
+    def test_lmstudio_custom_url(self):
+        client = _build_client({"provider": "lmstudio", "model": "llama3",
+                                 "base_url": "http://192.168.1.10:1234/v1"})
+        self.assertIsInstance(client, LMStudioClient)
+        self.assertEqual(client.base_url, "http://192.168.1.10:1234/v1")
+
     def test_unknown_provider_falls_back_to_local(self):
         client = _build_client({"provider": "unknown_xyz", "model": "test"})
         self.assertIsInstance(client, LocalClient)
@@ -196,6 +215,60 @@ class TestGeminiClient(unittest.TestCase):
         self.assertTrue(resp.ok)
         self.assertEqual(resp.text, "Gemini sagt hallo")
         self.assertEqual(resp.tokens_used, 42)
+
+
+class TestDeepseekClient(unittest.TestCase):
+    def test_success(self):
+        client = DeepseekClient(model="deepseek-chat", api_key="test-key")
+        mock = MagicMock()
+        mock.read.return_value = json.dumps({
+            "choices": [{"message": {"content": "Deepseek antwortet"}}],
+            "usage": {"total_tokens": 35},
+        }).encode()
+        mock.__enter__ = lambda s: s
+        mock.__exit__ = MagicMock(return_value=False)
+        with patch("urllib.request.urlopen", return_value=mock):
+            resp = client.complete("Frage")
+        self.assertTrue(resp.ok)
+        self.assertEqual(resp.text, "Deepseek antwortet")
+        self.assertEqual(resp.provider, "deepseek")
+        self.assertEqual(resp.tokens_used, 35)
+
+    def test_uses_deepseek_base_url(self):
+        client = DeepseekClient(model="deepseek-chat", api_key="key")
+        self.assertIn("deepseek.com", client.base_url)
+
+    def test_connection_error(self):
+        client = DeepseekClient(model="deepseek-chat", api_key="key")
+        with patch("urllib.request.urlopen", side_effect=ConnectionRefusedError):
+            resp = client.complete("test")
+        self.assertFalse(resp.ok)
+        self.assertEqual(resp.provider, "deepseek")
+
+
+class TestLMStudioClient(unittest.TestCase):
+    def test_success(self):
+        client = LMStudioClient(model="mistral-7b")
+        mock = MagicMock()
+        mock.read.return_value = json.dumps({
+            "choices": [{"message": {"content": "LM Studio antwortet"}}],
+            "usage": {"total_tokens": 20},
+        }).encode()
+        mock.__enter__ = lambda s: s
+        mock.__exit__ = MagicMock(return_value=False)
+        with patch("urllib.request.urlopen", return_value=mock):
+            resp = client.complete("Frage")
+        self.assertTrue(resp.ok)
+        self.assertEqual(resp.text, "LM Studio antwortet")
+        self.assertEqual(resp.provider, "lmstudio")
+
+    def test_default_url(self):
+        client = LMStudioClient(model="llama3")
+        self.assertIn("1234", client.base_url)
+
+    def test_no_api_key_required(self):
+        client = LMStudioClient(model="llama3")
+        self.assertEqual(client.api_key, "lm-studio")
 
 
 class TestLocalClient(unittest.TestCase):
