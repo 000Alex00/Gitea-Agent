@@ -1,0 +1,1024 @@
+[
+  {
+    "path": "agent_self_check.py",
+    "truncated": false,
+    "lines": 206,
+    "size_kb": 6,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "check_labels",
+        "lines": "11-28",
+        "signature": "def check_labels() -> Tuple[bool, str]:"
+      },
+      {
+        "type": "function",
+        "name": "check_flags",
+        "lines": "31-88",
+        "signature": "def check_flags() -> Tuple[bool, str]:"
+      },
+      {
+        "type": "function",
+        "name": "check_required_fields",
+        "lines": "91-106",
+        "signature": "def check_required_fields() -> Tuple[bool, str]:"
+      },
+      {
+        "type": "function",
+        "name": "check_env_sync",
+        "lines": "109-133",
+        "signature": "def check_env_sync() -> Tuple[bool, str]:"
+      },
+      {
+        "type": "function",
+        "name": "check_test_tags",
+        "lines": "136-165",
+        "signature": "def check_test_tags() -> Tuple[bool, str]:"
+      },
+      {
+        "type": "function",
+        "name": "run",
+        "lines": "168-202",
+        "signature": "def run() -> None:"
+      }
+    ]
+  },
+  {
+    "path": "agent_status.sh",
+    "truncated": false,
+    "lines": 91,
+    "size_kb": 2,
+    "symbols": []
+  },
+  {
+    "path": "stop_agent.sh",
+    "truncated": false,
+    "lines": 28,
+    "size_kb": 0,
+    "symbols": []
+  },
+  {
+    "path": "start_patch.sh",
+    "truncated": false,
+    "lines": 71,
+    "size_kb": 2,
+    "symbols": []
+  },
+  {
+    "path": "project.template.json",
+    "truncated": false,
+    "lines": 14,
+    "size_kb": 0,
+    "symbols": []
+  },
+  {
+    "path": "push_github.sh",
+    "truncated": false,
+    "lines": 26,
+    "size_kb": 0,
+    "symbols": []
+  },
+  {
+    "path": "agent_start.py",
+    "truncated": true,
+    "size_kb": 141,
+    "reason": "Datei zu gro\u00df (141KB > 20KB)",
+    "symbols": []
+  },
+  {
+    "path": "gitea_api.py",
+    "truncated": false,
+    "lines": 425,
+    "size_kb": 13,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "_load_env",
+        "lines": "36-57",
+        "signature": "def _load_env() -> dict:"
+      },
+      {
+        "type": "function",
+        "name": "_make_auth",
+        "lines": "60-75",
+        "signature": "def _make_auth(user: str, token: str, prompt_fallback: bool = False) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_request",
+        "lines": "91-122",
+        "signature": "def _request(method: str, path: str, data: dict | None = None, auth: str | None = None) -> dict | list | None:"
+      },
+      {
+        "type": "function",
+        "name": "get_issue",
+        "lines": "129-140",
+        "signature": "def get_issue(number: int) -> dict:"
+      },
+      {
+        "type": "function",
+        "name": "get_issues",
+        "lines": "143-161",
+        "signature": "def get_issues(label: str | None = None, state: str = \"open\") -> list:"
+      },
+      {
+        "type": "function",
+        "name": "create_issue",
+        "lines": "164-182",
+        "signature": "def create_issue(title: str, body: str, label: str | None = None) -> dict:"
+      },
+      {
+        "type": "function",
+        "name": "close_issue",
+        "lines": "185-188",
+        "signature": "def close_issue(number: int) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "update_issue",
+        "lines": "191-207",
+        "signature": "def update_issue(number: int, *, state: str | None = None, body: str | None = None) -> dict:"
+      },
+      {
+        "type": "function",
+        "name": "get_comments",
+        "lines": "214-224",
+        "signature": "def get_comments(number: int) -> list:"
+      },
+      {
+        "type": "function",
+        "name": "post_comment",
+        "lines": "227-248",
+        "signature": "def post_comment(number: int, body: str) -> dict:"
+      },
+      {
+        "type": "function",
+        "name": "check_approval",
+        "lines": "251-283",
+        "signature": "def check_approval(number: int, blocked_label: str | None = None) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "get_all_labels",
+        "lines": "290-298",
+        "signature": "def get_all_labels() -> dict:"
+      },
+      {
+        "type": "function",
+        "name": "add_label",
+        "lines": "301-314",
+        "signature": "def add_label(number: int, label_name: str) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "remove_label",
+        "lines": "317-329",
+        "signature": "def remove_label(number: int, label_name: str) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "swap_label",
+        "lines": "332-343",
+        "signature": "def swap_label(number: int, remove: str, add: str) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "get_pr_for_branch",
+        "lines": "350-372",
+        "signature": "def get_pr_for_branch(branch: str, base: str | None = None) -> dict | None:"
+      },
+      {
+        "type": "function",
+        "name": "get_file_contents",
+        "lines": "375-393",
+        "signature": "def get_file_contents(path: str, ref: str) -> str | None:"
+      },
+      {
+        "type": "function",
+        "name": "create_pr",
+        "lines": "396-425",
+        "signature": "def create_pr(branch: str, title: str, body: str, base: str | None = None) -> dict:"
+      }
+    ]
+  },
+  {
+    "path": "agent_eval.template.json",
+    "truncated": false,
+    "lines": 86,
+    "size_kb": 3,
+    "symbols": []
+  },
+  {
+    "path": "dashboard.py",
+    "truncated": false,
+    "lines": 299,
+    "size_kb": 10,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "generate",
+        "lines": "139-295",
+        "signature": "def generate(project_root: Path):"
+      }
+    ]
+  },
+  {
+    "path": "settings.py",
+    "truncated": false,
+    "lines": 301,
+    "size_kb": 11,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "_env",
+        "lines": "16-25",
+        "signature": "def _env(key: str, default: str = \"\") -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_env_list",
+        "lines": "28-30",
+        "signature": "def _env_list(key: str, default: str) -> list[str]:"
+      },
+      {
+        "type": "function",
+        "name": "_env_int",
+        "lines": "33-37",
+        "signature": "def _env_int(key: str, default: int) -> int:"
+      },
+      {
+        "type": "function",
+        "name": "_env_bool",
+        "lines": "40-41",
+        "signature": "def _env_bool(key: str, default: bool = False) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "_load_features",
+        "lines": "257-275",
+        "signature": "def _load_features() -> dict:"
+      },
+      {
+        "type": "function",
+        "name": "_load_project_type",
+        "lines": "280-291",
+        "signature": "def _load_project_type() -> str:"
+      }
+    ]
+  },
+  {
+    "path": "evaluation.py",
+    "truncated": false,
+    "lines": 604,
+    "size_kb": 20,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "TestResult",
+        "lines": "42-57",
+        "signature": "class TestResult:"
+      },
+      {
+        "type": "class",
+        "name": "EvalResult",
+        "lines": "61-72",
+        "signature": "class EvalResult:"
+      },
+      {
+        "type": "function",
+        "name": "_ping",
+        "lines": "80-88",
+        "signature": "def _ping(url: str) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "_chat",
+        "lines": "91-120",
+        "signature": "def _chat(server_url: str, endpoint: str, message: str, eval_user: str) -> str | None:"
+      },
+      {
+        "type": "function",
+        "name": "_keywords_match",
+        "lines": "123-126",
+        "signature": "def _keywords_match(text: str, keywords: list[str]) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "_categorize",
+        "lines": "129-159",
+        "signature": "def _categorize("
+      },
+      {
+        "type": "function",
+        "name": "_run_steps",
+        "lines": "162-237",
+        "signature": "def _run_steps("
+      },
+      {
+        "type": "function",
+        "name": "_resolve_path",
+        "lines": "240-258",
+        "signature": "def _resolve_path(project_root: Path, new_rel: str, legacy_rel: str) -> Path:"
+      },
+      {
+        "type": "function",
+        "name": "_resolve_config",
+        "lines": "261-266",
+        "signature": "def _resolve_config(project_root: Path) -> Path:"
+      },
+      {
+        "type": "function",
+        "name": "_load_config",
+        "lines": "269-275",
+        "signature": "def _load_config(project_root: Path) -> dict | None:"
+      },
+      {
+        "type": "function",
+        "name": "_load_baseline",
+        "lines": "278-285",
+        "signature": "def _load_baseline(project_root: Path) -> float | None:"
+      },
+      {
+        "type": "function",
+        "name": "_save_baseline",
+        "lines": "288-293",
+        "signature": "def _save_baseline(project_root: Path, score: float) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "_get_commit_hash",
+        "lines": "296-307",
+        "signature": "def _get_commit_hash() -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_save_score_history",
+        "lines": "310-346",
+        "signature": "def _save_score_history(project_root: Path, result: \"EvalResult\", trigger: str) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "run",
+        "lines": "354-525",
+        "signature": "def run("
+      },
+      {
+        "type": "function",
+        "name": "format_terminal",
+        "lines": "533-557",
+        "signature": "def format_terminal(r: EvalResult) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "format_gitea_comment",
+        "lines": "560-579",
+        "signature": "def format_gitea_comment(r: EvalResult) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "main",
+        "lines": "587-600",
+        "signature": "def main() -> None:"
+      }
+    ]
+  },
+  {
+    "path": "repo_skeleton.json",
+    "truncated": true,
+    "size_kb": 39,
+    "reason": "Datei zu gro\u00df (39KB > 20KB)",
+    "symbols": []
+  },
+  {
+    "path": "start_night.sh",
+    "truncated": false,
+    "lines": 24,
+    "size_kb": 0,
+    "symbols": []
+  },
+  {
+    "path": "context_export.sh",
+    "truncated": false,
+    "lines": 206,
+    "size_kb": 6,
+    "symbols": []
+  },
+  {
+    "path": "log.py",
+    "truncated": false,
+    "lines": 67,
+    "size_kb": 2,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "setup",
+        "lines": "21-54",
+        "signature": "def setup(log_file: str = \"gitea-agent.log\", level: str = \"INFO\") -> None:"
+      },
+      {
+        "type": "function",
+        "name": "get_logger",
+        "lines": "57-67",
+        "signature": "def get_logger(name: str) -> logging.Logger:"
+      }
+    ]
+  },
+  {
+    "path": "plugins/patch.py",
+    "truncated": false,
+    "lines": 200,
+    "size_kb": 5,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "_project_root",
+        "lines": "17-22",
+        "signature": "def _project_root() -> Path:"
+      },
+      {
+        "type": "function",
+        "name": "_normalize_ws",
+        "lines": "32-34",
+        "signature": "def _normalize_ws(text: str) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_parse_search_replace",
+        "lines": "37-83",
+        "signature": "def _parse_search_replace(text: str) -> list[dict]:"
+      },
+      {
+        "type": "function",
+        "name": "_apply_patch",
+        "lines": "86-147",
+        "signature": "def _apply_patch("
+      },
+      {
+        "type": "function",
+        "name": "cmd_apply_patch",
+        "lines": "150-200",
+        "signature": "def cmd_apply_patch(number: int, dry_run: bool = False) -> None:"
+      }
+    ]
+  },
+  {
+    "path": "plugins/changelog.py",
+    "truncated": false,
+    "lines": 165,
+    "size_kb": 5,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "_project_root",
+        "lines": "16-21",
+        "signature": "def _project_root() -> Path:"
+      },
+      {
+        "type": "function",
+        "name": "_git_log_since_tag",
+        "lines": "40-79",
+        "signature": "def _git_log_since_tag(cwd: Path) -> list[dict]:"
+      },
+      {
+        "type": "function",
+        "name": "_classify_commit",
+        "lines": "82-93",
+        "signature": "def _classify_commit(subject: str) -> tuple[str, str]:"
+      },
+      {
+        "type": "function",
+        "name": "_build_changelog_block",
+        "lines": "96-117",
+        "signature": "def _build_changelog_block(commits: list[dict], version: str, date: str) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "cmd_changelog",
+        "lines": "120-165",
+        "signature": "def cmd_changelog(version: str | None = None, update_file: bool = True) -> str:"
+      }
+    ]
+  },
+  {
+    "path": "scripts/agent_status.sh",
+    "truncated": false,
+    "lines": 91,
+    "size_kb": 2,
+    "symbols": []
+  },
+  {
+    "path": "scripts/stop_agent.sh",
+    "truncated": false,
+    "lines": 28,
+    "size_kb": 0,
+    "symbols": []
+  },
+  {
+    "path": "scripts/start_patch.sh",
+    "truncated": false,
+    "lines": 71,
+    "size_kb": 2,
+    "symbols": []
+  },
+  {
+    "path": "scripts/push_github.sh",
+    "truncated": false,
+    "lines": 26,
+    "size_kb": 0,
+    "symbols": []
+  },
+  {
+    "path": "scripts/start_night.sh",
+    "truncated": false,
+    "lines": 24,
+    "size_kb": 0,
+    "symbols": []
+  },
+  {
+    "path": "scripts/context_export.sh",
+    "truncated": false,
+    "lines": 206,
+    "size_kb": 6,
+    "symbols": []
+  },
+  {
+    "path": "data/doctor_last.json",
+    "truncated": false,
+    "lines": 46,
+    "size_kb": 0,
+    "symbols": []
+  },
+  {
+    "path": "tests/test_issue.py",
+    "truncated": false,
+    "lines": 149,
+    "size_kb": 4,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "_issue",
+        "lines": "12-13",
+        "signature": "def _issue(title=\"\", labels=None):"
+      },
+      {
+        "type": "function",
+        "name": "test_risk_level_bug",
+        "lines": "21-24",
+        "signature": "def test_risk_level_bug():"
+      },
+      {
+        "type": "function",
+        "name": "test_risk_level_feature",
+        "lines": "27-29",
+        "signature": "def test_risk_level_feature():"
+      },
+      {
+        "type": "function",
+        "name": "test_risk_level_enhancement",
+        "lines": "32-34",
+        "signature": "def test_risk_level_enhancement():"
+      },
+      {
+        "type": "function",
+        "name": "test_risk_level_docs_keyword",
+        "lines": "37-40",
+        "signature": "def test_risk_level_docs_keyword():"
+      },
+      {
+        "type": "function",
+        "name": "test_risk_level_default",
+        "lines": "43-45",
+        "signature": "def test_risk_level_default():"
+      },
+      {
+        "type": "function",
+        "name": "test_risk_level_no_labels",
+        "lines": "48-50",
+        "signature": "def test_risk_level_no_labels():"
+      },
+      {
+        "type": "function",
+        "name": "test_issue_type_bug",
+        "lines": "58-59",
+        "signature": "def test_issue_type_bug():"
+      },
+      {
+        "type": "function",
+        "name": "test_issue_type_feature",
+        "lines": "62-63",
+        "signature": "def test_issue_type_feature():"
+      },
+      {
+        "type": "function",
+        "name": "test_issue_type_enhancement",
+        "lines": "66-67",
+        "signature": "def test_issue_type_enhancement():"
+      },
+      {
+        "type": "function",
+        "name": "test_issue_type_docs",
+        "lines": "70-71",
+        "signature": "def test_issue_type_docs():"
+      },
+      {
+        "type": "function",
+        "name": "test_issue_type_default",
+        "lines": "74-75",
+        "signature": "def test_issue_type_default():"
+      },
+      {
+        "type": "function",
+        "name": "test_branch_name_bug_prefix",
+        "lines": "83-85",
+        "signature": "def test_branch_name_bug_prefix():"
+      },
+      {
+        "type": "function",
+        "name": "test_branch_name_feat_prefix",
+        "lines": "88-90",
+        "signature": "def test_branch_name_feat_prefix():"
+      },
+      {
+        "type": "function",
+        "name": "test_branch_name_chore_prefix",
+        "lines": "93-95",
+        "signature": "def test_branch_name_chore_prefix():"
+      },
+      {
+        "type": "function",
+        "name": "test_branch_name_docs_prefix",
+        "lines": "98-100",
+        "signature": "def test_branch_name_docs_prefix():"
+      },
+      {
+        "type": "function",
+        "name": "test_branch_name_slug_length",
+        "lines": "103-107",
+        "signature": "def test_branch_name_slug_length():"
+      },
+      {
+        "type": "function",
+        "name": "test_branch_name_umlaut_conversion",
+        "lines": "110-113",
+        "signature": "def test_branch_name_umlaut_conversion():"
+      },
+      {
+        "type": "function",
+        "name": "test_branch_name_special_chars_removed",
+        "lines": "116-120",
+        "signature": "def test_branch_name_special_chars_removed():"
+      },
+      {
+        "type": "function",
+        "name": "test_validate_comment_all_present",
+        "lines": "128-132",
+        "signature": "def test_validate_comment_all_present(capfd):"
+      },
+      {
+        "type": "function",
+        "name": "test_validate_comment_missing_field",
+        "lines": "135-139",
+        "signature": "def test_validate_comment_missing_field(capfd):"
+      },
+      {
+        "type": "function",
+        "name": "test_validate_comment_unknown_type",
+        "lines": "142-144",
+        "signature": "def test_validate_comment_unknown_type():"
+      },
+      {
+        "type": "function",
+        "name": "test_validate_comment_case_insensitive",
+        "lines": "147-149",
+        "signature": "def test_validate_comment_case_insensitive():"
+      }
+    ]
+  },
+  {
+    "path": "tests/test_patch.py",
+    "truncated": false,
+    "lines": 152,
+    "size_kb": 4,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "test_normalize_ws_strips_trailing_spaces",
+        "lines": "20-21",
+        "signature": "def test_normalize_ws_strips_trailing_spaces():"
+      },
+      {
+        "type": "function",
+        "name": "test_normalize_ws_crlf_to_lf",
+        "lines": "24-25",
+        "signature": "def test_normalize_ws_crlf_to_lf():"
+      },
+      {
+        "type": "function",
+        "name": "test_normalize_ws_empty",
+        "lines": "28-29",
+        "signature": "def test_normalize_ws_empty():"
+      },
+      {
+        "type": "function",
+        "name": "test_normalize_ws_no_change",
+        "lines": "32-33",
+        "signature": "def test_normalize_ws_no_change():"
+      },
+      {
+        "type": "function",
+        "name": "test_parse_single_block",
+        "lines": "50-55",
+        "signature": "def test_parse_single_block():"
+      },
+      {
+        "type": "function",
+        "name": "test_parse_multiple_blocks",
+        "lines": "58-62",
+        "signature": "def test_parse_multiple_blocks():"
+      },
+      {
+        "type": "function",
+        "name": "test_parse_empty_text",
+        "lines": "65-66",
+        "signature": "def test_parse_empty_text():"
+      },
+      {
+        "type": "function",
+        "name": "test_parse_no_py_header_ignored",
+        "lines": "69-71",
+        "signature": "def test_parse_no_py_header_ignored():"
+      },
+      {
+        "type": "function",
+        "name": "test_parse_multiline_block",
+        "lines": "74-78",
+        "signature": "def test_parse_multiline_block():"
+      },
+      {
+        "type": "function",
+        "name": "test_parse_incomplete_block_ignored",
+        "lines": "81-83",
+        "signature": "def test_parse_incomplete_block_ignored():"
+      },
+      {
+        "type": "function",
+        "name": "_make_temp_py",
+        "lines": "91-98",
+        "signature": "def _make_temp_py(content: str) -> Path:"
+      },
+      {
+        "type": "function",
+        "name": "test_apply_patch_happy_path",
+        "lines": "101-108",
+        "signature": "def test_apply_patch_happy_path(tmp_path, monkeypatch):"
+      },
+      {
+        "type": "function",
+        "name": "test_apply_patch_search_not_found",
+        "lines": "111-117",
+        "signature": "def test_apply_patch_search_not_found(tmp_path, monkeypatch):"
+      },
+      {
+        "type": "function",
+        "name": "test_apply_patch_file_not_found",
+        "lines": "120-125",
+        "signature": "def test_apply_patch_file_not_found(tmp_path, monkeypatch):"
+      },
+      {
+        "type": "function",
+        "name": "test_apply_patch_dry_run",
+        "lines": "128-135",
+        "signature": "def test_apply_patch_dry_run(tmp_path, monkeypatch):"
+      },
+      {
+        "type": "function",
+        "name": "test_apply_patch_syntax_error_rejected",
+        "lines": "138-144",
+        "signature": "def test_apply_patch_syntax_error_rejected(tmp_path, monkeypatch):"
+      },
+      {
+        "type": "function",
+        "name": "test_apply_patch_creates_backup",
+        "lines": "147-152",
+        "signature": "def test_apply_patch_creates_backup(tmp_path, monkeypatch):"
+      }
+    ]
+  },
+  {
+    "path": "tests/score_history.json",
+    "truncated": false,
+    "lines": 26,
+    "size_kb": 0,
+    "symbols": []
+  },
+  {
+    "path": "tests/test_skeleton.py",
+    "truncated": false,
+    "lines": 121,
+    "size_kb": 3,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "test_extract_function",
+        "lines": "17-21",
+        "signature": "def test_extract_function():"
+      },
+      {
+        "type": "function",
+        "name": "test_extract_class",
+        "lines": "24-27",
+        "signature": "def test_extract_class():"
+      },
+      {
+        "type": "function",
+        "name": "test_extract_multiple",
+        "lines": "30-33",
+        "signature": "def test_extract_multiple():"
+      },
+      {
+        "type": "function",
+        "name": "test_extract_syntax_error_returns_empty",
+        "lines": "36-38",
+        "signature": "def test_extract_syntax_error_returns_empty():"
+      },
+      {
+        "type": "function",
+        "name": "test_extract_empty_string",
+        "lines": "41-42",
+        "signature": "def test_extract_empty_string():"
+      },
+      {
+        "type": "function",
+        "name": "test_extract_line_numbers",
+        "lines": "45-51",
+        "signature": "def test_extract_line_numbers():"
+      },
+      {
+        "type": "function",
+        "name": "test_extract_signature",
+        "lines": "54-58",
+        "signature": "def test_extract_signature():"
+      },
+      {
+        "type": "function",
+        "name": "test_extract_async_function",
+        "lines": "61-64",
+        "signature": "def test_extract_async_function():"
+      },
+      {
+        "type": "function",
+        "name": "test_skeleton_to_md_header",
+        "lines": "72-76",
+        "signature": "def test_skeleton_to_md_header():"
+      },
+      {
+        "type": "function",
+        "name": "test_skeleton_to_md_function_entry",
+        "lines": "79-88",
+        "signature": "def test_skeleton_to_md_function_entry():"
+      },
+      {
+        "type": "function",
+        "name": "test_skeleton_to_md_class_entry",
+        "lines": "91-99",
+        "signature": "def test_skeleton_to_md_class_entry():"
+      },
+      {
+        "type": "function",
+        "name": "test_skeleton_to_md_truncated",
+        "lines": "102-105",
+        "signature": "def test_skeleton_to_md_truncated():"
+      },
+      {
+        "type": "function",
+        "name": "test_skeleton_to_md_no_symbols",
+        "lines": "108-111",
+        "signature": "def test_skeleton_to_md_no_symbols():"
+      },
+      {
+        "type": "function",
+        "name": "test_skeleton_to_md_multiple_files",
+        "lines": "114-121",
+        "signature": "def test_skeleton_to_md_multiple_files():"
+      }
+    ]
+  },
+  {
+    "path": "tests/test_changelog.py",
+    "truncated": false,
+    "lines": 97,
+    "size_kb": 2,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "test_classify_feat",
+        "lines": "17-18",
+        "signature": "def test_classify_feat():"
+      },
+      {
+        "type": "function",
+        "name": "test_classify_fix",
+        "lines": "21-22",
+        "signature": "def test_classify_fix():"
+      },
+      {
+        "type": "function",
+        "name": "test_classify_with_scope",
+        "lines": "25-28",
+        "signature": "def test_classify_with_scope():"
+      },
+      {
+        "type": "function",
+        "name": "test_classify_breaking_change",
+        "lines": "31-34",
+        "signature": "def test_classify_breaking_change():"
+      },
+      {
+        "type": "function",
+        "name": "test_classify_no_prefix",
+        "lines": "37-40",
+        "signature": "def test_classify_no_prefix():"
+      },
+      {
+        "type": "function",
+        "name": "test_classify_empty",
+        "lines": "43-45",
+        "signature": "def test_classify_empty():"
+      },
+      {
+        "type": "function",
+        "name": "test_classify_chore",
+        "lines": "48-51",
+        "signature": "def test_classify_chore():"
+      },
+      {
+        "type": "function",
+        "name": "test_classify_case_insensitive_prefix",
+        "lines": "54-56",
+        "signature": "def test_classify_case_insensitive_prefix():"
+      },
+      {
+        "type": "function",
+        "name": "test_build_changelog_block_header",
+        "lines": "64-66",
+        "signature": "def test_build_changelog_block_header():"
+      },
+      {
+        "type": "function",
+        "name": "test_build_changelog_block_feat_section",
+        "lines": "69-74",
+        "signature": "def test_build_changelog_block_feat_section():"
+      },
+      {
+        "type": "function",
+        "name": "test_build_changelog_block_multiple_types",
+        "lines": "77-84",
+        "signature": "def test_build_changelog_block_multiple_types():"
+      },
+      {
+        "type": "function",
+        "name": "test_build_changelog_block_other_section",
+        "lines": "87-91",
+        "signature": "def test_build_changelog_block_other_section():"
+      },
+      {
+        "type": "function",
+        "name": "test_build_changelog_block_empty_commits",
+        "lines": "94-97",
+        "signature": "def test_build_changelog_block_empty_commits():"
+      }
+    ]
+  },
+  {
+    "path": "tests/test_settings.py",
+    "truncated": false,
+    "lines": 35,
+    "size_kb": 0,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "test_dashboard_path_is_absolute",
+        "lines": "10-11",
+        "signature": "def test_dashboard_path_is_absolute():"
+      },
+      {
+        "type": "function",
+        "name": "test_dashboard_path_ends_with_html",
+        "lines": "14-15",
+        "signature": "def test_dashboard_path_ends_with_html():"
+      },
+      {
+        "type": "function",
+        "name": "test_dashboard_path_inside_agent_or_root",
+        "lines": "18-21",
+        "signature": "def test_dashboard_path_inside_agent_or_root():"
+      },
+      {
+        "type": "function",
+        "name": "test_all_paths_consistent",
+        "lines": "24-35",
+        "signature": "def test_all_paths_consistent():"
+      }
+    ]
+  }
+]

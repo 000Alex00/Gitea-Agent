@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 # Template direkt als Modul laden
 import importlib.util
-_TEMPLATE = Path(__file__).parent.parent / "log_analyzer.template.py"
+_TEMPLATE = Path(__file__).parent.parent / "config" / "log_analyzer.py"
 spec = importlib.util.spec_from_file_location("log_analyzer", _TEMPLATE)
 la = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(la)

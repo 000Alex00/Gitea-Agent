@@ -223,31 +223,6 @@
 - **Funktion** `create_pr` Zeilen 396-425
   `def create_pr(branch: str, title: str, body: str, base: str | None = None) -> dict:`
 
-## log_analyzer.template.py  *(317 Zeilen)*
-
-- **Funktion** `_load_eval_cfg` Zeilen 39-46
-  `def _load_eval_cfg() -> dict:`
-- **Klasse** `LogFinding` Zeilen 104-110
-  `class LogFinding:`
-- **Klasse** `LogAnalysisResult` Zeilen 114-129
-  `class LogAnalysisResult:`
-- **Funktion** `_analyze_rules` Zeilen 136-154
-  `def _analyze_rules(lines: list[str]) -> list[LogFinding]:`
-- **Funktion** `_call_llm_local` Zeilen 161-177
-  `def _call_llm_local(url: str, model: str, prompt: str, timeout: int) -> str:`
-- **Funktion** `_call_llm_claude` Zeilen 180-189
-  `def _call_llm_claude(model: str, prompt: str, max_tokens: int = 512) -> str:`
-- **Funktion** `_analyze_llm` Zeilen 192-231
-  `def _analyze_llm(lines: list[str], rule_findings: list[LogFinding], cfg: dict) -> tuple[str, str]:`
-- **Funktion** `run` Zeilen 238-283
-  `def run() -> LogAnalysisResult:`
-- **Funktion** `format_terminal` Zeilen 290-317
-  `def format_terminal(result: LogAnalysisResult) -> str:`
-- **Funktion** `error_count` Zeilen 124-125
-  `def error_count(self) -> int:`
-- **Funktion** `tags` Zeilen 128-129
-  `def tags(self) -> list[str]:`
-
 ## dashboard.py  *(299 Zeilen)*
 
 - **Funktion** `generate` Zeilen 139-295
@@ -929,3 +904,28 @@
   `def test_dashboard_path_inside_agent_or_root():`
 - **Funktion** `test_all_paths_consistent` Zeilen 24-35
   `def test_all_paths_consistent():`
+
+## config/log_analyzer.py  *(317 Zeilen)*
+
+- **Funktion** `_load_eval_cfg` Zeilen 39-46
+  `def _load_eval_cfg() -> dict:`
+- **Klasse** `LogFinding` Zeilen 104-110
+  `class LogFinding:`
+- **Klasse** `LogAnalysisResult` Zeilen 114-129
+  `class LogAnalysisResult:`
+- **Funktion** `_analyze_rules` Zeilen 136-154
+  `def _analyze_rules(lines: list[str]) -> list[LogFinding]:`
+- **Funktion** `_call_llm_local` Zeilen 161-177
+  `def _call_llm_local(url: str, model: str, prompt: str, timeout: int) -> str:`
+- **Funktion** `_call_llm_claude` Zeilen 180-189
+  `def _call_llm_claude(model: str, prompt: str, max_tokens: int = 512) -> str:`
+- **Funktion** `_analyze_llm` Zeilen 192-231
+  `def _analyze_llm(lines: list[str], rule_findings: list[LogFinding], cfg: dict) -> tuple[str, str]:`
+- **Funktion** `run` Zeilen 238-283
+  `def run() -> LogAnalysisResult:`
+- **Funktion** `format_terminal` Zeilen 290-317
+  `def format_terminal(result: LogAnalysisResult) -> str:`
+- **Funktion** `error_count` Zeilen 124-125
+  `def error_count(self) -> int:`
+- **Funktion** `tags` Zeilen 128-129
+  `def tags(self) -> list[str]:`

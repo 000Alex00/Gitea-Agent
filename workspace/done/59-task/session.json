@@ -1,0 +1,28 @@
+{
+  "slices_requested": [
+    {
+      "spec": "gitea_api.py:1-50",
+      "timestamp": "2026-03-23T13:39:28.743741"
+    },
+    {
+      "spec": "gitea_api.py:90-130",
+      "timestamp": "2026-03-23T13:39:33.579446"
+    },
+    {
+      "spec": "agent_start.py:3031-3070",
+      "timestamp": "2026-03-23T13:39:46.445465"
+    },
+    {
+      "spec": "agent_start.py:3155-3210",
+      "timestamp": "2026-03-23T13:39:47.193242"
+    },
+    {
+      "spec": "evaluation.py:1-50",
+      "timestamp": "2026-03-23T13:39:51.830480"
+    },
+    {
+      "spec": "agent_start.py:3195-3240",
+      "timestamp": "2026-03-23T13:40:40.126459"
+    }
+  ]
+}

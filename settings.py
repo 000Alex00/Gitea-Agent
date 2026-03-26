@@ -127,12 +127,12 @@ AUTO_APPROVE = _env_bool("AUTO_APPROVE", False)
 PROJECT_ROOT = _env("PROJECT_ROOT", "")
 
 # Verzeichnis für Kontext-Dateien (relativ zu agent_start.py oder absolut) — Legacy
-CONTEXT_DIR = _env("CONTEXT_DIR", "contexts")
+CONTEXT_DIR = _env("CONTEXT_DIR", "workspace")
 
 # ---------------------------------------------------------------------------
 # Pfad-Auflösung: wenn PROJECT_ROOT/agent/ existiert → neue Struktur
 #   agent/config/  ← agent_eval.json, log_analyzer.py
-#   agent/data/    ← contexts/, logs, session, baseline, history
+#   agent/data/    ← workspace/, logs, session, baseline, history
 # sonst → Fallback: Pfade relativ zu agent_start.py
 # ---------------------------------------------------------------------------
 
@@ -145,7 +145,7 @@ if PROJECT_ROOT:
         _AGENT_DIR = _candidate
 
 if _AGENT_DIR:
-    CONTEXT_DIR_PATH   = _AGENT_DIR / "data" / "contexts"
+    CONTEXT_DIR_PATH   = _AGENT_DIR / "data" / "workspace"
     LOG_FILE_PATH      = _AGENT_DIR / "data" / "gitea-agent.log"
     SESSION_FILE_PATH  = _AGENT_DIR / "data" / "session.json"
     DOCTOR_RESULT_PATH = _AGENT_DIR / "data" / "doctor_last.json"
@@ -154,9 +154,9 @@ if _AGENT_DIR:
 else:
     # Fallback: Laufzeit-Dateien in data/ (gitea-agent Root-Betrieb)
     _DATA_DIR          = _HERE_SETTINGS / "data"
-    CONTEXT_DIR_PATH   = _DATA_DIR / _env("CONTEXT_DIR", "contexts")
+    CONTEXT_DIR_PATH   = _DATA_DIR / _env("CONTEXT_DIR", "workspace")
     LOG_FILE_PATH      = _DATA_DIR / _env("LOG_FILE", "gitea-agent.log")
-    SESSION_FILE_PATH  = _DATA_DIR / "contexts" / "session.json"
+    SESSION_FILE_PATH  = _DATA_DIR / "workspace" / "session.json"
     DOCTOR_RESULT_PATH = _DATA_DIR / "doctor_last.json"
     DASHBOARD_PATH     = _DATA_DIR / "dashboard.html"
     LOG_ANALYZER_PATH  = None  # agent_start.py prüft PROJECT/tools/ als Fallback

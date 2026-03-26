@@ -8,7 +8,7 @@ __pycache__/
 # Laufzeit-Daten (gitea-agent Root-Betrieb)
 data/*
 !data/.gitkeep
-contexts/
+workspace/
 
 # Legacy (Root-Betrieb vor Strukturbereinigung)
 gitea-agent.log

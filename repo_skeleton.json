@@ -666,80 +666,6 @@
     ]
   },
   {
-    "path": "log_analyzer.template.py",
-    "truncated": false,
-    "lines": 317,
-    "size_kb": 10,
-    "symbols": [
-      {
-        "type": "function",
-        "name": "_load_eval_cfg",
-        "lines": "39-46",
-        "signature": "def _load_eval_cfg() -> dict:"
-      },
-      {
-        "type": "class",
-        "name": "LogFinding",
-        "lines": "104-110",
-        "signature": "class LogFinding:"
-      },
-      {
-        "type": "class",
-        "name": "LogAnalysisResult",
-        "lines": "114-129",
-        "signature": "class LogAnalysisResult:"
-      },
-      {
-        "type": "function",
-        "name": "_analyze_rules",
-        "lines": "136-154",
-        "signature": "def _analyze_rules(lines: list[str]) -> list[LogFinding]:"
-      },
-      {
-        "type": "function",
-        "name": "_call_llm_local",
-        "lines": "161-177",
-        "signature": "def _call_llm_local(url: str, model: str, prompt: str, timeout: int) -> str:"
-      },
-      {
-        "type": "function",
-        "name": "_call_llm_claude",
-        "lines": "180-189",
-        "signature": "def _call_llm_claude(model: str, prompt: str, max_tokens: int = 512) -> str:"
-      },
-      {
-        "type": "function",
-        "name": "_analyze_llm",
-        "lines": "192-231",
-        "signature": "def _analyze_llm(lines: list[str], rule_findings: list[LogFinding], cfg: dict) -> tuple[str, str]:"
-      },
-      {
-        "type": "function",
-        "name": "run",
-        "lines": "238-283",
-        "signature": "def run() -> LogAnalysisResult:"
-      },
-      {
-        "type": "function",
-        "name": "format_terminal",
-        "lines": "290-317",
-        "signature": "def format_terminal(result: LogAnalysisResult) -> str:"
-      },
-      {
-        "type": "function",
-        "name": "error_count",
-        "lines": "124-125",
-        "signature": "def error_count(self) -> int:"
-      },
-      {
-        "type": "function",
-        "name": "tags",
-        "lines": "128-129",
-        "signature": "def tags(self) -> list[str]:"
-      }
-    ]
-  },
-  {
     "path": "dashboard.py",
     "truncated": false,
     "lines": 299,
@@ -2757,6 +2683,80 @@
         "name": "test_all_paths_consistent",
         "lines": "24-35",
         "signature": "def test_all_paths_consistent():"
+      }
+    ]
+  },
+  {
+    "path": "config/log_analyzer.py",
+    "truncated": false,
+    "lines": 317,
+    "size_kb": 10,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "_load_eval_cfg",
+        "lines": "39-46",
+        "signature": "def _load_eval_cfg() -> dict:"
+      },
+      {
+        "type": "class",
+        "name": "LogFinding",
+        "lines": "104-110",
+        "signature": "class LogFinding:"
+      },
+      {
+        "type": "class",
+        "name": "LogAnalysisResult",
+        "lines": "114-129",
+        "signature": "class LogAnalysisResult:"
+      },
+      {
+        "type": "function",
+        "name": "_analyze_rules",
+        "lines": "136-154",
+        "signature": "def _analyze_rules(lines: list[str]) -> list[LogFinding]:"
+      },
+      {
+        "type": "function",
+        "name": "_call_llm_local",
+        "lines": "161-177",
+        "signature": "def _call_llm_local(url: str, model: str, prompt: str, timeout: int) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_call_llm_claude",
+        "lines": "180-189",
+        "signature": "def _call_llm_claude(model: str, prompt: str, max_tokens: int = 512) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_analyze_llm",
+        "lines": "192-231",
+        "signature": "def _analyze_llm(lines: list[str], rule_findings: list[LogFinding], cfg: dict) -> tuple[str, str]:"
+      },
+      {
+        "type": "function",
+        "name": "run",
+        "lines": "238-283",
+        "signature": "def run() -> LogAnalysisResult:"
+      },
+      {
+        "type": "function",
+        "name": "format_terminal",
+        "lines": "290-317",
+        "signature": "def format_terminal(result: LogAnalysisResult) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "error_count",
+        "lines": "124-125",
+        "signature": "def error_count(self) -> int:"
+      },
+      {
+        "type": "function",
+        "name": "tags",
+        "lines": "128-129",
+        "signature": "def tags(self) -> list[str]:"
       }
     ]
   }
