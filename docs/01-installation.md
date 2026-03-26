@@ -48,7 +48,7 @@ python3 agent_start.py --help
 
 **Warum zentrale Installation?**
 - gitea-agent ist **projekt-agnostisch** — ein Agent, viele Projekte.
-- Konfiguration liegt in den Zielprojekten (via `agent/config/`), nicht im Agent selbst.
+- Konfiguration liegt in den Zielprojekten (via `config/`), nicht im Agent selbst.
 - Updates ziehst du mit `git pull` im Agent-Verzeichnis.
 
 **Warum keine Dependencies?**
@@ -62,16 +62,19 @@ python3 agent_start.py --help
     agent_start.py
     evaluation.py
     gitea_api.py
+    plugins/            ← Plugin-Architektur
+    scripts/            ← Shell-Skripte
     .env                ← zeigt auf aktives Projekt
 
 ~/mein-projekt/         ← dein Zielprojekt
-    agent/
-        config/         ← versioniert (Tests, Excludes)
-        data/           ← .gitignore (Scores, Logs)
+    config/             ← versioniert (Tests, Excludes, LLM-Routing)
+    data/               ← .gitignore (Scores, Logs)
+    workspace/          ← Issue-Arbeit (open/, done/)
+    docs/               ← Dokumentation
 
 ~/anderes-projekt/      ← weiteres Projekt
-    agent/config/       ← eigene Konfiguration
-    agent/data/         ← eigene Laufzeit-Daten
+    config/             ← eigene Konfiguration
+    data/               ← eigene Laufzeit-Daten
 ```
 
 ---

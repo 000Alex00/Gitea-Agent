@@ -24,11 +24,11 @@ Score-History nur als JSON. Du willst: grafisches Dashboard mit Charts.
 # ──────────────────────────────────────────────────────────
 # Schritt 1: Dashboard aktivieren
 # ──────────────────────────────────────────────────────────
-# ~/mein-projekt/agent/config/dashboard.json
+# ~/mein-projekt/config/dashboard.json
 
 {
   "enabled": true,
-  "output_dir": "agent/dashboard",
+  "output_dir": "data/dashboard",
   "update_interval": 3600,
   "charts": {
     "score_history": {
@@ -62,30 +62,30 @@ Score-History nur als JSON. Du willst: grafisches Dashboard mit Charts.
 cd ~/Gitea-Agent
 python3 dashboard.py \
   --project ~/mein-projekt \
-  --config agent/config/dashboard.json
+  --config config/dashboard.json
 
 # Output:
 # [✓] Reading score_history.json
 # [✓] Generating charts...
 # [✓] Generating tables...
-# [✓] Dashboard saved: ~/mein-projekt/agent/dashboard/index.html
+# [✓] Dashboard saved: ~/mein-projekt/data/dashboard/index.html
 
 # ──────────────────────────────────────────────────────────
 # Schritt 3: Dashboard hosten
 # ──────────────────────────────────────────────────────────
 # Option A: Python http.server
-cd ~/mein-projekt/agent/dashboard
+cd ~/mein-projekt/data/dashboard
 python3 -m http.server 8080
 # → http://localhost:8080
 
 # Option B: nginx
-sudo cp -r ~/mein-projekt/agent/dashboard /var/www/html/agent-dashboard
+sudo cp -r ~/mein-projekt/data/dashboard /var/www/html/agent-dashboard
 sudo systemctl restart nginx
 # → http://your-server/agent-dashboard
 
 # Option C: Gitea Pages (falls aktiviert)
 cd ~/mein-projekt
-git add agent/dashboard/
+git add data/dashboard/
 git commit -m "Update dashboard"
 git push
 # → https://gitea.example.com/user/repo/dashboard
@@ -111,7 +111,7 @@ python3 agent_start.py \
 **Dashboard-Struktur:**
 
 ```
-agent/dashboard/
+data/dashboard/
 ├── index.html           # Haupt-Dashboard
 ├── assets/
 │   ├── style.css        # Custom-Styling

@@ -97,10 +97,19 @@ python3 agent_start.py --help
 
 | Flag | Argument | Beschreibung |
 |------|----------|--------------|
-| `--doctor` | - | Health-Check: Validiere Setup ([Rezept 04](04-health-check.md)) |
+| `--doctor` | - | Health-Check: 7 Checks inkl. LLM-Config-Guard ([Rezept 04](04-health-check.md)) |
 | `--verbose` | - | Detaillierte Logs |
 | `--debug` | - | Noch mehr Logs (HTTP-Bodies) |
 | `--dry-run` | - | Simulation ohne Änderungen |
+
+#### **LLM-Config-Guard**
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `python3 plugins/llm_config_guard.py` | Prüft alle IDE-Config-Dateien |
+| `python3 plugins/llm_config_guard.py --repair` | Repariert veraltete IDE-Configs |
+| `python3 plugins/llm_config_guard.py --create` | Erstellt fehlende IDE-Config-Dateien |
+| `python3 plugins/llm_config_guard.py --verbose` | Detaillierte Ausgabe |
 
 ---
 

@@ -32,12 +32,12 @@ python3 agent_start.py \
 # Output:
 # [✓] Scanning ~/mein-projekt
 # [✓] Analyzing 47 Python files...
-# [✓] Skeleton saved: ~/mein-projekt/agent/data/repo_skeleton.json
+# [✓] Skeleton saved: ~/mein-projekt/data/repo_skeleton.json
 
 # ──────────────────────────────────────────────────────────
 # Skeleton-Datei Struktur
 # ──────────────────────────────────────────────────────────
-cat ~/mein-projekt/agent/data/repo_skeleton.json
+cat ~/mein-projekt/data/repo_skeleton.json
 
 {
   "files": {
@@ -185,14 +185,14 @@ class ChatAPI:
 >   "exclude_files": ["setup.py", "conftest.py"]
 > }
 > ```
-> → In `agent/config/settings.json`
+> → In `config/settings.json`
 
 > [!TIP]
 > **Skeleton in README verlinken:**
 > ```markdown
 > # Project Structure
 > 
-> Siehe: `agent/data/repo_skeleton.json`
+> Siehe: `data/repo_skeleton.json`
 > 
 > Aktualisieren mit:
 > ```bash

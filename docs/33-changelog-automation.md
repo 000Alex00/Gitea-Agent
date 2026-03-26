@@ -36,7 +36,7 @@ git commit -m "perf: Reduce context loading time"
 # ──────────────────────────────────────────────────────────
 # Schritt 2: Changelog aktivieren
 # ──────────────────────────────────────────────────────────
-# ~/mein-projekt/agent/config/settings.json
+# ~/mein-projekt/config/settings.json
 
 {
   "changelog": {

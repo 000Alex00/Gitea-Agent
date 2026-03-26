@@ -43,7 +43,7 @@ agent:skip          # ⚫ Schwarz  → Agent soll ignorieren
 # ──────────────────────────────────────────────────────────
 # Schritt 2: Label-Konfiguration im Agent
 # ──────────────────────────────────────────────────────────
-# ~/mein-projekt/agent/config/labels.json
+# ~/mein-projekt/config/labels.json
 
 {
   "workflow": {
@@ -80,7 +80,7 @@ agent:skip          # ⚫ Schwarz  → Agent soll ignorieren
 cd ~/Gitea-Agent
 python3 agent_start.py \
   --project ~/mein-projekt \
-  --label-config agent/config/labels.json \
+  --label-config config/labels.json \
   --watch
 
 # Verhalten:

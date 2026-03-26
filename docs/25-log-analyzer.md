@@ -98,7 +98,7 @@ def analyze_logs(test_name, test_time, log_dir):
 # ──────────────────────────────────────────────────────────
 # Schritt 2: Agent-Konfiguration
 # ──────────────────────────────────────────────────────────
-# ~/mein-projekt/agent/config/agent_eval.json
+# ~/mein-projekt/config/agent_eval.json
 
 {
   "server_url": "http://localhost:8000",

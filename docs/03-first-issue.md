@@ -51,7 +51,7 @@ python3 agent_start.py --issue 1
 python3 agent_start.py --implement 1
 
 # → [✓] Branch erstellt: docs/issue-1-readme-typo
-# → [✓] Kontext generiert: contexts/1-enhancement/
+# → [✓] Kontext generiert: workspace/open/1-enhancement/
 # → [✓] Label: agent-proposed → in-progress
 
 # ──────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ python3 agent_start.py --pr 1 \
 **Was macht `--implement`?**
 - Prüft Freigabe (Kommentar mit "ok" nach letztem Agent-Kommentar)
 - Erstellt Feature-Branch (Format: `prefix/issue-N-slug`)
-- Generiert `starter.md` + `files.md` in `contexts/N-type/`
+- Generiert `starter.md` + `files.md` in `workspace/open/N-type/`
 - Wechselt Label zu `in-progress`
 
 **Was macht `--pr`?**

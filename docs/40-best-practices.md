@@ -227,6 +227,72 @@ Server offline → Alle Tests failen → 50 Issues erstellt
 
 ---
 
+## LLM-Routing
+
+**✓ Routing konfigurieren:**
+
+```json
+{
+  "default": { "provider": "claude", "model": "claude-sonnet-4-6" },
+  "tasks": {
+    "issue_analysis": { "provider": "claude", "model": "claude-haiku-4-5-20251001", "system_prompt": "config/llm/prompts/analyst.md" },
+    "implementation": { "provider": "claude", "model": "claude-sonnet-4-6", "system_prompt": "config/llm/prompts/senior_python.md" }
+  }
+}
+```
+
+→ Jede Task-Art nutzt optimales Modell, System-Prompt wird automatisch geladen
+
+**✗ Immer dasselbe Modell:**
+
+```
+Alle Tasks: gpt-4 (teuer, langsam für einfache Analyse)
+```
+
+---
+
+## System-Prompts
+
+**✓ Rollen-Prompts mit Schranken:**
+
+```bash
+# config/llm/prompts/ enthält:
+# analyst.md, senior_python.md, reviewer.md, healer.md, log_analyst.md
+# Jeder Prompt hat "Unveränderliche Schranken"-Sektion
+```
+
+→ Jailbreak-resistent, konsistentes Verhalten
+
+**✗ Kein System-Prompt:**
+
+```
+LLM ohne Kontext → halluziniert Pfade, macht unnötige Refactorings
+```
+
+---
+
+## Skeleton-First Workflow
+
+**✓ Skeleton vor Code lesen:**
+
+```bash
+# 1. Skeleton bauen
+python3 agent_start.py --build-skeleton
+
+# 2. Nur relevante Slices laden
+python3 agent_start.py --get-slice src/api.py:ChatAPI.process_message
+
+# → 95-98% Token-Ersparnis
+```
+
+**✗ Ganze Dateien laden:**
+
+```
+LLM liest 5000-Zeilen-Datei → Token-Limit, hohe Kosten
+```
+
+---
+
 ## Monitoring
 
 **✓ Dashboard + Alerts:**
@@ -275,12 +341,15 @@ This is a project.
 ✓ Tests haben expected_keywords + weights
 ✓ .env nicht committed
 ✓ Auto-Merge nur für low-risk
-✓ AST-Skeleton generiert
+✓ AST-Skeleton generiert (Skeleton-First Workflow)
 ✓ Excludes konfiguriert (venv, node_modules)
 ✓ Consecutive-Pass-Gate = 2-3
 ✓ Health-Checks vor Eval
 ✓ Dashboard + Monitoring
 ✓ README mit Links zu Cookbook
+✓ config/llm/routing.json konfiguriert (LLM-Routing)
+✓ System-Prompts in config/llm/prompts/ vorhanden
+✓ LLM-Config-Guard läuft (--doctor Check 7)
 ```
 
 ---

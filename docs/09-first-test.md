@@ -25,8 +25,8 @@ Du willst sicherstellen dass dein Projekt nach jeder Änderung noch funktioniert
 # ──────────────────────────────────────────────────────────
 # Schritt 1: agent_eval.json erstellen
 # ──────────────────────────────────────────────────────────
-mkdir -p ~/mein-projekt/agent/config
-nano ~/mein-projekt/agent/config/agent_eval.json
+mkdir -p ~/mein-projekt/config
+nano ~/mein-projekt/config/agent_eval.json
 
 # ──────────────────────────────────────────────────────────
 # Minimal-Konfiguration (Copy-Paste-ready):

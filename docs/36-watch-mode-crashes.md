@@ -27,7 +27,7 @@ Watch-Modus läuft, crasht nach X Stunden. Warum?
 # Watch-Modus crasht nach 12h
 
 # Logs:
-tail -f ~/mein-projekt/agent/data/agent.log
+tail -f ~/mein-projekt/data/gitea-agent.log
 # [2024-01-15 03:00] Starting eval-run
 # [2024-01-15 03:05] requests.exceptions.Timeout: HTTPConnectionPool
 
@@ -58,19 +58,19 @@ nano ~/mein-projekt/.env
 df -h
 # /dev/sda1  100%  (voll!)
 
-du -sh ~/mein-projekt/agent/data/*
+du -sh ~/mein-projekt/data/*
 # 15G  agent.log
 
 # Ursache: Log-Rotation fehlt
 
 # Lösung:
 nano ~/mein-projekt/.env
-# LOG_MAX_SIZE=10  # MB
-# LOG_BACKUP_COUNT=5
+# Log-Rotation ist zeitbasiert (täglich), kein LOG_MAX_SIZE mehr
+# LOG_BACKUP_COUNT=10  (Anzahl täglicher Backup-Dateien)
 
 # Oder systemd logrotate:
 sudo nano /etc/logrotate.d/gitea-agent
-# /home/user/mein-projekt/agent/data/*.log {
+# /home/user/mein-projekt/data/*.log {
 #   daily
 #   rotate 7
 #   compress
@@ -94,7 +94,7 @@ dmesg | grep -i oom
 # Ursache: Context-Accumulation (alte Eval-Results nicht freigegeben)
 
 # Lösung A: Eval-History begrenzen
-nano ~/mein-projekt/agent/config/agent_eval.json
+nano ~/mein-projekt/config/agent_eval.json
 # {
 #   "score_history_max_entries": 1000
 # }
@@ -168,7 +168,7 @@ python3 agent_start.py --project ~/proj --doctor
 # [✗] Config invalid: agent_eval.json missing 'tests' field
 
 # Lösung:
-nano ~/mein-projekt/agent/config/agent_eval.json
+nano ~/mein-projekt/config/agent_eval.json
 # {"tests": []}  ← Feld hinzufügen
 ```
 

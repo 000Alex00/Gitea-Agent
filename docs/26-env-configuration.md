@@ -21,7 +21,7 @@ Du willst wissen: welche .env-Felder gibt es? Was ist optional?
 
 ```bash
 # ──────────────────────────────────────────────────────────
-# ~/mein-projekt/.env
+# ~/Gitea-Agent/.env
 # ──────────────────────────────────────────────────────────
 
 # ══════════════════════════════════════════════════════════
@@ -34,11 +34,11 @@ GITEA_URL=https://gitea.example.com
 # Gitea-API-Token (Scopes: repo, write:issue, write:pull_request)
 GITEA_TOKEN=abc123def456...
 
-# LLM-API-Endpunkt (OpenAI-kompatibel)
-LLM_API_URL=http://localhost:8000/v1/chat/completions
+# Claude API aktivieren (Pflicht für LLM-Routing)
+CLAUDE_API_ENABLED=true
 
-# (Optional) LLM-API-Key (falls Server authentifiziert)
-LLM_API_KEY=sk-...
+# Lokaler LLM-Endpunkt (z.B. Ollama, optional)
+LLM_LOCAL_URL=http://localhost:11434
 
 # ══════════════════════════════════════════════════════════
 # REPOSITORY-KONFIGURATION
@@ -49,6 +49,19 @@ GITEA_REPO=myuser/my-project
 
 # Lokaler Repo-Pfad (absolut)
 PROJECT_PATH=/home/user/my-project
+
+# ══════════════════════════════════════════════════════════
+# LLM-ROUTING (Neu)
+# ══════════════════════════════════════════════════════════
+
+# Routing-Konfiguration (Provider + Modell pro Task)
+# → config/llm/routing.json ist der zentrale Konfig-Punkt
+# → Unterstützte Provider: claude, openai, gemini, local (Ollama)
+LLM_ROUTING_CONFIG=config/llm/routing.json
+
+# Legacy-Felder (nur für direkten Modus ohne routing.json):
+# LLM_API_URL=http://localhost:8000/v1/chat/completions
+# LLM_MODEL=gpt-4
 
 # ══════════════════════════════════════════════════════════
 # WATCH-MODUS
@@ -64,11 +77,8 @@ NIGHT_MODE=false
 CONSECUTIVE_PASSES=2
 
 # ══════════════════════════════════════════════════════════
-# LLM-PARAMETER
+# LLM-PARAMETER (global, Fallback wenn kein Routing)
 # ══════════════════════════════════════════════════════════
-
-# Model-Name (für API-Request)
-LLM_MODEL=gpt-4
 
 # Temperature (0.0-2.0, höher = kreativer)
 LLM_TEMPERATURE=0.7
@@ -97,13 +107,13 @@ BRANCH_PREFIX=agent
 # ══════════════════════════════════════════════════════════
 
 # Pfad zu agent_eval.json (relativ zu PROJECT_PATH)
-EVAL_CONFIG=agent/config/agent_eval.json
+EVAL_CONFIG=config/agent_eval.json
 
 # Baseline-Datei (relativ zu PROJECT_PATH)
-BASELINE_FILE=agent/data/baseline.json
+BASELINE_FILE=data/baseline.json
 
 # Score-History (relativ zu PROJECT_PATH)
-SCORE_HISTORY=agent/data/score_history.json
+SCORE_HISTORY=data/score_history.json
 
 # ══════════════════════════════════════════════════════════
 # ERWEITERTE FEATURES
@@ -113,7 +123,7 @@ SCORE_HISTORY=agent/data/score_history.json
 USE_SKELETON=true
 
 # Skeleton-Datei (relativ zu PROJECT_PATH)
-SKELETON_FILE=agent/data/repo_skeleton.json
+SKELETON_FILE=data/repo_skeleton.json
 
 # Diff-Validation (strict / warn / off)
 DIFF_VALIDATION=warn
@@ -141,13 +151,11 @@ STALENESS_INTERVAL=7200
 LOG_LEVEL=INFO
 
 # Log-Datei (relativ zu PROJECT_PATH)
-LOG_FILE=agent/data/agent.log
+# Täglich rotiert: data/gitea-agent.log.YYYY-MM-DD
+LOG_FILE=data/gitea-agent.log
 
-# Log-Rotation (MB)
-LOG_MAX_SIZE=10
-
-# Log-Backup-Count
-LOG_BACKUP_COUNT=5
+# Log-Backup-Count (täglich rotiert, 10 Backups)
+LOG_BACKUP_COUNT=10
 
 # ══════════════════════════════════════════════════════════
 # NETZWERK
@@ -170,8 +178,13 @@ HTTP_RETRY_DELAY=5
 **Feld-Kategorien:**
 
 ### Pflichtfelder
-- `GITEA_URL`, `GITEA_TOKEN`, `LLM_API_URL`
-- Agent startet nicht ohne diese
+- `GITEA_URL`, `GITEA_TOKEN`, `CLAUDE_API_ENABLED`, `LLM_LOCAL_URL`
+- Agent startet nicht ohne `GITEA_URL` und `GITEA_TOKEN`
+
+### LLM-Routing (Neu)
+- `LLM_ROUTING_CONFIG`: Zeigt auf `config/llm/routing.json`
+- Routing-Datei definiert Provider + Modell pro Task (issue_analysis, implementation, etc.)
+- Legacy: `LLM_API_URL` + `LLM_MODEL` nur für direkten Modus ohne Routing
 
 ### Watch-Modus
 - `EVAL_INTERVAL`: Wie oft Eval läuft
@@ -182,6 +195,11 @@ HTTP_RETRY_DELAY=5
 - `LLM_TEMPERATURE`: Kreativität (0.0 = deterministisch, 2.0 = chaotisch)
 - `LLM_MAX_TOKENS`: Längere Responses = mehr Tokens/Kosten
 - `LLM_CONTEXT_WINDOW`: Model-abhängig (GPT-4: 8k/32k, Llama-2: 4k)
+
+### Logging
+- `LOG_FILE`: Basis-Dateiname, täglich rotiert (`data/gitea-agent.log.YYYY-MM-DD`)
+- `LOG_BACKUP_COUNT`: Anzahl täglicher Backups (Standard: 10)
+- `LOG_MAX_SIZE` ist nicht mehr genutzt — Rotation erfolgt zeitbasiert
 
 ### Features
 - `USE_SKELETON`: Token-Reduktion ([Rezept 20](20-ast-skeleton.md))
@@ -195,10 +213,10 @@ HTTP_RETRY_DELAY=5
 > [!TIP]
 > **.env.template versionieren:**
 > ```bash
-> # ~/mein-projekt/.env.template
+> # ~/Gitea-Agent/.env.template
 > GITEA_URL=https://gitea.example.com
 > GITEA_TOKEN=<your_token>
-> LLM_API_URL=http://localhost:8000/v1/chat/completions
+> CLAUDE_API_ENABLED=true
 > 
 > # .gitignore
 > .env
@@ -221,7 +239,7 @@ HTTP_RETRY_DELAY=5
 > python3 agent_start.py --project ~/proj --doctor
 > # [✓] .env vorhanden
 > # [✓] GITEA_TOKEN gültig
-> # [✓] LLM_API_URL erreichbar
+> # [✓] CLAUDE_API_ENABLED gesetzt
 > # [✗] PROJECT_PATH existiert nicht
 > ```
 

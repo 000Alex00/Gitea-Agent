@@ -25,7 +25,7 @@ Nach Test-Änderungen oder Server-Verbesserungen ist die alte Baseline zu niedri
 # Szenario 1: Tests hinzugefügt/entfernt
 # ──────────────────────────────────────────────────────────
 # agent_eval.json: 3 Tests (weight: 1+2+3 = max 6)
-cat ~/mein-projekt/agent/data/baseline.json
+cat ~/mein-projekt/data/baseline.json
 # {"score": 6.0}
 
 # Neuen Test hinzugefügt (weight: 2)
@@ -54,7 +54,7 @@ python3 evaluation.py --project ~/mein-projekt --update-baseline
 # ──────────────────────────────────────────────────────────
 # Szenario 3: Baseline zu hoch (Tests geändert)
 # ──────────────────────────────────────────────────────────
-cat ~/mein-projekt/agent/data/baseline.json
+cat ~/mein-projekt/data/baseline.json
 # {"score": 8.0}
 
 # Test entfernt → max score jetzt nur 6.0
@@ -91,7 +91,7 @@ python3 evaluation.py --project ~/mein-projekt --update-baseline
 
 **Baseline-Datei:**
 ```bash
-cat ~/mein-projekt/agent/data/baseline.json
+cat ~/mein-projekt/data/baseline.json
 {"score": 7.0}
 ```
 
@@ -103,29 +103,29 @@ cat ~/mein-projekt/agent/data/baseline.json
 > **Nach Test-Änderungen immer Baseline prüfen:**
 > ```bash
 > # Tests anpassen
-> nano ~/mein-projekt/agent/config/agent_eval.json
+> nano ~/mein-projekt/config/agent_eval.json
 > 
 > # Baseline neu setzen
 > python3 evaluation.py --project ~/mein-projekt --update-baseline
 > 
 > # Verifizieren
-> cat ~/mein-projekt/agent/data/baseline.json
+> cat ~/mein-projekt/data/baseline.json
 > ```
 
 > [!TIP]
 > **Baseline in .gitignore:**
 > ```bash
 > # ~/mein-projekt/.gitignore
-> agent/data/baseline.json
-> agent/data/score_history.json
-> agent/data/*.log
+> data/baseline.json
+> data/score_history.json
+> data/*.log
 > ```
 > → Laufzeit-Daten nicht versionieren
 
 > [!TIP]
 > **Baseline-Check vor PR:**
 > ```bash
-> cat ~/mein-projekt/agent/data/baseline.json
+> cat ~/mein-projekt/data/baseline.json
 > # {"score": 7.0}
 > 
 > python3 agent_start.py --pr 21 --branch fix/... --summary "..."

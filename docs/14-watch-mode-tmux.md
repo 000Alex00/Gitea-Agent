@@ -8,7 +8,7 @@ Richte 24/7-Betrieb ein: Periodische Evals + Auto-Issues bei Regression.
 
 > [!IMPORTANT]
 > - Tests konfiguriert ([Rezept 09](09-first-test.md))
-> - Baseline existiert (`agent/data/baseline.json`)
+> - Baseline existiert (`data/baseline.json`)
 > - **tmux installiert:** `sudo apt install tmux` (Linux) oder `brew install tmux` (macOS)
 
 ---
@@ -25,7 +25,7 @@ Du willst dass der Agent kontinuierlich läuft: alle 60 Minuten Eval ausführen,
 # ──────────────────────────────────────────────────────────
 # Schritt 1: Watch-Intervall konfigurieren (optional)
 # ──────────────────────────────────────────────────────────
-nano ~/mein-projekt/agent/config/agent_eval.json
+nano ~/mein-projekt/config/agent_eval.json
 
 # Füge hinzu:
 {
@@ -152,7 +152,7 @@ Body:
 > ```python
 > # evaluation.py hat try/except — sollte nicht crashen
 > # Falls doch: Logs prüfen
-> tail -50 ~/mein-projekt/agent/data/gitea-agent.log
+> tail -50 ~/mein-projekt/data/gitea-agent.log
 > ```
 
 > [!WARNING]

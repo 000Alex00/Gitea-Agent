@@ -33,7 +33,7 @@ python3 agent_start.py \
 # ──────────────────────────────────────────────────────────
 # Ablauf (LLM-gesteuert):
 # ──────────────────────────────────────────────────────────
-# [1] Agent liest: ~/mein-projekt/agent/config/agent_eval.json
+# [1] Agent liest: ~/mein-projekt/config/agent_eval.json
 # [2] Agent scannt: API-Dokumentation, Swagger, README
 # [3] LLM generiert neue Tests:
 #     {
@@ -145,7 +145,7 @@ Format:
 > [!TIP]
 > **Manuelle Nachbearbeitung:**
 > ```bash
-> nano ~/mein-projekt/agent/config/agent_eval.json
+> nano ~/mein-projekt/config/agent_eval.json
 > # Anpassen:
 > # - Keywords verfeinern
 > # - Weights justieren

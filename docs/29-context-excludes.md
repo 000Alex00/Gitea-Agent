@@ -23,7 +23,7 @@ Agent lädt 50.000 Dateien aus `node_modules`, `venv`, `.git` → Token-Overflow
 # ──────────────────────────────────────────────────────────
 # Schritt 1: Exclude-Config erstellen
 # ──────────────────────────────────────────────────────────
-# ~/mein-projekt/agent/config/excludes.json
+# ~/mein-projekt/config/excludes.json
 
 {
   "exclude_dirs": [
@@ -65,7 +65,7 @@ Agent lädt 50.000 Dateien aus `node_modules`, `venv`, `.git` → Token-Overflow
 cd ~/Gitea-Agent
 python3 agent_start.py \
   --project ~/mein-projekt \
-  --exclude-config agent/config/excludes.json \
+  --exclude-config config/excludes.json \
   --build-skeleton
 
 # Output:

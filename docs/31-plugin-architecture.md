@@ -31,6 +31,8 @@ plugins/
 ├── __init__.py
 ├── patch.py           # Search-Replace-Patches
 ├── changelog.py       # CHANGELOG.md-Generator
+├── llm.py             # LLM-Routing (lädt config/llm/routing.json)
+├── llm_config_guard.py # IDE-Config-Guard (CLAUDE.md, .cursorrules, etc.)
 └── log_analyzer.py    # (Optional, User-created)
 
 # ──────────────────────────────────────────────────────────
@@ -221,6 +223,20 @@ class MyPlugin:
 - **Input:** commit_message, commit_hash
 - **Output:** Updated CHANGELOG.md
 - **Use-Case:** Conventional-Commits → Changelog
+
+### llm.py:
+- **Input:** task-Name (z.B. "implementation")
+- **Output:** LLM-Client-Instanz
+- **Use-Case:** `get_client(task="implementation").complete(prompt)` → LLMResponse
+- Liest `config/llm/routing.json` → Provider + Modell pro Task
+- Lädt System-Prompts aus `config/llm/prompts/` automatisch
+
+### llm_config_guard.py:
+- **Use-Case:** Prüft IDE-Config-Dateien auf Aktualität
+- Prüft: `CLAUDE.md`, `.cursorrules`, `.clinerules`, `copilot-instructions.md`, `windsurfrules`, `GEMINI.md`, `AGENTS.md`
+- Modi: `--repair` (repariert), `--create` (erstellt fehlende), `--verbose`
+- Templates in `config/llm/ide/`
+- Läuft als pre-commit Hook
 
 ---
 

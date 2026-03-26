@@ -164,7 +164,7 @@ Savings: 98.3%
 > [!TIP]
 > **Slice-Cache:**
 > ```bash
-> # ~/mein-projekt/agent/data/slice_cache/
+> # ~/mein-projekt/data/slice_cache/
 > ls
 > api_ChatAPI_process_message.txt
 > utils_format_response.txt

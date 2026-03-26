@@ -54,10 +54,10 @@ python3 evaluation.py --project ~/mein-projekt
 # Test "Removed" NOT FOUND (0.0)  ← Ursache
 
 # Debugging:
-cat ~/mein-projekt/agent/data/baseline.json
+cat ~/mein-projekt/data/baseline.json
 # {"score": 8.0}
 
-cat ~/mein-projekt/agent/config/agent_eval.json | grep weight
+cat ~/mein-projekt/config/agent_eval.json | grep weight
 # → Summe: 6.0 (Test "Removed" wurde gelöscht)
 
 # Lösung:
@@ -86,7 +86,7 @@ curl -X POST http://localhost:8000/chat \
 # {"response": "Das Kapitel handelt von Python-Grundlagen"}
 
 # Lösung:
-nano ~/mein-projekt/agent/config/agent_eval.json
+nano ~/mein-projekt/config/agent_eval.json
 # Ändere:
 # "expected_keywords": ["Kapitel", "Inhalt"]
 # → "expected_keywords": ["Kapitel"]
@@ -108,7 +108,7 @@ time curl -X POST http://localhost:8000/chat \
 # → 8.5 Sekunden
 
 # Lösung A: Timeout erhöhen
-nano ~/mein-projekt/agent/config/agent_eval.json
+nano ~/mein-projekt/config/agent_eval.json
 # "max_response_ms": 10000  (global)
 # oder:
 # {"name": "Long-Query", "max_response_ms": 10000}
@@ -144,12 +144,12 @@ python3 evaluation.py --project ~/mein-projekt
 # [✗] JSONDecodeError: score_history.json
 
 # Debugging:
-cat ~/mein-projekt/agent/data/score_history.json
+cat ~/mein-projekt/data/score_history.json
 # {"history": [{"score": 8.0, ...},
 # → Datei abgeschnitten / korrupt
 
 # Lösung:
-rm ~/mein-projekt/agent/data/score_history.json
+rm ~/mein-projekt/data/score_history.json
 python3 evaluation.py --project ~/mein-projekt
 # → Neue History wird angelegt
 ```
@@ -193,7 +193,7 @@ python3 evaluation.py --project ~/mein-projekt
 > [!TIP]
 > **Backup vor Baseline-Update:**
 > ```bash
-> cp ~/proj/agent/data/baseline.json ~/proj/agent/data/baseline.json.backup
+> cp ~/proj/data/baseline.json ~/proj/data/baseline.json.backup
 > python3 evaluation.py --project ~/proj --update-baseline
 > ```
 
@@ -202,9 +202,9 @@ python3 evaluation.py --project ~/mein-projekt
 > ```bash
 > # .env
 > LOG_LEVEL=DEBUG
-> LOG_FILE=agent/data/debug.log
+> LOG_FILE=data/debug.log
 > 
-> tail -f ~/proj/agent/data/debug.log
+> tail -f ~/proj/data/debug.log
 > ```
 
 ---
@@ -214,7 +214,7 @@ python3 evaluation.py --project ~/mein-projekt
 > [!WARNING]
 > **Baseline löschen:**
 > ```bash
-> rm ~/proj/agent/data/baseline.json
+> rm ~/proj/data/baseline.json
 > → Nächster Eval: Score wird neue Baseline (egal wie niedrig)
 > ```
 

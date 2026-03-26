@@ -57,8 +57,8 @@ python3 agent_start.py --implement 61
 # → Erstellt Branch: git checkout -b fix/issue-61-timeout-web-search
 # → Label: agent-proposed → in-progress
 # → Generiert Kontext-Dateien:
-#    - contexts/61-enhancement/starter.md  (Auftrag + Regeln)
-#    - contexts/61-enhancement/files.md    (relevante Dateien)
+#    - workspace/open/61-enhancement/starter.md  (Auftrag + Regeln)
+#    - workspace/open/61-enhancement/files.md    (relevante Dateien)
 
 # ──────────────────────────────────────────────────────────
 # Schritt 5: Code ändern (LLM-Session)
@@ -70,7 +70,7 @@ python3 agent_start.py --implement 61
 
 # Beispiel mit Claude Code:
 # $ claude
-# > Bitte lade contexts/61-enhancement/starter.md
+# > Bitte lade workspace/open/61-enhancement/starter.md
 # > [LLM ändert myproject/plugins/web_search.py]
 # > git add myproject/plugins/web_search.py
 # > git commit -m "fix: timeout auf 8s erhöht"
@@ -141,7 +141,7 @@ python3 agent_start.py --pr 61 \
 > [!TIP]
 > **Eval-Baseline vorher prüfen:**
 > ```bash
-> cat ~/mein-projekt/agent/data/baseline.json
+> cat ~/mein-projekt/data/baseline.json
 > # {"score": 7.0}
 > ```
 > → Wenn Score < Baseline: PR wird blockiert

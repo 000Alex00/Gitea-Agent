@@ -30,7 +30,7 @@ from evaluation import run_evaluation, update_baseline
 # ──────────────────────────────────────────────────────────
 result = run_evaluation(
     project_path="/home/user/my-project",
-    config_path="agent/config/agent_eval.json"
+    config_path="config/agent_eval.json"
 )
 
 # Returns:
@@ -176,6 +176,41 @@ api.update_file(
     branch="main",
     sha=None  # None = create, <sha> = update
 )
+```
+
+**plugins/llm.py**
+
+```python
+from plugins.llm import get_client, LLMResponse
+
+# ──────────────────────────────────────────────────────────
+# LLM-Client per Task-Name laden (via routing.json)
+# ──────────────────────────────────────────────────────────
+client = get_client(task="implementation")
+
+# LLM-Request ausführen
+response: LLMResponse = client.complete(
+    prompt="Implementiere eine Validierungsfunktion für leere Strings."
+)
+
+# LLMResponse Dataclass:
+# response.text      — generierter Text
+# response.tokens    — genutzte Tokens
+# response.model     — genutztes Modell
+# response.provider  — genutzter Provider (claude, openai, gemini, local)
+
+# ──────────────────────────────────────────────────────────
+# Verfügbare Tasks (aus config/llm/routing.json):
+# ──────────────────────────────────────────────────────────
+# "issue_analysis"   — schnelles Modell für Plan-Generierung
+# "implementation"   — leistungsfähiges Modell für Code-Änderungen
+# "review"           — Reviewer-Rolle
+# "heal"             — Healer/Fixer-Rolle
+# "log_analysis"     — Log-Analyse-Rolle
+
+# Fallback auf "default" wenn Task nicht konfiguriert:
+client = get_client(task="custom_task")
+# → nutzt routing.json["default"]
 ```
 
 **agent_self_check.py**

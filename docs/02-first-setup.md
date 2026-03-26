@@ -1,6 +1,6 @@
 ## Erstes Projekt einrichten (Setup-Wizard)
 
-Interaktiver 6-Schritt-Wizard führt durch die komplette Einrichtung.
+Interaktiver 9-Schritt-Wizard führt durch die komplette Einrichtung.
 
 ---
 
@@ -77,9 +77,9 @@ python3 agent_start.py --setup
 # Server URL (z.B. http://localhost:8000): http://localhost:8000
 # Chat Endpoint (Enter für /chat): /chat
 # Log-Pfad (optional): /home/user/mein-projekt/server.log
-# Restart-Script (optional): /home/user/start_server.sh
+# Restart-Script (optional): /home/user/scripts/start_server.sh
 
-# → Schreibt /home/user/mein-projekt/agent/config/agent_eval.json
+# → Schreibt /home/user/mein-projekt/config/agent_eval.json
 # → [✓] agent_eval.json erstellt
 
 # ──────────────────────────────────────────────────────────
@@ -88,6 +88,25 @@ python3 agent_start.py --setup
 # → Sammelt alle Eingaben
 # → Schreibt ~/Gitea-Agent/.env
 # → [✓] .env geschrieben
+
+# ──────────────────────────────────────────────────────────
+# Schritt 7: workspace/-Struktur anlegen
+# ──────────────────────────────────────────────────────────
+# → Legt workspace/open/ und workspace/done/ an
+# → [✓] workspace/ Verzeichnisse erstellt
+
+# ──────────────────────────────────────────────────────────
+# Schritt 8: LLM-Routing
+# ──────────────────────────────────────────────────────────
+# → Legt config/llm/routing.json an
+# → Wizard fragt: Provider (claude/openai/gemini/local): claude
+# → [✓] config/llm/routing.json erstellt
+
+# ──────────────────────────────────────────────────────────
+# Schritt 9: System-Prompts
+# ──────────────────────────────────────────────────────────
+# → Kopiert Templates aus config/llm/ide/ nach config/llm/prompts/
+# → [✓] analyst.md, senior_python.md, reviewer.md, healer.md, log_analyst.md
 
 # ──────────────────────────────────────────────────────────
 # Abschluss: Health-Check
@@ -99,6 +118,7 @@ python3 agent_start.py --setup
 # [✓] Labels vorhanden
 # [✓] agent_eval.json vorhanden
 # [✓] .env korrekt
+# [✓] LLM-Config-Guard (config/llm/routing.json + System-Prompts)
 
 # → [✓] Setup abgeschlossen
 ```
@@ -118,14 +138,25 @@ GITEA_REPO=admin/mein-projekt
 PROJECT_ROOT=/home/user/mein-projekt
 ```
 
-2. **`agent/config/agent_eval.json` im Projekt:**
+2. **`config/agent_eval.json` im Projekt:**
 ```json
 {
   "server_url": "http://localhost:8000",
   "chat_endpoint": "/chat",
   "log_path": "/home/user/mein-projekt/server.log",
-  "restart_script": "/home/user/start_server.sh",
+  "restart_script": "/home/user/scripts/start_server.sh",
   "tests": []
+}
+```
+
+3. **`config/llm/routing.json` (LLM-Routing):**
+```json
+{
+  "default": { "provider": "claude", "model": "claude-sonnet-4-6" },
+  "tasks": {
+    "issue_analysis": { "provider": "claude", "model": "claude-haiku-4-5-20251001", "system_prompt": "config/llm/prompts/analyst.md" },
+    "implementation": { "provider": "claude", "model": "claude-sonnet-4-6", "system_prompt": "config/llm/prompts/senior_python.md" }
+  }
 }
 ```
 

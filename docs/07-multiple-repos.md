@@ -43,7 +43,7 @@ GITEA_USER=admin
 GITEA_TOKEN=abc123...
 GITEA_REPO=admin/gitea-agent
 PROJECT_ROOT=/home/user/Gitea-Agent
-CONTEXT_DIR=/home/user/Gitea-Agent/contexts
+CONTEXT_DIR=/home/user/Gitea-Agent/workspace
 EOF
 
 # ──────────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ python3 agent_start.py --self --pr 42 --branch feat/... --summary "..."
 # ──────────────────────────────────────────────────────────
 # Kontext-Export für Agent-Issues:
 # ──────────────────────────────────────────────────────────
-./context_export.sh 42 --self
+./scripts/context_export.sh 42 --self
 # → Exportiert Kontext aus gitea-agent, nicht mein-projekt
 ```
 
@@ -83,13 +83,13 @@ python3 agent_start.py --self --pr 42 --branch feat/... --summary "..."
     .env                    ← normales Projekt
     .env.agent              ← agent selbst
     agent_start.py
-    contexts/               ← mixed (beide Projekte)
-        21-enhancement/     ← mein-projekt
-        42-feature/         ← gitea-agent (mit --self)
+    workspace/              ← mixed (beide Projekte)
+        open/21-enhancement/   ← mein-projekt
+        open/42-feature/       ← gitea-agent (mit --self)
 
 ~/mein-projekt/
-    agent/config/
-    agent/data/
+    config/
+    data/
 ```
 
 **Wann verwenden?**

@@ -47,15 +47,15 @@ Health-Check: OK (7/7)
 
 ### Erklärung
 
-**6 geprüfte Bereiche:**
+**7 geprüfte Bereiche:**
 
 1. **Gitea-Verbindung:** GET `/api/v1/user` mit Token
 2. **Repository:** GET `/api/v1/repos/{repo}` erreichbar
-3. **Projektverzeichnis:** `PROJECT_ROOT` existiert + `.git` vorhanden
+3. **Projektverzeichnis + Skeleton-Staleness:** `PROJECT_ROOT` existiert + `.git` vorhanden + mtime-Vergleich `repo_skeleton.md` vs. `.py`-Dateien
 4. **repo_skeleton.json:** Falls vorhanden → Statistik
 5. **agent_eval.json:** Falls vorhanden → Anzahl Tests
 6. **Labels:** Alle 4 Workflow-Labels in Gitea vorhanden
-7. **.env:** Pflichtfelder (`GITEA_URL`, `GITEA_TOKEN`, `GITEA_REPO`, `PROJECT_ROOT`)
+7. **LLM-Config-Guard:** Prüft `CLAUDE.md`, `.cursorrules`, `.clinerules`, `copilot-instructions.md`, `windsurfrules`, `GEMINI.md`, `AGENTS.md` auf Aktualität und Konsistenz
 
 **Fehlerfälle:**
 ```bash

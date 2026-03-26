@@ -146,7 +146,7 @@ Pass-Counter: 3 / 3 → Issue wird geschlossen
 > [!TIP]
 > **Logging beobachten:**
 > ```bash
-> tail -f ~/mein-projekt/agent/data/*.log
+> tail -f ~/mein-projekt/data/*.log
 > # [2024-01-15 02:00] Pass-Counter: 1 / 3
 > # [2024-01-15 02:30] Pass-Counter: 2 / 3
 > # [2024-01-15 03:00] Pass-Counter: 3 / 3 → Close

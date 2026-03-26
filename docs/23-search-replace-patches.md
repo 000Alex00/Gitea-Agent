@@ -175,7 +175,7 @@ post_issue_comment(
 > [!TIP]
 > **Patch-Log für Debugging:**
 > ```bash
-> cat ~/mein-projekt/agent/data/patch.log
+> cat ~/mein-projekt/data/patch.log
 > 
 > 2024-01-15 10:30 | Issue #99 | src/api.py
 > Strategy: EXACT_MATCH | Success: True | Lines: 145-146
