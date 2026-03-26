@@ -1162,12 +1162,13 @@ def _warn_diff_out_of_scope(number: int, branch: str) -> None:
         log.warning(f"Diff-Validierung: Kommentar konnte nicht gepostet werden: {e}")
 
 
-def _warn_slices_not_requested(number: int, branch: str) -> None:
+def _warn_slices_not_requested(number: int, branch: str) -> bool:
     """
     Schritt 8 in _check_pr_preconditions: Warnung wenn .py-Dateien geändert wurden
     ohne entsprechende --get-slice Anfragen.
 
-    Nicht-blockierend — postet Kommentar bei Fund.
+    Gibt True zurück wenn eine Verletzung gefunden wurde (für SLICE_GATE_ENABLED).
+    Berücksichtigt Dateigrößen: Dateien < SLICE_GATE_MIN_LINES werden ignoriert.
     """
     try:
         diff_out = subprocess.check_output(
@@ -1176,7 +1177,25 @@ def _warn_slices_not_requested(number: int, branch: str) -> None:
         ).decode().strip()
         changed_py = [f for f in diff_out.splitlines() if f.endswith(".py")]
         if not changed_py:
-            return
+            return False
+
+        min_lines = settings.SLICE_GATE_MIN_LINES
+        large_files = []
+        for rel_path in changed_py:
+            abs_path = PROJECT / rel_path
+            if abs_path.exists():
+                try:
+                    line_count = len(abs_path.read_text(encoding="utf-8", errors="ignore").splitlines())
+                    if line_count >= min_lines:
+                        large_files.append((rel_path, line_count))
+                except Exception:
+                    large_files.append((rel_path, 0))
+            else:
+                large_files.append((rel_path, 0))
+
+        if not large_files:
+            log.debug("Slice-Gate: alle geänderten Dateien unter Größen-Schwellwert")
+            return False
 
         idir = _find_issue_dir(number)
         slices_requested: list[dict] = []
@@ -1190,35 +1209,53 @@ def _warn_slices_not_requested(number: int, branch: str) -> None:
                     pass
 
         requested_specs = [s.get("spec", "") for s in slices_requested]
+        gate_mode = settings.SLICE_GATE_ENABLED
+        label = "❌ **Slice-Gate**" if gate_mode else "⚠️ **Slice-Warnung**"
 
         if not slices_requested:
+            file_list = "\n".join(f"- `{f}` ({lc} Zeilen)" for f, lc in large_files)
             msg = (
-                "⚠️ **Slice-Warnung**: Keine `--get-slice` Anfragen in session.json gefunden.\n\n"
-                f"Geänderte .py-Dateien: {', '.join(f'`{f}`' for f in changed_py)}\n\n"
-                "> Bitte prüfen ob Code-Slices angefordert wurden."
+                f"{label}: Keine `--get-slice` Anfragen in session.json gefunden.\n\n"
+                f"Geänderte Dateien (≥{min_lines} Zeilen):\n{file_list}\n\n"
+                + ("> **Harter Abbruch aktiviert** (SLICE_GATE_ENABLED=true)."
+                   if gate_mode else
+                   "> Bitte prüfen ob Code-Slices angefordert wurden.")
             )
             print(f"\n[!] Slice-Warnung: keine --get-slice Anfragen gefunden")
-        else:
-            missing = [f for f in changed_py if not any(f in spec for spec in requested_specs)]
-            if not missing:
-                log.debug("Slice-Warnung: alle geänderten Dateien hatten Slice-Anfragen")
-                return
-            if not _PROJECT_SKELETON.exists():
-                return
-            n = len(missing)
-            msg = (
-                f"⚠️ **Slice-Warnung**: {n} Datei(en) geändert ohne `--get-slice`:\n\n"
-                + "\n".join(f"- `{f}`" for f in missing)
-                + "\n\n> Kein harter Abbruch — bitte prüfen ob Slices angefordert wurden."
-            )
-            print(f"\n[!] Slice-Warnung: {n} Datei(en) geändert ohne --get-slice: {missing}")
+            try:
+                gitea.post_comment(number, msg)
+            except Exception as e:
+                log.warning(f"Slice-Warnung: Kommentar konnte nicht gepostet werden: {e}")
+            return True
 
+        missing = [(f, lc) for f, lc in large_files
+                   if not any(f in spec for spec in requested_specs)]
+        if not missing:
+            log.debug("Slice-Gate: alle großen Dateien hatten Slice-Anfragen")
+            return False
+
+        if not _PROJECT_SKELETON.exists() and not gate_mode:
+            return False
+
+        n = len(missing)
+        file_list = "\n".join(f"- `{f}` ({lc} Zeilen)" for f, lc in missing)
+        msg = (
+            f"{label}: {n} Datei(en) geändert ohne `--get-slice` (≥{min_lines} Zeilen):\n\n"
+            + file_list
+            + ("\n\n> **Harter Abbruch aktiviert** (SLICE_GATE_ENABLED=true)."
+               if gate_mode else
+               "\n\n> Kein harter Abbruch — bitte prüfen ob Slices angefordert wurden.")
+        )
+        print(f"\n[!] Slice-Warnung: {n} Datei(en) ohne Slice: {[f for f,_ in missing]}")
         try:
             gitea.post_comment(number, msg)
         except Exception as e:
             log.warning(f"Slice-Warnung: Kommentar konnte nicht gepostet werden: {e}")
+        return True
+
     except Exception as e:
         log.debug(f"_warn_slices_not_requested übersprungen: {e}")
+        return False
 
 
 def _check_pr_preconditions(number: int, branch: str) -> None:
@@ -1360,7 +1397,12 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
     _warn_diff_out_of_scope(number, branch)
 
     # 8. Slice-Warnung: geänderte Dateien ohne --get-slice Anfragen (Warnung)
-    _warn_slices_not_requested(number, branch)
+    slice_violation = _warn_slices_not_requested(number, branch)
+    if slice_violation and settings.SLICE_GATE_ENABLED:
+        fehler.append(
+            f"Slice-Gate aktiv (SLICE_GATE_ENABLED=true): "
+            f"{settings.SLICE_GATE_MIN_LINES}+ Zeilen-Dateien ohne --get-slice geändert"
+        )
 
     if fehler:
         print("\n❌ cmd_pr abgebrochen — Prozess nicht vollständig:")
@@ -3260,34 +3302,35 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
                     subprocess.run([restart_sc], check=False)
                     cmd_eval_after_restart()
 
-        # ── Health-Checks (plugins/health.py) ──────────────────────────
-        if settings.FEATURES.get("health_checks", False):
-            try:
-                from plugins.health import run_checks, format_terminal as hc_format
-                hc_result = run_checks(PROJECT)
-                hc_out = hc_format(hc_result)
-                if hc_out:
-                    print(hc_out)
-                for failure in hc_result.failures:
-                    issue_title = f"[Health] {failure.name} ausgefallen"
-                    if not _auto_issue_exists(failure.name):
-                        body = (
-                            f"**Health-Check fehlgeschlagen:** {failure.name}\n\n"
-                            f"- Typ: `{failure.type}`\n"
-                            f"- Meldung: {failure.message}\n"
-                            f"- Aufeinanderfolgende Fehler: {failure.consecutive_failures}\n\n"
-                            f"Bitte prüfen und beheben."
+        # ── Self-Healing (plugins/healing.py) ───────────────────────────
+        if settings.FEATURES.get("healing", False) and not result.skipped:
+            if not result.passed and result.failed_tests:
+                try:
+                    from plugins.healing import run_healing_loop, format_terminal as heal_fmt
+                    eval_cfg_h = evaluation._load_config(PROJECT) or {}
+                    log_path_h = eval_cfg_h.get("log_path", "")
+                    log_excerpt_h = ""
+                    if log_path_h:
+                        try:
+                            log_lines = Path(log_path_h).read_text(
+                                encoding="utf-8", errors="replace"
+                            ).splitlines()[-30:]
+                            log_excerpt_h = "\n".join(log_lines)
+                        except Exception:
+                            pass
+                    for t in result.failed_tests[:1]:  # max. 1 pro Watch-Zyklus
+                        hr = run_healing_loop(
+                            project_root=PROJECT,
+                            test_name=t.name,
+                            test_reason=getattr(t, "reason", ""),
+                            log_excerpt=log_excerpt_h,
                         )
-                        issue = gitea.create_issue(
-                            title=issue_title,
-                            body=body,
-                            label=settings.LABEL_READY,
-                        )
-                        log.warning(f"Health-Issue erstellt: #{issue['number']} für '{failure.name}'")
-                        print(f"[!] Health-Issue erstellt: #{issue['number']} — {failure.name}")
-                        _dashboard_event("Health-Issue erstellt")
-            except Exception as e:
-                log.warning(f"Health-Check Fehler: {e}")
+                        print(heal_fmt(hr))
+                        if hr.success:
+                            log.info(f"Watch-Healing: {t.name} geheilt")
+                            _dashboard_event("Self-Healing erfolgreich")
+                except Exception as e:
+                    log.warning(f"Self-Healing Fehler: {e}")
 
         print(f"    Nächster Lauf in {interval_minutes} Minute(n)...\n")
         time.sleep(interval_minutes * 60)
@@ -3526,6 +3569,108 @@ def _apply_auto_approve() -> None:
 # ---------------------------------------------------------------------------
 # Health-Check
 # ---------------------------------------------------------------------------
+
+def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:
+    """
+    --heal: Startet den Autonomous Self-Healing Loop für einen fehlgeschlagenen Test.
+
+    Ablauf:
+      1. Eval ausführen → fehlgeschlagene Tests ermitteln
+      2. Für jeden fehlgeschlagenen Test: Temp-Branch + LLM-Fix + Eval-Validierung
+      3. Bei Erfolg: Cherry-Pick auf aktuellen Branch
+      4. Bei Abbruch: Temp-Branch löschen + Gitea-Issue erstellen
+
+    Erfordert LLM-Backend (CLAUDE_API_ENABLED=true oder lokale LLM via agent_eval.json).
+
+    ⚠️ Risikostufe 4/4 — Autonome Schreibzyklen. Nur mit explizitem Feature-Flag nutzen.
+
+    Aufgerufen von:
+        main() wenn --heal gesetzt
+    """
+    from plugins.healing import run_healing_loop, format_terminal as heal_fmt
+
+    if not settings.FEATURES.get("healing", False):
+        print("[!] Self-Healing deaktiviert (project.json: healing=false)")
+        print("    Aktivieren: healing=true in agent/config/project.json setzen")
+        return
+
+    print("[→] Self-Healing Loop gestartet\n")
+
+    # Eval ausführen um fehlgeschlagene Tests zu ermitteln
+    try:
+        eval_result = evaluation.run(PROJECT, trigger="healing")
+        failed = eval_result.failed_tests
+        if not failed:
+            print("[✅] Keine fehlgeschlagenen Tests — kein Heilungsbedarf")
+            return
+    except Exception as e:
+        if test_name:
+            # Fallback: Direkt mit übergebenem Test-Namen arbeiten
+            failed = [type("T", (), {"name": test_name, "reason": "unbekannt", "tag": ""})()]
+        else:
+            print(f"[!] Eval fehlgeschlagen: {e}")
+            return
+
+    # Log-Auszug lesen
+    eval_cfg = evaluation._load_config(PROJECT) or {}
+    log_path_str = eval_cfg.get("log_path", "")
+    log_excerpt = ""
+    if log_path_str:
+        try:
+            lines = Path(log_path_str).read_text(
+                encoding="utf-8", errors="replace"
+            ).splitlines()[-log_lines:]
+            log_excerpt = "\n".join(lines)
+        except Exception:
+            pass
+
+    # Healing-Loop für jeden fehlgeschlagenen Test (max. 3 Tests pro Aufruf)
+    healed = 0
+    failed_heals = []
+    for t in failed[:3]:
+        if test_name and t.name != test_name:
+            continue
+        print(f"[→] Heile Test: {t.name}")
+        result = run_healing_loop(
+            project_root=PROJECT,
+            test_name=t.name,
+            test_reason=getattr(t, "reason", ""),
+            log_excerpt=log_excerpt,
+        )
+        print(heal_fmt(result))
+
+        if result.success:
+            healed += 1
+            log.info(f"Self-Healing erfolgreich: {t.name} in {result.attempt_count} Versuch(en)")
+        elif result.skipped:
+            log.warning(f"Self-Healing übersprungen: {result.skip_reason}")
+        else:
+            failed_heals.append(result)
+            # Gitea-Issue erstellen bei Abbruch
+            if settings.FEATURES.get("auto_issues", True):
+                body = (
+                    f"**Healing-Loop fehlgeschlagen** für Test `{t.name}`.\n\n"
+                    f"- Versuche: {result.attempt_count} / {result.attempt_count}\n"
+                    f"- Token verbraucht: ~{result.tokens_total:,}\n"
+                    + "\n".join(
+                        f"- Versuch {a.attempt_no}: {a.error or a.fix_description}"
+                        for a in result.attempts
+                    )
+                    + "\n\nManueller Eingriff erforderlich."
+                )
+                try:
+                    issue = gitea.create_issue(
+                        title=f"[Healing] Loop fehlgeschlagen — {t.name}",
+                        body=body,
+                        label=settings.LABEL_HELP,
+                    )
+                    print(f"[!] Healing-Issue erstellt: #{issue['number']}")
+                    log.warning(f"Healing-Issue erstellt: #{issue['number']}")
+                except Exception as exc:
+                    log.warning(f"Healing-Issue konnte nicht erstellt werden: {exc}")
+
+    print(f"\n[Healing] Abgeschlossen: {healed} geheilt, {len(failed_heals)} fehlgeschlagen")
+
 
 def cmd_doctor() -> None:
     """--doctor: Vollständigen Zustand des Agents prüfen und Report ausgeben."""
@@ -3837,46 +3982,7 @@ def cmd_setup() -> None:
             proj_file.write_text(json.dumps(project_json, indent=4, ensure_ascii=False), encoding="utf-8")
             print(f"  ✅ project.json geschrieben: {proj_file}\n")
 
-    # ── Schritt 8: Health-Checks konfigurieren ─────────────────────
-    print("Schritt 8/8 — Health-Checks (optional)\n")
-    if features.get("health_checks", False):
-        hc_file = Path(project_root) / "agent" / "config" / "health_checks.json"
-        if hc_file.exists():
-            print(f"  ✅ {hc_file} bereits vorhanden\n")
-        else:
-            confirm = input("  health_checks.json jetzt anlegen? [J/n]: ").strip().lower()
-            if confirm in ("", "j", "y"):
-                from plugins.health import DB_DEFAULTS
-                print("  Bekannte Dienste automatisch erkennen:")
-                detected = []
-                for db_name, checks in DB_DEFAULTS.items():
-                    for chk in checks:
-                        try:
-                            import socket
-                            host, port_str = chk["target"].rsplit(":", 1) if chk["type"] == "tcp" else ("", "")
-                            if host:
-                                with socket.create_connection((host, int(port_str)), timeout=1):
-                                    detected.append(chk)
-                                    print(f"  ✅ {chk['name']} erreichbar ({chk['target']})")
-                        except Exception:
-                            pass
-                server_url_env = _ask("Server HTTP-Endpoint (leer = überspringen)", "")
-                checks = list(detected)
-                if server_url_env:
-                    checks.insert(0, {"name": "Web-Server", "type": "http", "target": server_url_env, "timeout": 5})
-                if checks:
-                    hc_data = {"consecutive_failures_before_issue": 3, "checks": checks}
-                    hc_file.parent.mkdir(parents=True, exist_ok=True)
-                    hc_file.write_text(json.dumps(hc_data, indent=2, ensure_ascii=False), encoding="utf-8")
-                    print(f"  ✅ health_checks.json geschrieben ({len(checks)} Check(s))\n")
-                else:
-                    print("  Keine Checks erkannt — Vorlage kopieren: health_checks.template.json\n")
-            else:
-                print("  Übersprungen — Vorlage: health_checks.template.json\n")
-    else:
-        print("  Health-Checks für diesen Projekttyp deaktiviert — übersprungen\n")
-
-    # ── Abschluss ─────────────────────────────────────────────────
+    # ── Health-Check zum Abschluss ────────────────────────────────
     print(f"{'═' * 60}")
     print("  SETUP ABGESCHLOSSEN — starte Health-Check...\n")
     cmd_doctor()
@@ -4028,6 +4134,13 @@ Ohne Argumente: automatischer Modus.
         action="store_true",
         help="Interaktiver Einrichtungs-Wizard für neue Projekte",
     )
+    parser.add_argument(
+        "--heal",
+        metavar="TEST",
+        nargs="?",
+        const="",
+        help="Autonomous Self-Healing Loop: fehlgeschlagenen Test autonom fixen (erfordert LLM)",
+    )
     args = parser.parse_args()
 
     if args.setup:
@@ -4055,6 +4168,8 @@ Ohne Argumente: automatischer Modus.
         cmd_generate_tests(args.generate_tests)
     elif args.fixup:
         cmd_fixup(args.fixup)
+    elif args.heal is not None:
+        cmd_heal(test_name=args.heal or "")
     elif args.dashboard:
         cmd_dashboard()
     elif args.watch:

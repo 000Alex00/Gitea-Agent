@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 3927,
-    "size_kb": 138,
+    "lines": 4206,
+    "size_kb": 150,
     "symbols": [
       {
         "type": "function",
@@ -220,319 +220,331 @@
       {
         "type": "function",
         "name": "_warn_slices_not_requested",
-        "lines": "1165-1221",
-        "signature": "def _warn_slices_not_requested(number: int, branch: str) -> None:"
+        "lines": "1165-1258",
+        "signature": "def _warn_slices_not_requested(number: int, branch: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_check_pr_preconditions",
-        "lines": "1224-1370",
+        "lines": "1261-1412",
         "signature": "def _check_pr_preconditions(number: int, branch: str) -> None:"
       },
       {
         "type": "function",
         "name": "_validate_pr_completion",
-        "lines": "1373-1417",
+        "lines": "1415-1459",
         "signature": "def _validate_pr_completion("
       },
       {
         "type": "function",
         "name": "_validate_comment",
-        "lines": "1420-1443",
+        "lines": "1462-1485",
         "signature": "def _validate_comment(body: str, comment_type: str, *, critical: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "_update_discussion",
-        "lines": "1446-1481",
+        "lines": "1488-1523",
         "signature": "def _update_discussion(issue: dict, starter_path: Path) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_list",
-        "lines": "1489-1507",
+        "lines": "1531-1549",
         "signature": "def cmd_list() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_plan",
-        "lines": "1510-1614",
+        "lines": "1552-1656",
         "signature": "def cmd_plan(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_implement",
-        "lines": "1617-1760",
+        "lines": "1659-1802",
         "signature": "def cmd_implement(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "_neustart_required",
-        "lines": "1773-1778",
+        "lines": "1815-1820",
         "signature": "def _neustart_required(changed_files: list[str]) -> str:"
       },
       {
         "type": "function",
         "name": "cmd_pr",
-        "lines": "1781-1946",
+        "lines": "1823-1988",
         "signature": "def cmd_pr("
       },
       {
         "type": "function",
         "name": "cmd_generate_tests",
-        "lines": "1950-1975",
+        "lines": "1992-2017",
         "signature": "def cmd_generate_tests(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "_current_issue_from_branch",
-        "lines": "1977-1992",
+        "lines": "2019-2034",
         "signature": "def _current_issue_from_branch() -> int | None:"
       },
       {
         "type": "function",
+        "name": "_estimate_slice_tokens",
+        "lines": "2037-2048",
+        "signature": "def _estimate_slice_tokens(spec: str) -> int:"
+      },
+      {
+        "type": "function",
         "name": "_log_slice_request",
-        "lines": "1995-2016",
+        "lines": "2051-2093",
         "signature": "def _log_slice_request(spec: str) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_get_slice",
-        "lines": "2019-2049",
+        "lines": "2096-2126",
         "signature": "def cmd_get_slice(spec: str) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_fixup",
-        "lines": "2058-2102",
+        "lines": "2135-2179",
         "signature": "def cmd_fixup(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "_auto_issue_exists",
-        "lines": "2110-2114",
+        "lines": "2187-2191",
         "signature": "def _auto_issue_exists(test_name: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_auto_perf_issue_exists",
-        "lines": "2116-2120",
+        "lines": "2193-2197",
         "signature": "def _auto_perf_issue_exists(test_name: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_auto_improvement_issue_exists",
-        "lines": "2124-2127",
+        "lines": "2201-2204",
         "signature": "def _auto_improvement_issue_exists(tag: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_check_systematic_tag_failures",
-        "lines": "2129-2203",
+        "lines": "2206-2280",
         "signature": "def _check_systematic_tag_failures(project_root) -> None:"
       },
       {
         "type": "function",
         "name": "_sync_closed_contexts",
-        "lines": "2206-2231",
+        "lines": "2283-2308",
         "signature": "def _sync_closed_contexts() -> None:"
       },
       {
         "type": "function",
         "name": "_consecutive_passes_for_test",
-        "lines": "2234-2259",
+        "lines": "2311-2336",
         "signature": "def _consecutive_passes_for_test(test_name: str) -> int:"
       },
       {
         "type": "function",
         "name": "_close_resolved_auto_issues",
-        "lines": "2262-2341",
+        "lines": "2339-2418",
         "signature": "def _close_resolved_auto_issues(result: \"evaluation.EvalResult\") -> None:"
       },
       {
         "type": "function",
         "name": "_build_metadata",
-        "lines": "2344-2423",
+        "lines": "2421-2500",
         "signature": "def _build_metadata("
       },
       {
         "type": "function",
         "name": "_session_path",
-        "lines": "2426-2428",
+        "lines": "2503-2505",
         "signature": "def _session_path() -> Path:"
       },
       {
         "type": "function",
         "name": "_session_load",
-        "lines": "2431-2455",
+        "lines": "2508-2532",
         "signature": "def _session_load() -> dict:"
       },
       {
         "type": "function",
         "name": "_session_increment",
-        "lines": "2458-2468",
+        "lines": "2535-2545",
         "signature": "def _session_increment() -> dict:"
       },
       {
         "type": "function",
         "name": "_session_status_line",
-        "lines": "2471-2484",
+        "lines": "2548-2561",
         "signature": "def _session_status_line(data: dict) -> str:"
       },
       {
         "type": "function",
         "name": "_format_history_block",
-        "lines": "2487-2523",
+        "lines": "2564-2600",
         "signature": "def _format_history_block(project_root: Path, n: int = 5) -> str:"
       },
       {
         "type": "function",
         "name": "_last_chat_inactive_minutes",
-        "lines": "2526-2574",
+        "lines": "2603-2651",
         "signature": "def _last_chat_inactive_minutes(log_path: str | Path) -> float | None:"
       },
       {
         "type": "function",
         "name": "_server_start_time",
-        "lines": "2577-2625",
+        "lines": "2654-2702",
         "signature": "def _server_start_time(log_path: str | Path) -> datetime.datetime | None:"
       },
       {
         "type": "function",
         "name": "_check_server_staleness",
-        "lines": "2628-2696",
+        "lines": "2705-2773",
         "signature": "def _check_server_staleness(branch: str, force: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "_restart_server_for_eval",
-        "lines": "2699-2721",
+        "lines": "2776-2798",
         "signature": "def _restart_server_for_eval() -> None:"
       },
       {
         "type": "function",
         "name": "_has_new_commits_since_last_eval",
-        "lines": "2724-2755",
+        "lines": "2801-2832",
         "signature": "def _has_new_commits_since_last_eval(project_root: Path) -> bool:"
       },
       {
         "type": "function",
         "name": "_wait_for_server",
-        "lines": "2758-2803",
+        "lines": "2835-2880",
         "signature": "def _wait_for_server("
       },
       {
         "type": "function",
         "name": "cmd_eval_after_restart",
-        "lines": "2806-2868",
+        "lines": "2883-2945",
         "signature": "def cmd_eval_after_restart(number: int | None = None) -> None:"
       },
       {
         "type": "function",
         "name": "_ast_diff",
-        "lines": "2871-2911",
+        "lines": "2948-2988",
         "signature": "def _ast_diff(old_content: str, new_content: str) -> list[str]:"
       },
       {
         "type": "function",
         "name": "_gitea_version_compare",
-        "lines": "2914-2965",
+        "lines": "2991-3042",
         "signature": "def _gitea_version_compare(commit: str, changed_files: list[str]) -> str:"
       },
       {
         "type": "function",
         "name": "_build_auto_issue_body",
-        "lines": "2968-3083",
+        "lines": "3045-3160",
         "signature": "def _build_auto_issue_body("
       },
       {
         "type": "function",
         "name": "cmd_watch",
-        "lines": "3086-3222",
+        "lines": "3163-3336",
         "signature": "def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "_dashboard_event",
-        "lines": "3230-3237",
+        "lines": "3344-3351",
         "signature": "def _dashboard_event(context: str = \"\") -> None:"
       },
       {
         "type": "function",
         "name": "cmd_install_service",
-        "lines": "3263-3308",
+        "lines": "3377-3422",
         "signature": "def cmd_install_service() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_dashboard",
-        "lines": "3316-3322",
+        "lines": "3430-3436",
         "signature": "def cmd_dashboard() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_auto",
-        "lines": "3324-3416",
+        "lines": "3438-3530",
         "signature": "def cmd_auto() -> None:"
       },
       {
         "type": "function",
         "name": "_apply_auto_approve",
-        "lines": "3424-3452",
+        "lines": "3538-3566",
         "signature": "def _apply_auto_approve() -> None:"
       },
       {
         "type": "function",
+        "name": "cmd_heal",
+        "lines": "3573-3672",
+        "signature": "def cmd_heal(test_name: str = \"\", log_lines: int = 30) -> None:"
+      },
+      {
+        "type": "function",
         "name": "cmd_doctor",
-        "lines": "3459-3560",
+        "lines": "3675-3786",
         "signature": "def cmd_doctor() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "3567-3718",
+        "lines": "3793-3988",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "3721-3923",
+        "lines": "3991-4202",
         "signature": "def main():"
       },
       {
         "type": "function",
         "name": "_sym_map",
-        "lines": "2882-2884",
+        "lines": "2959-2961",
         "signature": "def _sym_map(content: str) -> dict[str, dict]:"
       },
       {
         "type": "function",
         "name": "_chk",
-        "lines": "3465-3466",
+        "lines": "3681-3682",
         "signature": "def _chk(name: str, status: str, detail: str = \"\", fix: str = \"\") -> None:"
       },
       {
         "type": "function",
         "name": "_ask",
-        "lines": "3571-3574",
+        "lines": "3797-3800",
         "signature": "def _ask(prompt: str, default: str = \"\") -> str:"
       },
       {
         "type": "function",
         "name": "_api_get_raw",
-        "lines": "3576-3583",
+        "lines": "3802-3809",
         "signature": "def _api_get_raw(url, user, token, path):"
       },
       {
         "type": "function",
         "name": "_api_post_raw",
-        "lines": "3585-3595",
+        "lines": "3811-3821",
         "signature": "def _api_post_raw(url, user, token, path, data: dict):"
       },
       {
         "type": "function",
         "name": "_len",
-        "lines": "2895-2900",
+        "lines": "2972-2977",
         "signature": "def _len(s: dict) -> int:"
       }
     ]
@@ -654,11 +666,78 @@
     ]
   },
   {
-    "path": "_create_issue_github.py",
+    "path": "log_analyzer.template.py",
     "truncated": false,
-    "lines": 64,
-    "size_kb": 2,
-    "symbols": []
+    "lines": 317,
+    "size_kb": 10,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "_load_eval_cfg",
+        "lines": "39-46",
+        "signature": "def _load_eval_cfg() -> dict:"
+      },
+      {
+        "type": "class",
+        "name": "LogFinding",
+        "lines": "104-110",
+        "signature": "class LogFinding:"
+      },
+      {
+        "type": "class",
+        "name": "LogAnalysisResult",
+        "lines": "114-129",
+        "signature": "class LogAnalysisResult:"
+      },
+      {
+        "type": "function",
+        "name": "_analyze_rules",
+        "lines": "136-154",
+        "signature": "def _analyze_rules(lines: list[str]) -> list[LogFinding]:"
+      },
+      {
+        "type": "function",
+        "name": "_call_llm_local",
+        "lines": "161-177",
+        "signature": "def _call_llm_local(url: str, model: str, prompt: str, timeout: int) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_call_llm_claude",
+        "lines": "180-189",
+        "signature": "def _call_llm_claude(model: str, prompt: str, max_tokens: int = 512) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_analyze_llm",
+        "lines": "192-231",
+        "signature": "def _analyze_llm(lines: list[str], rule_findings: list[LogFinding], cfg: dict) -> tuple[str, str]:"
+      },
+      {
+        "type": "function",
+        "name": "run",
+        "lines": "238-283",
+        "signature": "def run() -> LogAnalysisResult:"
+      },
+      {
+        "type": "function",
+        "name": "format_terminal",
+        "lines": "290-317",
+        "signature": "def format_terminal(result: LogAnalysisResult) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "error_count",
+        "lines": "124-125",
+        "signature": "def error_count(self) -> int:"
+      },
+      {
+        "type": "function",
+        "name": "tags",
+        "lines": "128-129",
+        "signature": "def tags(self) -> list[str]:"
+      }
+    ]
   },
   {
     "path": "dashboard.py",
@@ -677,8 +756,8 @@
   {
     "path": "settings.py",
     "truncated": false,
-    "lines": 258,
-    "size_kb": 10,
+    "lines": 329,
+    "size_kb": 13,
     "symbols": [
       {
         "type": "function",
@@ -703,121 +782,133 @@
         "name": "_env_bool",
         "lines": "40-41",
         "signature": "def _env_bool(key: str, default: bool = False) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "_load_features",
+        "lines": "284-303",
+        "signature": "def _load_features() -> dict:"
+      },
+      {
+        "type": "function",
+        "name": "_load_project_type",
+        "lines": "308-319",
+        "signature": "def _load_project_type() -> str:"
       }
     ]
   },
   {
     "path": "evaluation.py",
     "truncated": false,
-    "lines": 598,
-    "size_kb": 19,
+    "lines": 604,
+    "size_kb": 20,
     "symbols": [
       {
         "type": "class",
         "name": "TestResult",
-        "lines": "41-56",
+        "lines": "42-57",
         "signature": "class TestResult:"
       },
       {
         "type": "class",
         "name": "EvalResult",
-        "lines": "60-71",
+        "lines": "61-72",
         "signature": "class EvalResult:"
       },
       {
         "type": "function",
         "name": "_ping",
-        "lines": "79-87",
+        "lines": "80-88",
         "signature": "def _ping(url: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_chat",
-        "lines": "90-119",
+        "lines": "91-120",
         "signature": "def _chat(server_url: str, endpoint: str, message: str, eval_user: str) -> str | None:"
       },
       {
         "type": "function",
         "name": "_keywords_match",
-        "lines": "122-125",
+        "lines": "123-126",
         "signature": "def _keywords_match(text: str, keywords: list[str]) -> bool:"
       },
       {
         "type": "function",
         "name": "_categorize",
-        "lines": "128-158",
+        "lines": "129-159",
         "signature": "def _categorize("
       },
       {
         "type": "function",
         "name": "_run_steps",
-        "lines": "161-236",
+        "lines": "162-237",
         "signature": "def _run_steps("
       },
       {
         "type": "function",
         "name": "_resolve_path",
-        "lines": "239-257",
+        "lines": "240-258",
         "signature": "def _resolve_path(project_root: Path, new_rel: str, legacy_rel: str) -> Path:"
       },
       {
         "type": "function",
         "name": "_resolve_config",
-        "lines": "260-265",
+        "lines": "261-266",
         "signature": "def _resolve_config(project_root: Path) -> Path:"
       },
       {
         "type": "function",
         "name": "_load_config",
-        "lines": "268-274",
+        "lines": "269-275",
         "signature": "def _load_config(project_root: Path) -> dict | None:"
       },
       {
         "type": "function",
         "name": "_load_baseline",
-        "lines": "277-284",
+        "lines": "278-285",
         "signature": "def _load_baseline(project_root: Path) -> float | None:"
       },
       {
         "type": "function",
         "name": "_save_baseline",
-        "lines": "287-292",
+        "lines": "288-293",
         "signature": "def _save_baseline(project_root: Path, score: float) -> None:"
       },
       {
         "type": "function",
         "name": "_get_commit_hash",
-        "lines": "295-306",
+        "lines": "296-307",
         "signature": "def _get_commit_hash() -> str:"
       },
       {
         "type": "function",
         "name": "_save_score_history",
-        "lines": "309-345",
+        "lines": "310-346",
         "signature": "def _save_score_history(project_root: Path, result: \"EvalResult\", trigger: str) -> None:"
       },
       {
         "type": "function",
         "name": "run",
-        "lines": "353-519",
+        "lines": "354-525",
         "signature": "def run("
       },
       {
         "type": "function",
         "name": "format_terminal",
-        "lines": "527-551",
+        "lines": "533-557",
         "signature": "def format_terminal(r: EvalResult) -> str:"
       },
       {
         "type": "function",
         "name": "format_gitea_comment",
-        "lines": "554-573",
+        "lines": "560-579",
         "signature": "def format_gitea_comment(r: EvalResult) -> str:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "581-594",
+        "lines": "587-600",
         "signature": "def main() -> None:"
       }
     ]
@@ -919,11 +1010,353 @@
     ]
   },
   {
+    "path": "plugins/health.py",
+    "truncated": false,
+    "lines": 174,
+    "size_kb": 5,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "CheckResult",
+        "lines": "36-41",
+        "signature": "class CheckResult:"
+      },
+      {
+        "type": "class",
+        "name": "HealthResult",
+        "lines": "45-51",
+        "signature": "class HealthResult:"
+      },
+      {
+        "type": "function",
+        "name": "_load_config",
+        "lines": "54-62",
+        "signature": "def _load_config(project_root: Path) -> dict | None:"
+      },
+      {
+        "type": "function",
+        "name": "_check_http",
+        "lines": "65-73",
+        "signature": "def _check_http(target: str, timeout: int = 5) -> tuple[bool, str]:"
+      },
+      {
+        "type": "function",
+        "name": "_check_tcp",
+        "lines": "76-83",
+        "signature": "def _check_tcp(target: str, timeout: int = 3) -> tuple[bool, str]:"
+      },
+      {
+        "type": "function",
+        "name": "_check_process",
+        "lines": "86-95",
+        "signature": "def _check_process(target: str) -> tuple[bool, str]:"
+      },
+      {
+        "type": "function",
+        "name": "_check_disk",
+        "lines": "98-106",
+        "signature": "def _check_disk(target: str, threshold: int = 90) -> tuple[bool, str]:"
+      },
+      {
+        "type": "function",
+        "name": "run_checks",
+        "lines": "109-164",
+        "signature": "def run_checks(project_root: Path) -> HealthResult:"
+      },
+      {
+        "type": "function",
+        "name": "format_terminal",
+        "lines": "167-174",
+        "signature": "def format_terminal(result: HealthResult) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "all_passed",
+        "lines": "50-51",
+        "signature": "def all_passed(self) -> bool:"
+      }
+    ]
+  },
+  {
+    "path": "plugins/llm.py",
+    "truncated": false,
+    "lines": 346,
+    "size_kb": 12,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "_load_routing",
+        "lines": "36-45",
+        "signature": "def _load_routing(extra_path: Optional[Path] = None) -> dict:"
+      },
+      {
+        "type": "function",
+        "name": "_resolve_task_config",
+        "lines": "48-59",
+        "signature": "def _resolve_task_config(task: str, routing: dict) -> dict:"
+      },
+      {
+        "type": "class",
+        "name": "LLMResponse",
+        "lines": "67-76",
+        "signature": "class LLMResponse:"
+      },
+      {
+        "type": "function",
+        "name": "_http_post",
+        "lines": "83-87",
+        "signature": "def _http_post(url: str, payload: dict, headers: dict, timeout: int) -> dict:"
+      },
+      {
+        "type": "class",
+        "name": "ClaudeClient",
+        "lines": "90-123",
+        "signature": "class ClaudeClient:"
+      },
+      {
+        "type": "class",
+        "name": "OpenAIClient",
+        "lines": "126-157",
+        "signature": "class OpenAIClient:"
+      },
+      {
+        "type": "class",
+        "name": "GeminiClient",
+        "lines": "160-188",
+        "signature": "class GeminiClient:"
+      },
+      {
+        "type": "class",
+        "name": "LocalClient",
+        "lines": "191-217",
+        "signature": "class LocalClient:"
+      },
+      {
+        "type": "function",
+        "name": "_client_from_env",
+        "lines": "224-251",
+        "signature": "def _client_from_env() -> Optional[\"ClaudeClient | LocalClient\"]:"
+      },
+      {
+        "type": "function",
+        "name": "_build_client",
+        "lines": "254-295",
+        "signature": "def _build_client(cfg: dict) -> \"ClaudeClient | OpenAIClient | GeminiClient | LocalClient\":"
+      },
+      {
+        "type": "function",
+        "name": "get_client",
+        "lines": "302-331",
+        "signature": "def get_client("
+      },
+      {
+        "type": "function",
+        "name": "complete",
+        "lines": "334-346",
+        "signature": "def complete("
+      },
+      {
+        "type": "function",
+        "name": "ok",
+        "lines": "75-76",
+        "signature": "def ok(self) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "__init__",
+        "lines": "96-100",
+        "signature": "def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):"
+      },
+      {
+        "type": "function",
+        "name": "complete",
+        "lines": "102-123",
+        "signature": "def complete(self, prompt: str) -> LLMResponse:"
+      },
+      {
+        "type": "function",
+        "name": "__init__",
+        "lines": "129-135",
+        "signature": "def __init__(self, model: str, api_key: str, base_url: str = \"https://api.openai.com/v1\","
+      },
+      {
+        "type": "function",
+        "name": "complete",
+        "lines": "137-157",
+        "signature": "def complete(self, prompt: str) -> LLMResponse:"
+      },
+      {
+        "type": "function",
+        "name": "__init__",
+        "lines": "165-169",
+        "signature": "def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):"
+      },
+      {
+        "type": "function",
+        "name": "complete",
+        "lines": "171-188",
+        "signature": "def complete(self, prompt: str) -> LLMResponse:"
+      },
+      {
+        "type": "function",
+        "name": "__init__",
+        "lines": "194-199",
+        "signature": "def __init__(self, model: str, base_url: str = \"http://localhost:11434\","
+      },
+      {
+        "type": "function",
+        "name": "complete",
+        "lines": "201-217",
+        "signature": "def complete(self, prompt: str) -> LLMResponse:"
+      },
+      {
+        "type": "function",
+        "name": "_get",
+        "lines": "240-241",
+        "signature": "def _get(key: str, default: str = \"\") -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_get_key",
+        "lines": "258-268",
+        "signature": "def _get_key(env_var: str) -> str:"
+      }
+    ]
+  },
+  {
     "path": "plugins/__init__.py",
     "truncated": false,
     "lines": 0,
     "size_kb": 0,
     "symbols": []
+  },
+  {
+    "path": "plugins/healing.py",
+    "truncated": false,
+    "lines": 474,
+    "size_kb": 15,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "_load_healing_cfg",
+        "lines": "40-53",
+        "signature": "def _load_healing_cfg(project_root: Path) -> dict:"
+      },
+      {
+        "type": "class",
+        "name": "HealingAttempt",
+        "lines": "61-68",
+        "signature": "class HealingAttempt:"
+      },
+      {
+        "type": "class",
+        "name": "HealingResult",
+        "lines": "72-86",
+        "signature": "class HealingResult:"
+      },
+      {
+        "type": "function",
+        "name": "_git",
+        "lines": "93-96",
+        "signature": "def _git(args: list[str], cwd: Path) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_git_run",
+        "lines": "99-103",
+        "signature": "def _git_run(args: list[str], cwd: Path) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "_current_branch",
+        "lines": "106-107",
+        "signature": "def _current_branch(project_root: Path) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_short_hash",
+        "lines": "110-114",
+        "signature": "def _short_hash(project_root: Path) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_create_temp_branch",
+        "lines": "117-121",
+        "signature": "def _create_temp_branch(project_root: Path) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_delete_branch",
+        "lines": "124-129",
+        "signature": "def _delete_branch(project_root: Path, branch: str) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "_cherry_pick",
+        "lines": "132-149",
+        "signature": "def _cherry_pick(project_root: Path, from_branch: str, onto_branch: str) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "_estimate_tokens",
+        "lines": "156-158",
+        "signature": "def _estimate_tokens(text: str) -> int:"
+      },
+      {
+        "type": "function",
+        "name": "_call_llm_local",
+        "lines": "161-173",
+        "signature": "def _call_llm_local(url: str, model: str, prompt: str, timeout: int) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_call_llm_claude",
+        "lines": "176-183",
+        "signature": "def _call_llm_claude(model: str, prompt: str) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_build_fix_prompt",
+        "lines": "186-225",
+        "signature": "def _build_fix_prompt("
+      },
+      {
+        "type": "function",
+        "name": "_parse_fix",
+        "lines": "228-242",
+        "signature": "def _parse_fix(llm_output: str) -> list[dict]:"
+      },
+      {
+        "type": "function",
+        "name": "_apply_fixes",
+        "lines": "245-258",
+        "signature": "def _apply_fixes(project_root: Path, fixes: list[dict]) -> tuple[bool, list[str], str]:"
+      },
+      {
+        "type": "function",
+        "name": "_run_eval",
+        "lines": "265-280",
+        "signature": "def _run_eval(project_root: Path) -> tuple[bool, float, str]:"
+      },
+      {
+        "type": "function",
+        "name": "run_healing_loop",
+        "lines": "287-450",
+        "signature": "def run_healing_loop("
+      },
+      {
+        "type": "function",
+        "name": "format_terminal",
+        "lines": "457-474",
+        "signature": "def format_terminal(result: HealingResult) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "attempt_count",
+        "lines": "85-86",
+        "signature": "def attempt_count(self) -> int:"
+      }
+    ]
   },
   {
     "path": "tests/test_issue.py",
@@ -1068,6 +1501,460 @@
         "name": "test_validate_comment_case_insensitive",
         "lines": "147-149",
         "signature": "def test_validate_comment_case_insensitive():"
+      }
+    ]
+  },
+  {
+    "path": "tests/test_health.py",
+    "truncated": false,
+    "lines": 247,
+    "size_kb": 9,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "TestCheckResult",
+        "lines": "25-34",
+        "signature": "class TestCheckResult(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestHealthResult",
+        "lines": "37-45",
+        "signature": "class TestHealthResult(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestCheckHttp",
+        "lines": "48-79",
+        "signature": "class TestCheckHttp(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestCheckTcp",
+        "lines": "82-99",
+        "signature": "class TestCheckTcp(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestCheckProcess",
+        "lines": "102-113",
+        "signature": "class TestCheckProcess(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestCheckDisk",
+        "lines": "116-137",
+        "signature": "class TestCheckDisk(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestRunChecks",
+        "lines": "140-223",
+        "signature": "class TestRunChecks(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestFormatTerminal",
+        "lines": "226-243",
+        "signature": "class TestFormatTerminal(unittest.TestCase):"
+      },
+      {
+        "type": "function",
+        "name": "test_defaults",
+        "lines": "26-29",
+        "signature": "def test_defaults(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_failed",
+        "lines": "31-34",
+        "signature": "def test_failed(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_all_passed_empty",
+        "lines": "38-40",
+        "signature": "def test_all_passed_empty(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_all_passed_with_failures",
+        "lines": "42-45",
+        "signature": "def test_all_passed_with_failures(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_ok_response",
+        "lines": "49-57",
+        "signature": "def test_ok_response(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_server_error",
+        "lines": "59-66",
+        "signature": "def test_server_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_client_error_is_ok",
+        "lines": "68-74",
+        "signature": "def test_client_error_is_ok(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_connection_error",
+        "lines": "76-79",
+        "signature": "def test_connection_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_reachable",
+        "lines": "83-90",
+        "signature": "def test_reachable(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_unreachable",
+        "lines": "92-95",
+        "signature": "def test_unreachable(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_invalid_target",
+        "lines": "97-99",
+        "signature": "def test_invalid_target(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_found",
+        "lines": "103-107",
+        "signature": "def test_found(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_not_found",
+        "lines": "109-113",
+        "signature": "def test_not_found(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_below_threshold",
+        "lines": "117-124",
+        "signature": "def test_below_threshold(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_above_threshold",
+        "lines": "126-132",
+        "signature": "def test_above_threshold(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_path_error",
+        "lines": "134-137",
+        "signature": "def test_path_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "_make_config",
+        "lines": "141-146",
+        "signature": "def _make_config(self, tmp_path: Path, checks: list, threshold: int = 3) -> Path:"
+      },
+      {
+        "type": "function",
+        "name": "test_no_config",
+        "lines": "148-153",
+        "signature": "def test_no_config(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_http_check_passes",
+        "lines": "155-169",
+        "signature": "def test_http_check_passes(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_consecutive_failures_threshold",
+        "lines": "171-185",
+        "signature": "def test_consecutive_failures_threshold(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_consecutive_failures_exceed_threshold",
+        "lines": "187-203",
+        "signature": "def test_consecutive_failures_exceed_threshold(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_recovery_clears_state",
+        "lines": "205-223",
+        "signature": "def test_recovery_clears_state(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_empty",
+        "lines": "227-228",
+        "signature": "def test_empty(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_passed",
+        "lines": "230-235",
+        "signature": "def test_passed(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_failed",
+        "lines": "237-243",
+        "signature": "def test_failed(self):"
+      }
+    ]
+  },
+  {
+    "path": "tests/test_llm.py",
+    "truncated": false,
+    "lines": 264,
+    "size_kb": 9,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "TestLLMResponse",
+        "lines": "27-38",
+        "signature": "class TestLLMResponse(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestLoadRouting",
+        "lines": "41-64",
+        "signature": "class TestLoadRouting(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestResolveTaskConfig",
+        "lines": "67-94",
+        "signature": "class TestResolveTaskConfig(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestBuildClient",
+        "lines": "97-123",
+        "signature": "class TestBuildClient(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestClaudeClient",
+        "lines": "126-158",
+        "signature": "class TestClaudeClient(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestOpenAIClient",
+        "lines": "161-181",
+        "signature": "class TestOpenAIClient(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestGeminiClient",
+        "lines": "184-198",
+        "signature": "class TestGeminiClient(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestLocalClient",
+        "lines": "201-218",
+        "signature": "class TestLocalClient(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestGetClient",
+        "lines": "221-248",
+        "signature": "class TestGetClient(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestCompleteConvenience",
+        "lines": "251-260",
+        "signature": "class TestCompleteConvenience(unittest.TestCase):"
+      },
+      {
+        "type": "function",
+        "name": "test_ok_with_text",
+        "lines": "28-30",
+        "signature": "def test_ok_with_text(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_not_ok_empty",
+        "lines": "32-34",
+        "signature": "def test_not_ok_empty(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_not_ok_with_error",
+        "lines": "36-38",
+        "signature": "def test_not_ok_with_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_no_config",
+        "lines": "42-44",
+        "signature": "def test_no_config(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_valid_config",
+        "lines": "46-56",
+        "signature": "def test_valid_config(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_invalid_json",
+        "lines": "58-64",
+        "signature": "def test_invalid_json(self):"
+      },
+      {
+        "type": "function",
+        "name": "setUp",
+        "lines": "68-75",
+        "signature": "def setUp(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_known_task",
+        "lines": "77-79",
+        "signature": "def test_known_task(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_unknown_task_falls_back_to_default",
+        "lines": "81-84",
+        "signature": "def test_unknown_task_falls_back_to_default(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_default_as_string",
+        "lines": "86-90",
+        "signature": "def test_default_as_string(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_empty_routing",
+        "lines": "92-94",
+        "signature": "def test_empty_routing(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_claude",
+        "lines": "98-101",
+        "signature": "def test_claude(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_openai",
+        "lines": "103-105",
+        "signature": "def test_openai(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_gemini",
+        "lines": "107-109",
+        "signature": "def test_gemini(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_local",
+        "lines": "111-115",
+        "signature": "def test_local(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_ollama_alias",
+        "lines": "117-119",
+        "signature": "def test_ollama_alias(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_unknown_provider_falls_back_to_local",
+        "lines": "121-123",
+        "signature": "def test_unknown_provider_falls_back_to_local(self):"
+      },
+      {
+        "type": "function",
+        "name": "_mock_response",
+        "lines": "127-135",
+        "signature": "def _mock_response(self, text: str, input_tokens: int = 10, output_tokens: int = 20):"
+      },
+      {
+        "type": "function",
+        "name": "test_success",
+        "lines": "137-144",
+        "signature": "def test_success(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_api_error",
+        "lines": "146-152",
+        "signature": "def test_api_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_connection_error",
+        "lines": "154-158",
+        "signature": "def test_connection_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_success",
+        "lines": "162-175",
+        "signature": "def test_success(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_connection_error",
+        "lines": "177-181",
+        "signature": "def test_connection_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_success",
+        "lines": "185-198",
+        "signature": "def test_success(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_success",
+        "lines": "202-212",
+        "signature": "def test_success(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_connection_error",
+        "lines": "214-218",
+        "signature": "def test_connection_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_no_routing_falls_back_to_env",
+        "lines": "222-228",
+        "signature": "def test_no_routing_falls_back_to_env(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_routing_selects_correct_provider",
+        "lines": "230-237",
+        "signature": "def test_routing_selects_correct_provider(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_default_used_for_unknown_task",
+        "lines": "239-248",
+        "signature": "def test_default_used_for_unknown_task(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_delegates_to_client",
+        "lines": "252-260",
+        "signature": "def test_delegates_to_client(self):"
       }
     ]
   },
@@ -1270,6 +2157,488 @@
         "name": "test_skeleton_to_md_multiple_files",
         "lines": "114-121",
         "signature": "def test_skeleton_to_md_multiple_files():"
+      }
+    ]
+  },
+  {
+    "path": "tests/test_healing.py",
+    "truncated": false,
+    "lines": 192,
+    "size_kb": 6,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "TestEstimateTokens",
+        "lines": "24-30",
+        "signature": "class TestEstimateTokens(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestParseFix",
+        "lines": "33-68",
+        "signature": "class TestParseFix(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestApplyFixes",
+        "lines": "71-99",
+        "signature": "class TestApplyFixes(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestBuildFixPrompt",
+        "lines": "102-121",
+        "signature": "class TestBuildFixPrompt(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestRunHealingLoopSkipped",
+        "lines": "124-147",
+        "signature": "class TestRunHealingLoopSkipped(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestHealingResult",
+        "lines": "150-158",
+        "signature": "class TestHealingResult(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestFormatTerminal",
+        "lines": "161-188",
+        "signature": "class TestFormatTerminal(unittest.TestCase):"
+      },
+      {
+        "type": "function",
+        "name": "test_empty",
+        "lines": "25-26",
+        "signature": "def test_empty(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_approximation",
+        "lines": "28-30",
+        "signature": "def test_approximation(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_valid_block",
+        "lines": "34-47",
+        "signature": "def test_valid_block(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_no_block",
+        "lines": "49-51",
+        "signature": "def test_no_block(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_multiple_blocks",
+        "lines": "53-68",
+        "signature": "def test_multiple_blocks(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_successful_replace",
+        "lines": "72-81",
+        "signature": "def test_successful_replace(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_file_not_found",
+        "lines": "83-89",
+        "signature": "def test_file_not_found(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_search_not_found",
+        "lines": "91-99",
+        "signature": "def test_search_not_found(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_contains_test_name",
+        "lines": "103-109",
+        "signature": "def test_contains_test_name(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_contains_attempt_history",
+        "lines": "111-121",
+        "signature": "def test_contains_attempt_history(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_feature_not_enabled_skipped_if_no_llm",
+        "lines": "125-134",
+        "signature": "def test_feature_not_enabled_skipped_if_no_llm(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_git_error_skipped",
+        "lines": "136-147",
+        "signature": "def test_git_error_skipped(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_attempt_count",
+        "lines": "151-158",
+        "signature": "def test_attempt_count(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_skipped",
+        "lines": "162-166",
+        "signature": "def test_skipped(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_success",
+        "lines": "168-177",
+        "signature": "def test_success(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_failure",
+        "lines": "179-188",
+        "signature": "def test_failure(self):"
+      }
+    ]
+  },
+  {
+    "path": "tests/test_log_analyzer.py",
+    "truncated": false,
+    "lines": 221,
+    "size_kb": 8,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "TestKnownPatterns",
+        "lines": "19-64",
+        "signature": "class TestKnownPatterns(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestRunSkipped",
+        "lines": "67-78",
+        "signature": "class TestRunSkipped(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestRunWithLog",
+        "lines": "81-172",
+        "signature": "class TestRunWithLog(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestFormatTerminal",
+        "lines": "175-217",
+        "signature": "class TestFormatTerminal(unittest.TestCase):"
+      },
+      {
+        "type": "function",
+        "name": "test_connection_refused",
+        "lines": "20-24",
+        "signature": "def test_connection_refused(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_timeout",
+        "lines": "26-30",
+        "signature": "def test_timeout(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_memory_error",
+        "lines": "32-36",
+        "signature": "def test_memory_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_import_error",
+        "lines": "38-42",
+        "signature": "def test_import_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_permission_error",
+        "lines": "44-48",
+        "signature": "def test_permission_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_no_match",
+        "lines": "50-53",
+        "signature": "def test_no_match(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_one_finding_per_line",
+        "lines": "55-59",
+        "signature": "def test_one_finding_per_line(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_line_numbers",
+        "lines": "61-64",
+        "signature": "def test_line_numbers(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_no_log_path_in_config",
+        "lines": "68-72",
+        "signature": "def test_no_log_path_in_config(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_log_file_missing",
+        "lines": "74-78",
+        "signature": "def test_log_file_missing(self):"
+      },
+      {
+        "type": "function",
+        "name": "_make_log",
+        "lines": "82-85",
+        "signature": "def _make_log(self, tmp_path, content: str) -> Path:"
+      },
+      {
+        "type": "function",
+        "name": "test_clean_log",
+        "lines": "87-98",
+        "signature": "def test_clean_log(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_log_with_errors",
+        "lines": "100-111",
+        "signature": "def test_log_with_errors(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_tail_lines_respected",
+        "lines": "113-125",
+        "signature": "def test_tail_lines_respected(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_llm_enabled_no_server",
+        "lines": "127-140",
+        "signature": "def test_llm_enabled_no_server(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_llm_local_called",
+        "lines": "142-157",
+        "signature": "def test_llm_local_called(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_claude_api_called",
+        "lines": "159-172",
+        "signature": "def test_claude_api_called(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_skipped",
+        "lines": "176-179",
+        "signature": "def test_skipped(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_clean",
+        "lines": "181-184",
+        "signature": "def test_clean(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_with_findings",
+        "lines": "186-194",
+        "signature": "def test_with_findings(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_with_llm_summary",
+        "lines": "196-201",
+        "signature": "def test_with_llm_summary(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_with_llm_error",
+        "lines": "203-207",
+        "signature": "def test_with_llm_error(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_max_10_findings_shown",
+        "lines": "209-217",
+        "signature": "def test_max_10_findings_shown(self):"
+      }
+    ]
+  },
+  {
+    "path": "tests/test_slice_gate.py",
+    "truncated": false,
+    "lines": 105,
+    "size_kb": 4,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "TestSliceGateSettings",
+        "lines": "14-19",
+        "signature": "class TestSliceGateSettings(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestWarnSlicesNotRequested",
+        "lines": "22-101",
+        "signature": "class TestWarnSlicesNotRequested(unittest.TestCase):"
+      },
+      {
+        "type": "function",
+        "name": "test_disabled_by_default",
+        "lines": "15-16",
+        "signature": "def test_disabled_by_default(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_min_lines_default",
+        "lines": "18-19",
+        "signature": "def test_min_lines_default(self):"
+      },
+      {
+        "type": "function",
+        "name": "setUp",
+        "lines": "23-25",
+        "signature": "def setUp(self):"
+      },
+      {
+        "type": "function",
+        "name": "_patch_diff",
+        "lines": "27-31",
+        "signature": "def _patch_diff(self, changed_files: list[str]):"
+      },
+      {
+        "type": "function",
+        "name": "test_no_py_files_changed",
+        "lines": "33-36",
+        "signature": "def test_no_py_files_changed(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_small_files_ignored",
+        "lines": "38-50",
+        "signature": "def test_small_files_ignored(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_large_file_no_slices",
+        "lines": "52-64",
+        "signature": "def test_large_file_no_slices(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_large_file_with_matching_slice",
+        "lines": "66-84",
+        "signature": "def test_large_file_with_matching_slice(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_gate_blocks_when_enabled",
+        "lines": "86-101",
+        "signature": "def test_gate_blocks_when_enabled(self):"
+      }
+    ]
+  },
+  {
+    "path": "tests/test_token_budget.py",
+    "truncated": false,
+    "lines": 79,
+    "size_kb": 2,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "TestEstimateSliceTokens",
+        "lines": "13-39",
+        "signature": "class TestEstimateSliceTokens(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestTokenBudgetSettings",
+        "lines": "42-51",
+        "signature": "class TestTokenBudgetSettings(unittest.TestCase):"
+      },
+      {
+        "type": "class",
+        "name": "TestTokenAccumulation",
+        "lines": "54-75",
+        "signature": "class TestTokenAccumulation(unittest.TestCase):"
+      },
+      {
+        "type": "function",
+        "name": "setUp",
+        "lines": "14-17",
+        "signature": "def setUp(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_range",
+        "lines": "19-22",
+        "signature": "def test_range(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_single_line",
+        "lines": "24-26",
+        "signature": "def test_single_line(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_large_range",
+        "lines": "28-30",
+        "signature": "def test_large_range(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_invalid_spec",
+        "lines": "32-35",
+        "signature": "def test_invalid_spec(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_invalid_range",
+        "lines": "37-39",
+        "signature": "def test_invalid_range(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_warn_threshold_positive",
+        "lines": "43-44",
+        "signature": "def test_warn_threshold_positive(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_lines_factor_positive",
+        "lines": "46-47",
+        "signature": "def test_lines_factor_positive(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_defaults",
+        "lines": "49-51",
+        "signature": "def test_defaults(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_cumulative_sum",
+        "lines": "57-65",
+        "signature": "def test_cumulative_sum(self):"
+      },
+      {
+        "type": "function",
+        "name": "test_threshold_detection",
+        "lines": "67-75",
+        "signature": "def test_threshold_detection(self):"
       }
     ]
   },

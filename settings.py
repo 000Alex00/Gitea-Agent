@@ -218,6 +218,24 @@ TOKEN_LINES_FACTOR  = _env_int("TOKEN_LINES_FACTOR",  10)   # Zeilen × 10 ≈ T
 TOKEN_BUDGET_WARN   = _env_int("TOKEN_BUDGET_WARN",   150000)
 
 # ---------------------------------------------------------------------------
+# Slice-Gate (Issue #94) — Schlupflöcher-Kontrolle
+# ---------------------------------------------------------------------------
+
+# True → Slice-Warnung wird zu hartem Fehler (blockiert --pr)
+SLICE_GATE_ENABLED   = _env_bool("SLICE_GATE_ENABLED",  False)
+# Dateien mit mehr als N Zeilen müssen via --get-slice gelesen worden sein
+SLICE_GATE_MIN_LINES = _env_int("SLICE_GATE_MIN_LINES", 100)
+
+# ---------------------------------------------------------------------------
+# Self-Healing Loop (Issue #60)
+# ---------------------------------------------------------------------------
+
+# Maximale Versuche pro Heilungs-Lauf
+HEALING_MAX_ATTEMPTS = _env_int("HEALING_MAX_ATTEMPTS", 3)
+# Token-Budget pro Heilungs-Lauf (Abbruch bei Überschreitung)
+HEALING_MAX_TOKENS   = _env_int("HEALING_MAX_TOKENS",   50000)
+
+# ---------------------------------------------------------------------------
 # Prozess-Enforcement (Issue #6)
 # ---------------------------------------------------------------------------
 
@@ -269,6 +287,7 @@ def _load_features() -> dict:
     defaults = {
         "eval": True, "health_checks": False, "auto_issues": True,
         "changelog": True, "watch": True, "pr_workflow": True,
+        "healing": False,
     }
     config_path = (
         (_AGENT_DIR / "config" / "project.json") if _AGENT_DIR
