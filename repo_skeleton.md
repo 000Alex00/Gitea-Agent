@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4037 Zeilen)*
+## agent_start.py  *(3927 Zeilen)*
 
 - **Funktion** `_project_root` Zeilen 70-92
   `def _project_root() -> Path:`
@@ -157,28 +157,26 @@
   `def cmd_install_service() -> None:`
 - **Funktion** `cmd_dashboard` Zeilen 3316-3322
   `def cmd_dashboard() -> None:`
-- **Funktion** `cmd_doctor` Zeilen 3324-3485
-  `def cmd_doctor() -> None:`
-- **Funktion** `cmd_auto` Zeilen 3488-3580
+- **Funktion** `cmd_auto` Zeilen 3324-3416
   `def cmd_auto() -> None:`
-- **Funktion** `_apply_auto_approve` Zeilen 3588-3616
+- **Funktion** `_apply_auto_approve` Zeilen 3424-3452
   `def _apply_auto_approve() -> None:`
-- **Funktion** `cmd_setup` Zeilen 3623-3828
+- **Funktion** `cmd_doctor` Zeilen 3459-3560
+  `def cmd_doctor() -> None:`
+- **Funktion** `cmd_setup` Zeilen 3567-3718
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 3831-4033
+- **Funktion** `main` Zeilen 3721-3923
   `def main():`
 - **Funktion** `_sym_map` Zeilen 2882-2884
   `def _sym_map(content: str) -> dict[str, dict]:`
-- **Funktion** `_check` Zeilen 3337-3345
-  `def _check(status: str, name: str, detail: str, fix: str = "") -> None:`
-- **Funktion** `_ask` Zeilen 3632-3635
+- **Funktion** `_chk` Zeilen 3465-3466
+  `def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:`
+- **Funktion** `_ask` Zeilen 3571-3574
   `def _ask(prompt: str, default: str = "") -> str:`
-- **Funktion** `_ask_secret` Zeilen 3637-3638
-  `def _ask_secret(prompt: str) -> str:`
-- **Funktion** `_api_get` Zeilen 3640-3647
-  `def _api_get(url: str, user: str, token: str, path: str):`
-- **Funktion** `_api_post` Zeilen 3649-3663
-  `def _api_post(url: str, user: str, token: str, path: str, data: dict):`
+- **Funktion** `_api_get_raw` Zeilen 3576-3583
+  `def _api_get_raw(url, user, token, path):`
+- **Funktion** `_api_post_raw` Zeilen 3585-3595
+  `def _api_post_raw(url, user, token, path, data: dict):`
 - **Funktion** `_len` Zeilen 2895-2900
   `def _len(s: dict) -> int:`
 
@@ -225,12 +223,12 @@
 
 *(keine Klassen/Funktionen erkannt)*
 
-## dashboard.py  *(302 Zeilen)*
+## dashboard.py  *(299 Zeilen)*
 
-- **Funktion** `generate` Zeilen 139-298
+- **Funktion** `generate` Zeilen 139-295
   `def generate(project_root: Path):`
 
-## settings.py  *(260 Zeilen)*
+## settings.py  *(258 Zeilen)*
 
 - **Funktion** `_env` Zeilen 16-25
   `def _env(key: str, default: str = "") -> str:`
@@ -462,3 +460,14 @@
   `def test_build_changelog_block_other_section():`
 - **Funktion** `test_build_changelog_block_empty_commits` Zeilen 94-97
   `def test_build_changelog_block_empty_commits():`
+
+## tests/test_settings.py  *(35 Zeilen)*
+
+- **Funktion** `test_dashboard_path_is_absolute` Zeilen 10-11
+  `def test_dashboard_path_is_absolute():`
+- **Funktion** `test_dashboard_path_ends_with_html` Zeilen 14-15
+  `def test_dashboard_path_ends_with_html():`
+- **Funktion** `test_dashboard_path_inside_agent_or_root` Zeilen 18-21
+  `def test_dashboard_path_inside_agent_or_root():`
+- **Funktion** `test_all_paths_consistent` Zeilen 24-35
+  `def test_all_paths_consistent():`
