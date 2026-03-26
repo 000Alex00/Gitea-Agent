@@ -59,7 +59,7 @@ LLM_CONFIG_FILES: dict[str, str] = {
 }
 
 # Pfad zu den kanonischen Templates (relativ zu diesem Skript)
-_TEMPLATE_DIR = Path(__file__).parent.parent / "llm_config"
+_TEMPLATE_DIR = Path(__file__).parent.parent / "config" / "llm" / "ide"
 
 # Template-Dateinamen pro logischem Namen
 _TEMPLATES: dict[str, str] = {
