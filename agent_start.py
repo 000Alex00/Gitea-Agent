@@ -3225,6 +3225,35 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
                     subprocess.run([restart_sc], check=False)
                     cmd_eval_after_restart()
 
+        # ── Health-Checks (plugins/health.py) ──────────────────────────
+        if settings.FEATURES.get("health_checks", False):
+            try:
+                from plugins.health import run_checks, format_terminal as hc_format
+                hc_result = run_checks(PROJECT)
+                hc_out = hc_format(hc_result)
+                if hc_out:
+                    print(hc_out)
+                for failure in hc_result.failures:
+                    issue_title = f"[Health] {failure.name} ausgefallen"
+                    if not _auto_issue_exists(failure.name):
+                        body = (
+                            f"**Health-Check fehlgeschlagen:** {failure.name}\n\n"
+                            f"- Typ: `{failure.type}`\n"
+                            f"- Meldung: {failure.message}\n"
+                            f"- Aufeinanderfolgende Fehler: {failure.consecutive_failures}\n\n"
+                            f"Bitte prüfen und beheben."
+                        )
+                        issue = gitea.create_issue(
+                            title=issue_title,
+                            body=body,
+                            label=settings.LABEL_READY,
+                        )
+                        log.warning(f"Health-Issue erstellt: #{issue['number']} für '{failure.name}'")
+                        print(f"[!] Health-Issue erstellt: #{issue['number']} — {failure.name}")
+                        _dashboard_event("Health-Issue erstellt")
+            except Exception as e:
+                log.warning(f"Health-Check Fehler: {e}")
+
         print(f"    Nächster Lauf in {interval_minutes} Minute(n)...\n")
         time.sleep(interval_minutes * 60)
 
@@ -3773,7 +3802,46 @@ def cmd_setup() -> None:
             proj_file.write_text(json.dumps(project_json, indent=4, ensure_ascii=False), encoding="utf-8")
             print(f"  ✅ project.json geschrieben: {proj_file}\n")
 
-    # ── Health-Check zum Abschluss ────────────────────────────────
+    # ── Schritt 8: Health-Checks konfigurieren ─────────────────────
+    print("Schritt 8/8 — Health-Checks (optional)\n")
+    if features.get("health_checks", False):
+        hc_file = Path(project_root) / "agent" / "config" / "health_checks.json"
+        if hc_file.exists():
+            print(f"  ✅ {hc_file} bereits vorhanden\n")
+        else:
+            confirm = input("  health_checks.json jetzt anlegen? [J/n]: ").strip().lower()
+            if confirm in ("", "j", "y"):
+                from plugins.health import DB_DEFAULTS
+                print("  Bekannte Dienste automatisch erkennen:")
+                detected = []
+                for db_name, checks in DB_DEFAULTS.items():
+                    for chk in checks:
+                        try:
+                            import socket
+                            host, port_str = chk["target"].rsplit(":", 1) if chk["type"] == "tcp" else ("", "")
+                            if host:
+                                with socket.create_connection((host, int(port_str)), timeout=1):
+                                    detected.append(chk)
+                                    print(f"  ✅ {chk['name']} erreichbar ({chk['target']})")
+                        except Exception:
+                            pass
+                server_url_env = _ask("Server HTTP-Endpoint (leer = überspringen)", "")
+                checks = list(detected)
+                if server_url_env:
+                    checks.insert(0, {"name": "Web-Server", "type": "http", "target": server_url_env, "timeout": 5})
+                if checks:
+                    hc_data = {"consecutive_failures_before_issue": 3, "checks": checks}
+                    hc_file.parent.mkdir(parents=True, exist_ok=True)
+                    hc_file.write_text(json.dumps(hc_data, indent=2, ensure_ascii=False), encoding="utf-8")
+                    print(f"  ✅ health_checks.json geschrieben ({len(checks)} Check(s))\n")
+                else:
+                    print("  Keine Checks erkannt — Vorlage kopieren: health_checks.template.json\n")
+            else:
+                print("  Übersprungen — Vorlage: health_checks.template.json\n")
+    else:
+        print("  Health-Checks für diesen Projekttyp deaktiviert — übersprungen\n")
+
+    # ── Abschluss ─────────────────────────────────────────────────
     print(f"{'═' * 60}")
     print("  SETUP ABGESCHLOSSEN — starte Health-Check...\n")
     cmd_doctor()

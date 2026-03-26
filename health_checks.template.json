@@ -1,0 +1,34 @@
+{
+    "_comment": "Vorlage für health_checks.json — nach agent/config/health_checks.json kopieren und anpassen",
+    "consecutive_failures_before_issue": 3,
+    "_comment_threshold": "Erst nach N aufeinanderfolgenden Fehlern wird ein Gitea-Issue angelegt",
+    "checks": [
+        {
+            "name": "Web-Server",
+            "type": "http",
+            "target": "http://localhost:8080/health",
+            "timeout": 5,
+            "_comment": "HTTP-Check: Status < 500 = OK"
+        },
+        {
+            "name": "Datenbank",
+            "type": "tcp",
+            "target": "localhost:5432",
+            "timeout": 3,
+            "_comment": "TCP-Check: Verbindung erreichbar = OK"
+        },
+        {
+            "name": "Backend-Prozess",
+            "type": "process",
+            "target": "myapp.py",
+            "_comment": "Prozess-Check: pgrep -f target — PID gefunden = OK"
+        },
+        {
+            "name": "Festplatte /",
+            "type": "disk",
+            "target": "/",
+            "threshold": 90,
+            "_comment": "Disk-Check: Belegung < threshold% = OK"
+        }
+    ]
+}
