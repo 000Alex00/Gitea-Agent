@@ -123,8 +123,17 @@ Ein vollständiges Infrastruktur-System für KI-gestützte Code-Entwicklung: Iss
 - **SEARCH/REPLACE-Format:** Funktioniert in jedem Chat (GPT, Claude, Gemini Web)
 - **Test-Generierung:** LLM schreibt pytest + agent_eval.json Tests aus Issue-Kontext
 
+### ⚙️ **Setup & Konfiguration**
+- **9-Schritt-Wizard:** `--setup` führt interaktiv durch die komplette Einrichtung — Gitea-Verbindung, Repository, Labels, Eval-Config, LLM-Routing, System-Prompts
+- **Resume-Fähig:** Setup speichert Fortschritt in `.setup_state.json` — Abbruch (Strg+C) wird protokolliert, beim nächsten Start weitermachen
+- **Install-Log:** Jeder Setup-Schritt wird in `data/setup_YYYYMMDD_HHMMSS.log` festgehalten
+- **7 Projekttypen:** web_api, llm_chat, voice_assistant, iot, cli_tool, library, custom — jeder Typ aktiviert sinnvolle Feature-Defaults
+- **Feature-Flags:** `config/project.json` steuert eval, health_checks, auto_issues, changelog, watch, pr_workflow — einzeln ein-/ausschaltbar
+- **LLM-Wizard:** `--llm` verwaltet Provider, Modelle, Fallback-Kette und per-Task-Routing nachträglich — kein Setup-Neustart nötig
+
 ### 🧩 **LLM-Routing & System-Prompts**
 - **Aufgaben-Routing:** `config/llm/routing.json` — Provider und Modell pro Task-Typ (Issue-Analyse, Implementierung, Review, Healing, Log-Analyse, Test-Generierung)
+- **Fallback-Kette:** Automatischer Provider-Wechsel bei Ausfall: z.B. `claude → openai → local`
 - **Rollen-Prompts:** `config/llm/prompts/` — Aufgabenspezifische Anweisungen mit unveränderlichen Schranken
 - **Jailbreak-Resistenz:** System-Prompts enthalten technische Schranken, die durch keinen Prompt-Inhalt aufgehoben werden können
 - **Multi-Provider:** Claude, OpenAI, Gemini, Groq, Together AI, Ollama, LM Studio in einer Routing-Datei
@@ -272,6 +281,9 @@ Das **Cookbook** ist die zentrale Anlaufstelle für alle technischen Details, Wo
 | [40](docs/40-best-practices.md) | Best Practices & Patterns |
 | [41](docs/41-security-guide.md) | Sicherheitshinweise |
 | [42](docs/42-llm-routing.md) | LLM-Routing: Provider wechseln, per-Task Modelle, Fallback-Kette (`--llm`) |
+| [43](docs/43-system-prompts.md) | System-Prompts / Rollen-Prompts anpassen |
+| [44](docs/44-self-healing.md) | Self-Healing Loop (`--heal`): Fehlgeschlagene Tests autonom beheben |
+| [45](docs/45-project-config.md) | `config/project.json`: Projekttyp & Feature-Flags |
 
 > [!IMPORTANT]
 > **Alle Features erklärt im Cookbook:** Jedes Rezept enthält Copy-Paste-ready Code, Erklärungen, Tipps und Warnungen. → [docs/](docs/)
