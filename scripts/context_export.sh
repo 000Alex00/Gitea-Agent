@@ -62,7 +62,13 @@ fi
 
 CONTEXT_DIR="$(grep '^CONTEXT_DIR=' "$ENV_FILE" 2>/dev/null | cut -d= -f2)"
 if [ -z "${CONTEXT_DIR:-}" ]; then
-    CONTEXT_DIR="$PROJECT_ROOT/agent/data/contexts/open"
+    if [ -d "$PROJECT_ROOT/workspace/open" ]; then
+        CONTEXT_DIR="$PROJECT_ROOT/workspace/open"
+    elif [ -d "$PROJECT_ROOT/agent/data/workspace/open" ]; then
+        CONTEXT_DIR="$PROJECT_ROOT/agent/data/workspace/open"
+    else
+        CONTEXT_DIR="$PROJECT_ROOT/workspace/open"
+    fi
 fi
 
 # --- Kontext finden ---

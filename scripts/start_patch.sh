@@ -40,7 +40,7 @@ fi
 RESTART_SCRIPT=$(python3 -c "
 import json, sys
 from pathlib import Path
-for p in ['agent/config/agent_eval.json', 'tests/agent_eval.json']:
+for p in ['config/agent_eval.json', 'agent/config/agent_eval.json', 'tests/agent_eval.json']:
     cfg = Path('${SCRIPT_DIR}').parent / p
     if not cfg.exists():
         cfg = Path(sys.argv[1]) / p if len(sys.argv) > 1 else cfg

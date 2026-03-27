@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4408 Zeilen)*
+## agent_start.py  *(4411 Zeilen)*
 
 - **Funktion** `_project_root` Zeilen 70-92
   `def _project_root() -> Path:`
@@ -155,35 +155,35 @@
   `def _gitea_version_compare(commit: str, changed_files: list[str]) -> str:`
 - **Funktion** `_build_auto_issue_body` Zeilen 3096-3211
   `def _build_auto_issue_body(`
-- **Funktion** `cmd_watch` Zeilen 3214-3391
+- **Funktion** `cmd_watch` Zeilen 3214-3394
   `def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:`
-- **Funktion** `_dashboard_event` Zeilen 3399-3406
+- **Funktion** `_dashboard_event` Zeilen 3402-3409
   `def _dashboard_event(context: str = "") -> None:`
-- **Funktion** `cmd_install_service` Zeilen 3432-3477
+- **Funktion** `cmd_install_service` Zeilen 3435-3480
   `def cmd_install_service() -> None:`
-- **Funktion** `cmd_dashboard` Zeilen 3485-3491
+- **Funktion** `cmd_dashboard` Zeilen 3488-3494
   `def cmd_dashboard() -> None:`
-- **Funktion** `cmd_auto` Zeilen 3493-3585
+- **Funktion** `cmd_auto` Zeilen 3496-3588
   `def cmd_auto() -> None:`
-- **Funktion** `_apply_auto_approve` Zeilen 3593-3621
+- **Funktion** `_apply_auto_approve` Zeilen 3596-3624
   `def _apply_auto_approve() -> None:`
-- **Funktion** `cmd_heal` Zeilen 3628-3727
+- **Funktion** `cmd_heal` Zeilen 3631-3730
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
-- **Funktion** `cmd_doctor` Zeilen 3730-3883
+- **Funktion** `cmd_doctor` Zeilen 3733-3886
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 3890-4181
+- **Funktion** `cmd_setup` Zeilen 3893-4184
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4184-4404
+- **Funktion** `main` Zeilen 4187-4407
   `def main():`
 - **Funktion** `_sym_map` Zeilen 3010-3012
   `def _sym_map(content: str) -> dict[str, dict]:`
-- **Funktion** `_chk` Zeilen 3736-3737
+- **Funktion** `_chk` Zeilen 3739-3740
   `def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:`
-- **Funktion** `_ask` Zeilen 3894-3897
+- **Funktion** `_ask` Zeilen 3897-3900
   `def _ask(prompt: str, default: str = "") -> str:`
-- **Funktion** `_api_get_raw` Zeilen 3899-3906
+- **Funktion** `_api_get_raw` Zeilen 3902-3909
   `def _api_get_raw(url, user, token, path):`
-- **Funktion** `_api_post_raw` Zeilen 3908-3918
+- **Funktion** `_api_post_raw` Zeilen 3911-3921
   `def _api_post_raw(url, user, token, path, data: dict):`
 - **Funktion** `_len` Zeilen 3023-3028
   `def _len(s: dict) -> int:`
@@ -232,7 +232,7 @@
 - **Funktion** `generate` Zeilen 139-295
   `def generate(project_root: Path):`
 
-## settings.py  *(329 Zeilen)*
+## settings.py  *(341 Zeilen)*
 
 - **Funktion** `_env` Zeilen 16-25
   `def _env(key: str, default: str = "") -> str:`
@@ -242,9 +242,9 @@
   `def _env_int(key: str, default: int) -> int:`
 - **Funktion** `_env_bool` Zeilen 40-41
   `def _env_bool(key: str, default: bool = False) -> bool:`
-- **Funktion** `_load_features` Zeilen 284-303
+- **Funktion** `_load_features` Zeilen 284-309
   `def _load_features() -> dict:`
-- **Funktion** `_load_project_type` Zeilen 308-319
+- **Funktion** `_load_project_type` Zeilen 314-331
   `def _load_project_type() -> str:`
 
 ## evaluation.py  *(611 Zeilen)*
@@ -319,86 +319,86 @@
 - **Funktion** `cmd_changelog` Zeilen 120-165
   `def cmd_changelog(version: str | None = None, update_file: bool = True) -> str:`
 
-## plugins/health.py  *(174 Zeilen)*
+## plugins/health.py  *(175 Zeilen)*
 
-- **Klasse** `CheckResult` Zeilen 36-41
+- **Klasse** `CheckResult` Zeilen 37-42
   `class CheckResult:`
-- **Klasse** `HealthResult` Zeilen 45-51
+- **Klasse** `HealthResult` Zeilen 46-52
   `class HealthResult:`
-- **Funktion** `_load_config` Zeilen 54-62
+- **Funktion** `_load_config` Zeilen 55-63
   `def _load_config(project_root: Path) -> dict | None:`
-- **Funktion** `_check_http` Zeilen 65-73
+- **Funktion** `_check_http` Zeilen 66-74
   `def _check_http(target: str, timeout: int = 5) -> tuple[bool, str]:`
-- **Funktion** `_check_tcp` Zeilen 76-83
+- **Funktion** `_check_tcp` Zeilen 77-84
   `def _check_tcp(target: str, timeout: int = 3) -> tuple[bool, str]:`
-- **Funktion** `_check_process` Zeilen 86-95
+- **Funktion** `_check_process` Zeilen 87-96
   `def _check_process(target: str) -> tuple[bool, str]:`
-- **Funktion** `_check_disk` Zeilen 98-106
+- **Funktion** `_check_disk` Zeilen 99-107
   `def _check_disk(target: str, threshold: int = 90) -> tuple[bool, str]:`
-- **Funktion** `run_checks` Zeilen 109-164
+- **Funktion** `run_checks` Zeilen 110-165
   `def run_checks(project_root: Path) -> HealthResult:`
-- **Funktion** `format_terminal` Zeilen 167-174
+- **Funktion** `format_terminal` Zeilen 168-175
   `def format_terminal(result: HealthResult) -> str:`
-- **Funktion** `all_passed` Zeilen 50-51
+- **Funktion** `all_passed` Zeilen 51-52
   `def all_passed(self) -> bool:`
 
-## plugins/llm.py  *(438 Zeilen)*
+## plugins/llm.py  *(439 Zeilen)*
 
-- **Funktion** `_load_routing` Zeilen 40-49
+- **Funktion** `_load_routing` Zeilen 41-50
   `def _load_routing(extra_path: Optional[Path] = None) -> dict:`
-- **Funktion** `_resolve_task_config` Zeilen 52-63
+- **Funktion** `_resolve_task_config` Zeilen 53-64
   `def _resolve_task_config(task: str, routing: dict) -> dict:`
-- **Funktion** `_load_system_prompt` Zeilen 66-81
+- **Funktion** `_load_system_prompt` Zeilen 67-82
   `def _load_system_prompt(cfg: dict) -> str:`
-- **Klasse** `LLMResponse` Zeilen 89-98
+- **Klasse** `LLMResponse` Zeilen 90-99
   `class LLMResponse:`
-- **Funktion** `_http_post` Zeilen 105-109
+- **Funktion** `_http_post` Zeilen 106-110
   `def _http_post(url: str, payload: dict, headers: dict, timeout: int) -> dict:`
-- **Klasse** `ClaudeClient` Zeilen 112-150
+- **Klasse** `ClaudeClient` Zeilen 113-151
   `class ClaudeClient:`
-- **Klasse** `OpenAIClient` Zeilen 153-191
+- **Klasse** `OpenAIClient` Zeilen 154-192
   `class OpenAIClient:`
-- **Klasse** `DeepseekClient` Zeilen 194-203
+- **Klasse** `DeepseekClient` Zeilen 195-204
   `class DeepseekClient(OpenAIClient):`
-- **Klasse** `LMStudioClient` Zeilen 206-216
+- **Klasse** `LMStudioClient` Zeilen 207-217
   `class LMStudioClient(OpenAIClient):`
-- **Klasse** `GeminiClient` Zeilen 219-252
+- **Klasse** `GeminiClient` Zeilen 220-253
   `class GeminiClient:`
-- **Klasse** `LocalClient` Zeilen 255-285
+- **Klasse** `LocalClient` Zeilen 256-286
   `class LocalClient:`
-- **Funktion** `_client_from_env` Zeilen 292-331
+- **Funktion** `_client_from_env` Zeilen 293-332
   `def _client_from_env() -> Optional["ClaudeClient | LocalClient"]:`
-- **Funktion** `_build_client` Zeilen 334-387
+- **Funktion** `_build_client` Zeilen 335-388
   `def _build_client(cfg: dict) -> "ClaudeClient | OpenAIClient | GeminiClient | LocalClient":`
-- **Funktion** `get_client` Zeilen 394-423
+- **Funktion** `get_client` Zeilen 395-424
   `def get_client(`
-- **Funktion** `complete` Zeilen 426-438
+- **Funktion** `complete` Zeilen 427-439
   `def complete(`
-- **Funktion** `ok` Zeilen 97-98
+- **Funktion** `ok` Zeilen 98-99
   `def ok(self) -> bool:`
-- **Funktion** `__init__` Zeilen 118-124
+- **Funktion** `__init__` Zeilen 119-125
   `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,`
-- **Funktion** `complete` Zeilen 126-150
+- **Funktion** `complete` Zeilen 127-151
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 158-165
+- **Funktion** `__init__` Zeilen 159-166
   `def __init__(self, model: str, api_key: str, base_url: str = "https://api.openai.com/v1",`
-- **Funktion** `complete` Zeilen 167-191
+- **Funktion** `complete` Zeilen 168-192
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 200-203
+- **Funktion** `__init__` Zeilen 201-204
   `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):`
-- **Funktion** `__init__` Zeilen 212-216
+- **Funktion** `__init__` Zeilen 213-217
   `def __init__(self, model: str, api_key: str = "lm-studio",`
-- **Funktion** `__init__` Zeilen 224-230
+- **Funktion** `__init__` Zeilen 225-231
   `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,`
-- **Funktion** `complete` Zeilen 232-252
+- **Funktion** `complete` Zeilen 233-253
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 258-264
+- **Funktion** `__init__` Zeilen 259-265
   `def __init__(self, model: str, base_url: str = "http://localhost:11434",`
-- **Funktion** `complete` Zeilen 266-285
+- **Funktion** `complete` Zeilen 267-286
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `_get` Zeilen 308-309
+- **Funktion** `_get` Zeilen 309-310
   `def _get(key: str, default: str = "") -> str:`
-- **Funktion** `_get_key` Zeilen 337-347
+- **Funktion** `_get_key` Zeilen 338-348
   `def _get_key(env_var: str) -> str:`
 
 ## plugins/__init__.py  *(0 Zeilen)*

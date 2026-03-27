@@ -3320,10 +3320,13 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
             _check_systematic_tag_failures(PROJECT)
 
         # Optionaler Log-Analyzer: neue Struktur (agent/config/) oder Legacy (tools/)
-        analyzer_path = (
-            settings.LOG_ANALYZER_PATH
-            if settings.LOG_ANALYZER_PATH and settings.LOG_ANALYZER_PATH.exists()
-            else PROJECT / "tools" / "log_analyzer.py"
+        analyzer_path = next(
+            (p for p in [
+                settings.LOG_ANALYZER_PATH,
+                PROJECT / "config" / "log_analyzer.py",
+                PROJECT / "tools" / "log_analyzer.py",  # Legacy
+            ] if p and p.exists()),
+            None,
         )
         if analyzer_path.exists():
             try:
