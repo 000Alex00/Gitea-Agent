@@ -82,6 +82,10 @@ sudo systemctl edit --full gitea-agent-night.timer
 | Consecutive-Passes | 3 | Extra-Sicherheit vor Auto-Close |
 | Auto-Merge | ❌ Disabled | Manuelle Review am Morgen |
 | Labels | `agent:night-run` | Nachvollziehbarkeit |
+| **Auto-Context-Build** | ✅ Aktiv | Nach Auto-Issue: `workspace/open/{N}-*/starter.md` sofort erstellt |
+
+> [!TIP]
+> **Auto-Context-Build:** Nach jeder automatischen Issue-Erstellung (Score-Regression, Performance) baut der Agent sofort `workspace/open/{N}-*/starter.md` und `files.md`. Morgens ist der Kontext fertig — der LLM kann direkt loslegen.
 
 **Patch-Modus Details:**
 

@@ -69,6 +69,7 @@ python3 agent_start.py --help
 |------|----------|--------------|
 | `--build-skeleton` | - | AST-Skeleton generieren ([Rezept 20](20-ast-skeleton.md)) |
 | `--get-slice` | `<file>:<symbol>` | Code-Segment extrahieren ([Rezept 21](21-codesegment-strategy.md)) |
+| `--get-llm-cmd` | `<task>` | cli_cmd für Task aus routing.json ausgeben (für context_export.sh --llm) |
 | `--apply-patch` | `<file>` | Patch-Datei anwenden ([Rezept 23](23-search-replace-patches.md)) |
 
 #### **Systemd/Service**

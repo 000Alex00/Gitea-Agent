@@ -56,8 +56,18 @@ PROJECT_PATH=/home/user/my-project
 
 # Routing-Konfiguration (Provider + Modell pro Task)
 # → config/llm/routing.json ist der zentrale Konfig-Punkt
-# → Unterstützte Provider: claude, openai, gemini, local (Ollama)
+# → Unterstützte Provider: claude, openai, gemini, deepseek, lmstudio, local (Ollama)
 LLM_ROUTING_CONFIG=config/llm/routing.json
+
+# Deepseek API (optional)
+DEEPSEEK_API_ENABLED=false
+DEEPSEEK_API_KEY=sk-...
+DEEPSEEK_MODEL=deepseek-chat
+
+# LM Studio lokale API (optional, Standard-Port 1234)
+LMSTUDIO_ENABLED=false
+LMSTUDIO_MODEL=local-model
+LMSTUDIO_URL=http://localhost:1234/v1
 
 # Legacy-Felder (nur für direkten Modus ohne routing.json):
 # LLM_API_URL=http://localhost:8000/v1/chat/completions
