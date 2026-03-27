@@ -239,31 +239,38 @@ def _run_steps(
 
 def _resolve_path(project_root: Path, new_rel: str, legacy_rel: str) -> Path:
     """
-    Löst einen Dateipfad auf — neue Struktur hat Vorrang vor Legacy.
+    Löst einen Dateipfad auf — Priorität: standalone > agent/data/ > legacy.
 
-    Neue Struktur:  project_root/agent/data/<new_rel>
+    Standalone:     project_root/data/<new_rel>        (gitea-agent auf sich selbst)
+    Neue Struktur:  project_root/agent/data/<new_rel>  (gitea-agent auf Zielprojekt)
     Legacy:         project_root/<legacy_rel>
 
-    Args:
-        project_root: Wurzel des Zielprojekts
-        new_rel:      Pfad relativ zu agent/data/ (neue Struktur)
-        legacy_rel:   Pfad relativ zu project_root (Legacy)
-
     Returns:
-        Erster existierender Pfad, sonst der Legacy-Pfad (für Neuanlage).
+        Erster existierender Pfad; bei Neuanlage: data/ wenn vorhanden, sonst legacy.
     """
     project_root = Path(project_root)
+    standalone = project_root / "data" / new_rel
+    if standalone.exists():
+        return standalone
     new_path = project_root / "agent" / "data" / new_rel
-    legacy_path = project_root / legacy_rel
-    return new_path if new_path.exists() else legacy_path
+    if new_path.exists():
+        return new_path
+    # Neuanlage: data/ bevorzugen wenn Verzeichnis existiert
+    if (project_root / "data").is_dir():
+        return standalone
+    return project_root / legacy_rel
 
 
 def _resolve_config(project_root: Path) -> Path:
-    """Gibt den Pfad zu agent_eval.json zurück (neue Struktur oder Legacy)."""
+    """Gibt den Pfad zu agent_eval.json zurück — standalone > agent/config/ > legacy."""
     project_root = Path(project_root)
+    standalone = project_root / "config" / "agent_eval.json"
+    if standalone.exists():
+        return standalone
     new_path = project_root / "agent" / "config" / "agent_eval.json"
-    legacy_path = project_root / EVAL_CONFIG
-    return new_path if new_path.exists() else legacy_path
+    if new_path.exists():
+        return new_path
+    return project_root / EVAL_CONFIG
 
 
 def _load_config(project_root: Path) -> dict | None:

@@ -660,7 +660,9 @@ def _get_exclude_dirs(project: Path) -> set[str]:
         Set von Verzeichnisnamen die beim Keyword-Scan ignoriert werden.
     """
     try:
-        cfg_path = Path(project) / "agent" / "config" / "agent_eval.json"
+        cfg_path = (Path(project) / "config" / "agent_eval.json"
+                    if (Path(project) / "config" / "agent_eval.json").exists()
+                    else Path(project) / "agent" / "config" / "agent_eval.json")
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         extra = cfg.get("context_loader", {}).get("exclude_dirs", [])
         return _EXCLUDE_DIRS_DEFAULT | set(extra)
@@ -3775,9 +3777,14 @@ def cmd_doctor() -> None:
              "python3 agent_start.py --build-skeleton ausführen")
 
     # 4. agent_eval.json (neue Struktur: agent/config/, Fallback: tests/)
-    eval_cfg = (PROJECT / "agent" / "config" / "agent_eval.json"
-                if (PROJECT / "agent" / "config" / "agent_eval.json").exists()
-                else PROJECT / "tests" / "agent_eval.json")
+    eval_cfg = next(
+        (p for p in [
+            PROJECT / "config" / "agent_eval.json",
+            PROJECT / "agent" / "config" / "agent_eval.json",
+            PROJECT / "tests" / "agent_eval.json",
+        ] if p.exists()),
+        PROJECT / "config" / "agent_eval.json",  # Fallback für Fehlermeldung
+    )
     if eval_cfg.exists():
         try:
             with eval_cfg.open(encoding="utf-8") as f:
