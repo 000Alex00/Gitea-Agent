@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4741,
-    "size_kb": 175,
+    "lines": 4823,
+    "size_kb": 182,
     "symbols": [
       {
         "type": "class",
@@ -520,13 +520,13 @@
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "4049-4506",
+        "lines": "4049-4588",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "4509-4737",
+        "lines": "4591-4819",
         "signature": "def main():"
       },
       {
@@ -600,6 +600,18 @@
         "name": "_api_post_raw",
         "lines": "4107-4117",
         "signature": "def _api_post_raw(url, user, token, path, data: dict):"
+      },
+      {
+        "type": "function",
+        "name": "_box",
+        "lines": "4125-4133",
+        "signature": "def _box(title: str, lines: list) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "_step_done",
+        "lines": "4135-4143",
+        "signature": "def _step_done(n: int, title: str, detail: str = \"\") -> None:"
       },
       {
         "type": "function",

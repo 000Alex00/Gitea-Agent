@@ -4116,60 +4116,100 @@ def cmd_setup() -> None:
         with urllib.request.urlopen(req, timeout=5) as resp:
             return json.loads(resp.read())
 
-    print(f"\n{'═' * 60}")
-    print("  gitea-agent Setup-Wizard")
-    print(f"{'═' * 60}\n")
+    W = 66  # Box-Breite gesamt
 
-    # ── Resume prüfen ─────────────────────────────────────────────
+    _H = '═'
+    _TL = '╔'; _TR = '╗'; _BL = '╚'; _BR = '╝'
+    _V  = '║'; _ML = '╠'; _MR = '╣'
+
+    def _box(title: str, lines: list) -> None:
+        inner = W - 4
+        hr = _H * (W - 2)
+        print(f"\n{_TL}{hr}{_TR}")
+        print(f"{_V}  {title:<{inner}}{_V}")
+        print(f"{_ML}{hr}{_MR}")
+        for line in lines:
+            print(f"{_V}  {line:<{inner}}{_V}")
+        print(f"{_BL}{hr}{_BR}\n")
+
+    def _step_done(n: int, title: str, detail: str = "") -> None:
+        inner = W - 4
+        hr    = _H * (W - 2)
+        label = f"Schritt {n}/9 — {title}"
+        info  = f"✅ (Resume: {detail})" if detail else "✅ (aus Resume)"
+        print(f"\n{_TL}{hr}{_TR}")
+        print(f"{_V}  {label:<{inner}}{_V}")
+        print(f"{_V}  {info:<{inner}}{_V}")
+        print(f"{_BL}{hr}{_BR}\n")
+
+    # Begrüßung
+    hr = _H * (W - 2)
+    print(f"\n{_TL}{hr}{_TR}")
+    print(f"{_V}{'  gitea-agent Setup-Wizard — 9 Schritte':^{W - 2}}{_V}")
+    print(f"{_BL}{hr}{_BR}\n")
+    print("  Dieser Wizard richtet den Agenten f\u00fcr dein Projekt ein.")
+    print("  Jeder Schritt erkl\u00e4rt zuerst was ben\u00f6tigt wird,")
+    print("  danach werden die Eingaben abgefragt.\n")
+    print("  Du kannst den Wizard jederzeit mit Strg+C abbrechen.")
+    print("  Beim n\u00e4chsten Start wird dort weitergemacht.\n")
+
+    # \u2500\u2500 Resume pr\u00fcfen \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     state = _load_state()
     if state:
         completed = [k for k in ("gitea_url", "gitea_repo", "project_root") if k in state]
-        print(f"  ℹ️  Vorheriger Setup-Fortschritt gefunden ({', '.join(completed)})")
+        print(f"  \u26a1 Vorheriger Fortschritt gefunden: {', '.join(completed)}")
         if input("  Dort weitermachen? [J/n]: ").strip().lower() in ("", "j", "y"):
             _log("RESUME", "INFO", f"Fortgesetzt ab: {', '.join(completed)}")
             print()
         else:
-            _log("RESUME", "INFO", "Abgelehnt — Neustart von Schritt 1")
+            _log("RESUME", "INFO", "Abgelehnt \u2014 Neustart von Schritt 1")
             state = {}
             _STATE_FILE.unlink(missing_ok=True)
             print()
 
-    # ── Schritt 1: Gitea-Verbindung ────────────────────────────────
+    # \u2500\u2500 Schritt 1: Gitea-Verbindung \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     if "gitea_url" not in state:
-        print("Schritt 1/9 — Gitea-Verbindung\n")
-        print("  ℹ️  Nur die Root-URL eingeben, z.B. http://192.168.1.60:3001")
-        print("       (kein /user oder /repo am Ende)\n")
-        print("  ℹ️  Token erstellen: Gitea → Einstellungen → Anwendungen → Token generieren")
-        print("       Empfohlener Name: gitea-agent")
-        print("       Berechtigungen:  issue Read+Write, repository Read+Write, user Read")
-        print("       Token einmalig kopieren — wird danach nicht mehr angezeigt.\n")
-
+        _box("Schritt 1/9 \u2014 Gitea-Verbindung", [
+            "In diesem Schritt verbinden wir den Agenten mit Gitea.",
+            "Du ben\u00f6tigst:",
+            "",
+            "  [1] Gitea URL \u2014 Adresse deiner Gitea-Installation",
+            "      Beispiel: http://192.168.1.60:3001",
+            "      Nur Root-URL eingeben, KEIN /user oder /repo am Ende!",
+            "",
+            "  [2] Gitea Benutzername \u2014 dein Login-Name in Gitea",
+            "",
+            "  [3] API-Token \u2014 einmalig in Gitea erstellen:",
+            "      Gitea \u2192 Einstellungen \u2192 Anwendungen \u2192 Token generieren",
+            "      Empfohlener Name: gitea-agent",
+            "      Rechte: issue R+W  \u00b7  repository R+W  \u00b7  user R",
+            "      Token kopieren \u2014 danach NICHT mehr sichtbar!",
+            "",
+            "  [4] Bot-User (optional) \u2014 separater Gitea-Account",
+            "      Vorteil: Kommentare/PRs erscheinen unter Bot-Name",
+            "      Anlegen: Admin-Panel \u2192 Benutzer \u2192 Neuen User",
+            "      Repo \u2192 Einstellungen \u2192 Collaborators \u2192 Write",
+            "      \u2192 Leer lassen wenn du keinen Bot-Account hast",
+        ])
         while True:
-            gitea_url   = _ask("Gitea URL (z.B. http://192.168.1.x:3001)")
-            gitea_user  = _ask("Gitea Benutzername")
-            gitea_token = _ask("Gitea API-Token")
+            print("  Bitte gib folgendes ein:\n")
+            gitea_url   = _ask("[1] Gitea URL (z.B. http://192.168.1.x:3001)")
+            gitea_user  = _ask("[2] Gitea Benutzername")
+            gitea_token = _ask("[3] Gitea API-Token")
             try:
                 _api_get_raw(gitea_url, gitea_user, gitea_token, "/user")
-                print("  ✅ Verbindung erfolgreich\n")
+                print("  \u2705 Verbindung erfolgreich\n")
                 _log("Schritt 1 Verbindung", "OK", f"URL={gitea_url} User={gitea_user}")
                 break
             except Exception as exc:
-                print(f"  ❌ Verbindungsfehler: {exc}")
+                print(f"  \u274c Verbindungsfehler: {exc}")
                 _log("Schritt 1 Verbindung", "FEHLER", str(exc))
                 if not _retry(""):
-                    print("  ⚠️  Fortfahren trotz Fehler\n")
+                    print("  \u26a0\ufe0f  Fortfahren trotz Fehler\n")
                     break
-
-        print("  ℹ️  Bot-User = optionaler separater Gitea-Account für Kommentare/PRs")
-        print("       Vorteil: Aktionen erscheinen unter Bot-Name statt Haupt-Account")
-        print("       Bot anlegen: Gitea Admin → Benutzer → Neuen Benutzer erstellen")
-        print("       Bot muss als Collaborator zum Ziel-Repo hinzugefügt werden")
-        print("       (Repo → Einstellungen → Collaborators → Write)")
-        print("       Leer lassen = Agent nutzt Haupt-Account\n")
-        bot_user  = _ask("Bot-User (leer = kein Bot)", "")
-        bot_token = _ask("Bot-Token", "") if bot_user else ""
+        bot_user  = _ask("[4] Bot-User (leer = kein Bot)", "")
+        bot_token = _ask("    Bot-Token", "") if bot_user else ""
         _log("Schritt 1 Bot", "INFO", f"Bot-User={bot_user or '(keiner)'}")
-
         state.update(gitea_url=gitea_url, gitea_user=gitea_user, gitea_token=gitea_token,
                      bot_user=bot_user, bot_token=bot_token)
         _save_state(state)
@@ -4180,185 +4220,226 @@ def cmd_setup() -> None:
         bot_user    = state["bot_user"]
         bot_token   = state["bot_token"]
         _log("Schritt 1", "RESUME", f"URL={gitea_url} User={gitea_user}")
-        print(f"Schritt 1/9 — Gitea-Verbindung ✅ (Resume: {gitea_url}, {gitea_user})\n")
+        _step_done(1, "Gitea-Verbindung", f"{gitea_url}  \u00b7  {gitea_user}")
 
-    # ── Schritt 2: Repository ──────────────────────────────────────
+    # \u2500\u2500 Schritt 2: Repository \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     if "gitea_repo" not in state:
-        print("Schritt 2/9 — Repository\n")
-        print("  ℹ️  Format: besitzer/reponame  (nur Pfad, keine vollständige URL)")
-        print("       Beispiel: Alexmistrator/mein-projekt\n")
-
+        _box("Schritt 2/9 \u2014 Repository", [
+            "Hier legst du fest, welches Gitea-Repository der Agent",
+            "\u00fcberwachen und bearbeiten soll.",
+            "",
+            "  Format:  besitzer/reponame  (nur der Pfad, keine URL!)",
+            "  Beispiel: Alexmistrator/jetson-llm-chat",
+            "",
+            "  Das Repository muss bereits in Gitea existieren.",
+            "  Falls ein Bot-User konfiguriert wurde: er muss als",
+            "  Collaborator im Repository eingetragen sein.",
+        ])
         try:
             repos_data = _api_get_raw(gitea_url, gitea_user, gitea_token,
                                       "/repos/search?limit=50&sort=updated")
             repos = [r["full_name"] for r in repos_data.get("data", [])]
             if repos:
-                print("  Verfügbare Repositories:")
+                print("  Deine verf\u00fcgbaren Repositories:\n")
                 for r in repos[:15]:
-                    print(f"    • {r}")
+                    print(f"    \u2022 {r}")
                 print()
         except Exception:
             pass
-
         while True:
-            raw = _ask("Repository (user/name)")
+            raw = _ask("  Repository (besitzer/name)")
             gitea_repo = _sanitize_repo(raw)
             if gitea_repo != raw:
-                print(f"  ℹ️  Eingabe bereinigt: '{gitea_repo}'")
-                _log("Schritt 2 Sanitize", "INFO", f"'{raw}' → '{gitea_repo}'")
+                print(f"  \u2139\ufe0f  Eingabe bereinigt: '{gitea_repo}'")
+                _log("Schritt 2 Sanitize", "INFO", f"'{raw}' \u2192 '{gitea_repo}'")
             try:
                 _api_get_raw(gitea_url, gitea_user, gitea_token, f"/repos/{gitea_repo}")
-                print("  ✅ Repository gefunden\n")
+                print("  \u2705 Repository gefunden\n")
                 _log("Schritt 2 Repository", "OK", gitea_repo)
                 break
             except Exception as exc:
-                print(f"  ❌ Repo nicht gefunden: {exc}")
+                print(f"  \u274c Repo nicht gefunden: {exc}")
                 _log("Schritt 2 Repository", "FEHLER", f"Eingabe='{gitea_repo}' {exc}")
                 if not _retry(""):
-                    print("  ⚠️  Fortfahren trotz Fehler\n")
+                    print("  \u26a0\ufe0f  Fortfahren trotz Fehler\n")
                     break
-
         state["gitea_repo"] = gitea_repo
         _save_state(state)
     else:
         gitea_repo = state["gitea_repo"]
         _log("Schritt 2", "RESUME", gitea_repo)
-        print(f"Schritt 2/9 — Repository ✅ (Resume: {gitea_repo})\n")
+        _step_done(2, "Repository", gitea_repo)
 
-    # ── Schritt 3: Projektverzeichnis ─────────────────────────────
+    # \u2500\u2500 Schritt 3: Projektverzeichnis \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     if "project_root" not in state:
-        print("Schritt 3/9 — Projektverzeichnis\n")
+        _box("Schritt 3/9 \u2014 Projektverzeichnis", [
+            "Der Agent ben\u00f6tigt den lokalen Pfad zu deinem Projekt.",
+            "Dort wird er Code lesen, \u00c4nderungen schreiben und",
+            "Konfigurationsdateien anlegen.",
+            "",
+            "  Gib den vollst\u00e4ndigen Pfad zum Projektordner an.",
+            "  Beispiel: /home/ki02/jetson-llm-chat",
+            "",
+            "  Das Verzeichnis muss existieren und idealerweise",
+            "  ein git-Repository sein (enth\u00e4lt einen .git Ordner).",
+        ])
         while True:
-            project_root = _ask("Lokaler Pfad zum Projekt-Repo")
+            project_root = _ask("  Lokaler Pfad zum Projekt")
             if Path(project_root).is_dir():
                 if (Path(project_root) / ".git").exists():
-                    print("  ✅ git-Repo gefunden\n")
+                    print("  \u2705 git-Repo gefunden\n")
                     _log("Schritt 3 Verzeichnis", "OK", project_root)
                 else:
-                    print("  ⚠️  Kein git-Repo gefunden.")
+                    print("  \u26a0\ufe0f  Kein .git Ordner gefunden.")
                     _log("Schritt 3 Verzeichnis", "WARNUNG", f"Kein .git in {project_root}")
-                    if input("  Trotzdem als PROJECT_ROOT verwenden? [J/n]: ").strip().lower() in ("", "j", "y"):
+                    if input("  Trotzdem verwenden? [J/n]: ").strip().lower() in ("", "j", "y"):
                         print()
                     else:
                         continue
                 break
             else:
-                print(f"  ❌ Verzeichnis existiert nicht: {project_root}")
+                print(f"  \u274c Verzeichnis nicht gefunden: {project_root}")
                 _log("Schritt 3 Verzeichnis", "FEHLER", f"Nicht gefunden: {project_root}")
                 if not _retry(""):
-                    print("  ⚠️  Fortfahren trotz Fehler\n")
+                    print("  \u26a0\ufe0f  Fortfahren trotz Fehler\n")
                     break
-
         state["project_root"] = project_root
         _save_state(state)
     else:
         project_root = state["project_root"]
         _log("Schritt 3", "RESUME", project_root)
-        print(f"Schritt 3/9 — Projektverzeichnis ✅ (Resume: {project_root})\n")
+        _step_done(3, "Projektverzeichnis", project_root)
 
-    # ── Schritt 4: Labels ─────────────────────────────────────────
-    print("Schritt 4/9 — Labels\n")
+    # \u2500\u2500 Schritt 4: Labels \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    _box("Schritt 4/9 \u2014 Gitea Labels", [
+        "Der Agent kommuniziert \u00fcber Labels in Gitea-Issues.",
+        "Diese Labels werden jetzt automatisch im Repository angelegt",
+        "sofern sie noch nicht vorhanden sind.",
+        "",
+        "  Labels die erstellt werden:",
+        f"  \u2022 {settings.LABEL_READY:<22} \u2014 Issue bereit f\u00fcr Agent",
+        f"  \u2022 {settings.LABEL_PROPOSED:<22} \u2014 Agent hat Plan vorgeschlagen",
+        f"  \u2022 {settings.LABEL_PROGRESS:<22} \u2014 Agent arbeitet daran",
+        f"  \u2022 {settings.LABEL_REVIEW:<22} \u2014 Bereit f\u00fcr Code-Review",
+        f"  \u2022 {settings.LABEL_HELP:<22} \u2014 Manuelle Hilfe ben\u00f6tigt",
+    ])
     required_labels = [
-        (settings.LABEL_READY,    "0075ca", "Bereit für Agent-Bearbeitung"),
+        (settings.LABEL_READY,    "0075ca", "Bereit f\u00fcr Agent-Bearbeitung"),
         (settings.LABEL_PROPOSED, "e4e669", "Agent hat Plan vorgeschlagen"),
         (settings.LABEL_PROGRESS, "d93f0b", "Agent arbeitet daran"),
-        (settings.LABEL_REVIEW,   "0e8a16", "Bereit für Code-Review"),
-        (settings.LABEL_HELP,     "ee0701", "Manuelle Hilfe benötigt"),
+        (settings.LABEL_REVIEW,   "0e8a16", "Bereit f\u00fcr Code-Review"),
+        (settings.LABEL_HELP,     "ee0701", "Manuelle Hilfe ben\u00f6tigt"),
     ]
-
     while True:
         try:
             existing_resp = _api_get_raw(gitea_url, gitea_user, gitea_token,
                                          f"/repos/{gitea_repo}/labels")
             existing_names = {lbl["name"] for lbl in existing_resp}
             missing = [(n, c, d) for n, c, d in required_labels if n not in existing_names]
-
             if not missing:
-                print(f"  ✅ Alle {len(required_labels)} Labels bereits vorhanden\n")
+                print(f"  \u2705 Alle {len(required_labels)} Labels bereits vorhanden\n")
                 _log("Schritt 4 Labels", "OK", "Alle vorhanden")
             else:
                 print(f"  Fehlende Labels: {', '.join(n for n,_,_ in missing)}")
-                confirm = input("  Jetzt anlegen? [J/n]: ").strip().lower()
-                if confirm in ("", "j", "y"):
+                if input("  Jetzt anlegen? [J/n]: ").strip().lower() in ("", "j", "y"):
                     for name, color, desc in missing:
                         _api_post_raw(gitea_url, gitea_user, gitea_token,
                                       f"/repos/{gitea_repo}/labels",
                                       {"name": name, "color": f"#{color}", "description": desc})
-                        print(f"  ✅ Label '{name}' angelegt")
+                        print(f"  \u2705 Label '{name}' angelegt")
                         _log("Schritt 4 Label", "OK", f"Angelegt: {name}")
                 print()
             break
         except Exception as exc:
-            print(f"  ❌ Label-Prüfung fehlgeschlagen: {exc}")
+            print(f"  \u274c Label-Pr\u00fcfung fehlgeschlagen: {exc}")
             _log("Schritt 4 Labels", "FEHLER", str(exc))
             if not _retry(""):
-                print("  ⚠️  Labels übersprungen\n")
+                print("  \u26a0\ufe0f  Labels \u00fcbersprungen\n")
                 break
 
-    # ── Schritt 5: agent_eval.json ────────────────────────────────
-    print("Schritt 5/9 — agent_eval.json\n")
+    # \u2500\u2500 Schritt 5: agent_eval.json \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    _box("Schritt 5/9 \u2014 Evaluierung (agent_eval.json)", [
+        "Der Agent kann deinen Server automatisch testen und bewerten.",
+        "Daf\u00fcr braucht er die Adresse deines Servers und den Pfad",
+        "zur Log-Datei deiner Anwendung.",
+        "",
+        "  [1] Server-URL \u2014 Adresse deines laufenden Servers",
+        "      Beispiel: http://localhost:8080",
+        "",
+        "  [2] Log-Pfad \u2014 vollst\u00e4ndiger Pfad zur Log-Datei",
+        "      Beispiel: /home/ki02/jetson-llm-chat/logs/app.log",
+        "",
+        "  [3] Start-Script \u2014 Script zum Starten des Servers (optional)",
+        "      Beispiel: /home/ki02/jetson-llm-chat/start.sh",
+    ])
     eval_file = PROJECT / "config" / "agent_eval.json"
     write_eval = True
     if eval_file.exists():
-        confirm = input(f"  {eval_file} existiert bereits — überschreiben? [j/N]: ").strip().lower()
-        write_eval = confirm in ("j", "y")
-
+        write_eval = input("  agent_eval.json existiert bereits \u2014 \u00fcberschreiben? [j/N]: ").strip().lower() in ("j", "y")
     if write_eval:
-        server_url   = _ask("Server-URL für Eval (z.B. http://localhost:8080)")
-        log_path     = _ask("Log-Pfad (z.B. /home/user/llm-chat/gitea-agent.log)")
-        start_script = _ask("Start-Script (z.B. /home/user/start_llm.sh)", "")
-        eval_data = {
-            "server_url": server_url,
-            "log_path": log_path,
-            "start_script": start_script,
-            "watch_interval_minutes": 60,
-        }
+        server_url   = _ask("  [1] Server-URL")
+        log_path     = _ask("  [2] Log-Pfad")
+        start_script = _ask("  [3] Start-Script (leer = keins)", "")
+        eval_data = {"server_url": server_url, "log_path": log_path,
+                     "start_script": start_script, "watch_interval_minutes": 60}
         eval_file.parent.mkdir(parents=True, exist_ok=True)
         eval_file.write_text(json.dumps(eval_data, indent=2), encoding="utf-8")
-        print(f"  ✅ {eval_file} geschrieben\n")
+        print("  \u2705 agent_eval.json geschrieben\n")
         _log("Schritt 5 agent_eval.json", "OK", str(eval_file))
     else:
-        _log("Schritt 5 agent_eval.json", "INFO", "Übersprungen")
-        print("  Übersprungen\n")
+        _log("Schritt 5 agent_eval.json", "INFO", "\u00dcbersprungen")
+        print("  \u00dcbersprungen\n")
 
-    # ── Schritt 6: .env schreiben ─────────────────────────────────
-    print("Schritt 6/9 — .env\n")
+    # \u2500\u2500 Schritt 6: .env \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    _box("Schritt 6/9 \u2014 Konfigurationsdatei (.env)", [
+        "Alle eingegebenen Werte werden jetzt in einer .env Datei",
+        "im Agenten-Verzeichnis gespeichert.",
+        "",
+        "  \u26a0\ufe0f  Die .env Datei enth\u00e4lt Tokens und Passw\u00f6rter.",
+        "      Sie darf NICHT in git eingecheckt werden!",
+        "      Sie ist bereits in .gitignore eingetragen.",
+        "",
+        "  Gespeichert werden:",
+        "  \u2022 GITEA_URL, GITEA_USER, GITEA_TOKEN",
+        "  \u2022 GITEA_REPO, GITEA_BOT_USER, GITEA_BOT_TOKEN",
+        "  \u2022 PROJECT_ROOT",
+    ])
     env_file = PROJECT / ".env"
     write_env = True
     if env_file.exists():
-        confirm = input(f"  {env_file} existiert bereits — überschreiben? [j/N]: ").strip().lower()
-        write_env = confirm in ("j", "y")
-
+        write_env = input("  .env existiert bereits \u2014 \u00fcberschreiben? [j/N]: ").strip().lower() in ("j", "y")
     if write_env:
         env_lines = [
-            f"GITEA_URL={gitea_url}",
-            f"GITEA_USER={gitea_user}",
-            f"GITEA_TOKEN={gitea_token}",
-            f"GITEA_REPO={gitea_repo}",
-            f"GITEA_BOT_USER={bot_user}",
-            f"GITEA_BOT_TOKEN={bot_token}",
+            f"GITEA_URL={gitea_url}", f"GITEA_USER={gitea_user}",
+            f"GITEA_TOKEN={gitea_token}", f"GITEA_REPO={gitea_repo}",
+            f"GITEA_BOT_USER={bot_user}", f"GITEA_BOT_TOKEN={bot_token}",
             f"PROJECT_ROOT={project_root}",
         ]
         env_file.write_text("\n".join(env_lines) + "\n", encoding="utf-8")
-        print(f"  ✅ .env geschrieben: {env_file}")
-        print("  ⚠️  .env enthält Secrets — nicht in Git commiten!\n")
-        _log("Schritt 6 .env", "OK", f"{env_file} (Secrets maskiert: TOKEN=****)")
+        print(f"  \u2705 .env geschrieben: {env_file}")
+        print("  \u26a0\ufe0f  Nicht in Git commiten!\n")
+        _log("Schritt 6 .env", "OK", f"{env_file} (Secrets maskiert)")
     else:
-        _log("Schritt 6 .env", "INFO", "Übersprungen")
-        print("  Übersprungen\n")
+        _log("Schritt 6 .env", "INFO", "\u00dcbersprungen")
+        print("  \u00dcbersprungen\n")
 
-    # ── Schritt 7: Projekttyp + Feature-Flags ──────────────────────
-    print("Schritt 7/9 — Projekttyp & Feature-Flags\n")
-    print("  Projekttypen:")
-    print("    1) web_api    — REST-API / Web-Server")
-    print("    2) llm_chat   — LLM-Chat mit Eval-Tests")
-    print("    3) cli_tool   — Kommandozeilen-Tool")
-    print("    4) library    — Python-Bibliothek")
-    print("    5) custom     — Eigene Konfiguration")
+    # \u2500\u2500 Schritt 7: Projekttyp \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    _box("Schritt 7/9 \u2014 Projekttyp & Features", [
+        "W\u00e4hle den Typ deines Projekts. Der Agent aktiviert dann",
+        "automatisch die passenden Features.",
+        "",
+        "  1) web_api  \u2014 REST-API / Web-Server",
+        "  2) llm_chat \u2014 LLM-Chat-Anwendung mit Eval-Tests",
+        "  3) cli_tool \u2014 Kommandozeilen-Programm",
+        "  4) library  \u2014 Python-Bibliothek",
+        "  5) custom   \u2014 Eigene Konfiguration",
+        "",
+        "  Features: eval, health_checks, auto_issues,",
+        "            changelog, watch, pr_workflow",
+    ])
     type_map = {"1": "web_api", "2": "llm_chat", "3": "cli_tool", "4": "library", "5": "custom"}
-    type_choice = _ask("Projekttyp (1-5)", "1")
+    type_choice = _ask("  Projekttyp (1-5)", "2")
     proj_type = type_map.get(type_choice, "custom")
-
     feature_defaults = {
         "web_api":  {"eval": True,  "health_checks": True,  "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
         "llm_chat": {"eval": True,  "health_checks": True,  "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
@@ -4367,62 +4448,61 @@ def cmd_setup() -> None:
         "custom":   {"eval": True,  "health_checks": False, "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
     }
     features = feature_defaults.get(proj_type, feature_defaults["custom"])
-    print(f"\n  Voreinstellungen für '{proj_type}':")
+    print(f"\n  Voreinstellungen f\u00fcr '{proj_type}':")
     for k, v in features.items():
-        print(f"    {k:<15} {'✅ aktiv' if v else '❌ deaktiviert'}")
-
-    confirm = _ask("\n  Features übernehmen? (ja/nein)", "ja")
-    if confirm.lower() not in ("ja", "j", "yes", "y"):
-        print("  Manuelle Konfiguration: project.json nach config/ kopieren und anpassen.")
-    else:
-        project_json = {
-            "type": proj_type,
-            "features": features,
-        }
+        chk = '✅' if v else '❌'
+        print(f"    {chk}  {k}")
+    if _ask("\n  Features \u00fcbernehmen? [ja/nein]", "ja").lower() in ("ja", "j", "yes", "y"):
         agent_config = Path(project_root) / "config"
         agent_config.mkdir(parents=True, exist_ok=True)
         proj_file = agent_config / "project.json"
         if proj_file.exists():
-            overwrite = _ask(f"  project.json existiert bereits. Überschreiben? (ja/nein)", "nein")
-            if overwrite.lower() not in ("ja", "j", "yes", "y"):
-                print("  Übersprungen\n")
+            if _ask("  project.json existiert. \u00dcberschreiben? [ja/nein]", "nein").lower() not in ("ja", "j", "yes", "y"):
                 proj_file = None
         if proj_file:
-            proj_file.write_text(json.dumps(project_json, indent=4, ensure_ascii=False), encoding="utf-8")
-            print(f"  ✅ project.json geschrieben: {proj_file}\n")
-            _log("Schritt 7 project.json", "OK", f"type={proj_type} path={proj_file}")
+            proj_file.write_text(json.dumps({"type": proj_type, "features": features}, indent=4, ensure_ascii=False), encoding="utf-8")
+            print("  \u2705 project.json geschrieben\n")
+            _log("Schritt 7 project.json", "OK", f"type={proj_type}")
+    else:
+        print("  Manuelle Konfiguration: project.json nach config/ kopieren und anpassen.\n")
 
-    # ── Schritt 8: LLM-Routing ────────────────────────────────────
-    print("Schritt 8/9 — LLM-Routing\n")
+    # \u2500\u2500 Schritt 8: LLM-Routing \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    _box("Schritt 8/9 \u2014 LLM-Routing", [
+        "Der Agent verwendet ein KI-Modell f\u00fcr seine Aufgaben.",
+        "Hier konfigurierst du welchen Anbieter und Modell er nutzen soll.",
+        "",
+        "  Verf\u00fcgbare Anbieter:",
+        "  \u2022 claude  \u2014 Anthropic Claude (empfohlen)",
+        "              API-Key: ANTHROPIC_API_KEY in .env eintragen",
+        "  \u2022 openai  \u2014 OpenAI GPT",
+        "              API-Key: OPENAI_API_KEY in .env eintragen",
+        "  \u2022 gemini  \u2014 Google Gemini",
+        "              API-Key: GEMINI_API_KEY in .env eintragen",
+        "  \u2022 local   \u2014 Lokales Modell via Ollama (kein API-Key n\u00f6tig)",
+        "              Ollama muss laufen: http://localhost:11434",
+    ])
     routing_file = Path(project_root) / "config" / "llm" / "routing.json"
     write_routing = True
     if routing_file.exists():
-        confirm = input(f"  {routing_file} existiert bereits — überschreiben? [j/N]: ").strip().lower()
-        write_routing = confirm in ("j", "y")
-
+        write_routing = input("  routing.json existiert bereits \u2014 \u00fcberschreiben? [j/N]: ").strip().lower() in ("j", "y")
     if write_routing:
-        print("  Provider-Optionen: claude, openai, gemini, local (Ollama)")
-        default_provider = _ask("Standard-Provider", "claude")
-        default_model = ""
-        api_key_hint = ""
+        default_provider = _ask("  Standard-Anbieter", "claude")
+        default_model, api_key_hint = "", ""
         if default_provider == "claude":
-            default_model = _ask("Standard-Modell", "claude-sonnet-4-6")
+            default_model = _ask("  Standard-Modell", "claude-sonnet-4-6")
             api_key_hint = "ANTHROPIC_API_KEY"
         elif default_provider == "openai":
-            default_model = _ask("Standard-Modell", "gpt-4o-mini")
+            default_model = _ask("  Standard-Modell", "gpt-4o-mini")
             api_key_hint = "OPENAI_API_KEY"
         elif default_provider == "gemini":
-            default_model = _ask("Standard-Modell", "gemini-1.5-flash")
+            default_model = _ask("  Standard-Modell", "gemini-1.5-flash")
             api_key_hint = "GEMINI_API_KEY"
         else:
-            default_model = _ask("Standard-Modell", "llama3")
-
+            default_model = _ask("  Standard-Modell", "llama3")
         if api_key_hint:
-            print(f"  ℹ️  API-Key in .env als {api_key_hint}=... eintragen\n")
-
-        use_task_routing = input("  Task-spezifisches Routing konfigurieren? [J/n]: ").strip().lower()
+            print(f"\n  \u26a0\ufe0f  Nicht vergessen: {api_key_hint}=... in .env eintragen\n")
         tasks: dict = {}
-        if use_task_routing in ("", "j", "y"):
+        if input("  F\u00fcr verschiedene Aufgaben unterschiedliche Modelle? [J/n]: ").strip().lower() in ("", "j", "y"):
             task_defs = [
                 ("issue_analysis",  "Issue-Analyse",    "claude-haiku-4-5-20251001", "prompts/analyst.md"),
                 ("implementation",  "Implementierung",  default_model,               "prompts/senior_python.md"),
@@ -4433,76 +4513,78 @@ def cmd_setup() -> None:
             ]
             print()
             for task_key, task_label, suggested_model, default_prompt in task_defs:
-                task_provider = _ask(f"  {task_label} — Provider", default_provider)
-                task_model    = _ask(f"  {task_label} — Modell", suggested_model)
-                task_cfg: dict = {
-                    "provider": task_provider,
-                    "model": task_model,
-                    "system_prompt": default_prompt,
-                }
-                if task_provider == "local":
-                    task_cfg["base_url"] = _ask(f"  {task_label} — Base-URL", "http://localhost:11434")
-                tasks[task_key] = task_cfg
+                tp = _ask(f"  {task_label} \u2014 Anbieter", default_provider)
+                tm = _ask(f"  {task_label} \u2014 Modell",   suggested_model)
+                tc: dict = {"provider": tp, "model": tm, "system_prompt": default_prompt}
+                if tp == "local":
+                    tc["base_url"] = _ask(f"  {task_label} \u2014 Base-URL", "http://localhost:11434")
+                tasks[task_key] = tc
                 print()
-
         routing_data: dict = {
-            "_comment": "LLM-Routing — generiert vom Setup-Wizard",
+            "_comment": "LLM-Routing \u2014 generiert vom Setup-Wizard",
             "_comment_system_prompt": "system_prompt: relativer Pfad zu .md-Datei im Projekt-Root",
-            "default": {
-                "provider": default_provider,
-                "model": default_model,
-                "max_tokens": 1024,
-                "timeout": 60,
-            },
+            "default": {"provider": default_provider, "model": default_model,
+                        "max_tokens": 1024, "timeout": 60},
         }
         if tasks:
             routing_data["tasks"] = tasks
-
         routing_file.parent.mkdir(parents=True, exist_ok=True)
         routing_file.write_text(json.dumps(routing_data, indent=4, ensure_ascii=False), encoding="utf-8")
-        print(f"  ✅ llm_routing.json geschrieben: {routing_file}\n")
+        print("  \u2705 routing.json geschrieben\n")
         _log("Schritt 8 LLM-Routing", "OK", f"provider={default_provider} model={default_model}")
     else:
-        _log("Schritt 8 LLM-Routing", "INFO", "Übersprungen")
-        print("  Übersprungen\n")
+        _log("Schritt 8 LLM-Routing", "INFO", "\u00dcbersprungen")
+        print("  \u00dcbersprungen\n")
 
-    # ── Schritt 9: System-Prompts ─────────────────────────────────
-    print("Schritt 9/9 — System-Prompts\n")
+    # \u2500\u2500 Schritt 9: System-Prompts \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    _box("Schritt 9/9 \u2014 System-Prompts", [
+        "Der Agent verwendet Rollen-Prompts die sein Verhalten",
+        "bei verschiedenen Aufgaben steuern.",
+        "",
+        "  Prompts werden aus dem Agenten-Verzeichnis in dein",
+        "  Projekt unter config/llm/prompts/ kopiert.",
+        "",
+        "  Du kannst sie danach anpassen \u2014 die Originale bleiben",
+        "  im Agenten-Verzeichnis erhalten.",
+    ])
     prompts_src = Path(__file__).parent / "config" / "llm" / "prompts"
     prompts_dst = Path(project_root) / "config" / "llm" / "prompts"
     if prompts_src.exists() and prompts_src.resolve() != prompts_dst.resolve():
-        copy_prompts = input("  Rollen-Prompts (config/llm/prompts/*.md) ins Projekt kopieren? [J/n]: ").strip().lower()
-        if copy_prompts in ("", "j", "y"):
+        if input("  Prompts jetzt ins Projekt kopieren? [J/n]: ").strip().lower() in ("", "j", "y"):
             prompts_dst.mkdir(parents=True, exist_ok=True)
-            copied = 0
-            for src_file in prompts_src.glob("*.md"):
-                dst_file = prompts_dst / src_file.name
-                if not dst_file.exists():
-                    dst_file.write_text(src_file.read_text(encoding="utf-8"), encoding="utf-8")
-                    copied += 1
+            copied = sum(
+                1 for src_file in prompts_src.glob("*.md")
+                if not (prompts_dst / src_file.name).exists()
+                and (prompts_dst / src_file.name).write_text(src_file.read_text(encoding="utf-8"), encoding="utf-8") is None
+            )
             if copied:
-                print(f"  ✅ {copied} Prompt-Dateien nach {prompts_dst} kopiert")
+                print(f"  \u2705 {copied} Prompt-Dateien kopiert nach:\n     {prompts_dst}")
                 _log("Schritt 9 Prompts", "OK", f"{copied} Dateien nach {prompts_dst}")
             else:
-                print("  ℹ️  Alle Prompts bereits vorhanden")
+                print("  \u2139\ufe0f  Alle Prompts bereits vorhanden")
                 _log("Schritt 9 Prompts", "OK", "Bereits vorhanden")
             print()
         else:
-            _log("Schritt 9 Prompts", "INFO", "Übersprungen")
-            print("  Übersprungen — config/llm/prompts/*.md manuell nach Bedarf anlegen\n")
+            _log("Schritt 9 Prompts", "INFO", "\u00dcbersprungen")
+            print("  \u00dcbersprungen \u2014 Prompts k\u00f6nnen sp\u00e4ter manuell kopiert werden\n")
     else:
         _log("Schritt 9 Prompts", "OK", f"Bereits unter {prompts_dst}")
-        print(f"  ℹ️  Prompts bereits unter {prompts_dst}\n")
+        print(f"  \u2705 Prompts bereits vorhanden\n")
 
-    # ── Aufräumen & Health-Check ──────────────────────────────────
+    # \u2500\u2500 Abschluss \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
     _log("SETUP ABGESCHLOSSEN", "OK", f"Install-Log: {_LOG_FILE}")
     _STATE_FILE.unlink(missing_ok=True)
-    print(f"{'═' * 60}")
-    print("  SETUP ABGESCHLOSSEN — starte Health-Check...\n")
-    print(f"  ℹ️  Install-Log: {_LOG_FILE}\n")
+    inner = W - 4
+    hr = _H * (W - 2)
+    inner = W - 4
+    print(f"{_TL}{hr}{_TR}")
+    print(f"{_V}{'  SETUP ABGESCHLOSSEN':^{W - 2}}{_V}")
+    print(f"{_ML}{hr}{_MR}")
+    print(f"{_V}  {'Install-Log: ' + str(_LOG_FILE):<{inner}}{_V}")
+    print(f"{_BL}{hr}{_BR}\n")
+    print("  Starte Health-Check...\n")
     cmd_doctor()
-    print(f"\n{'═' * 60}")
-    print("  Generiere initiales Dashboard...\n")
+    print("\n  Generiere initiales Dashboard...\n")
     cmd_dashboard()
 
 

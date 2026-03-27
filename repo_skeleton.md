@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4741 Zeilen)*
+## agent_start.py  *(4823 Zeilen)*
 
 - **Klasse** `_LazyGitea` Zeilen 70-78
   `class _LazyGitea:`
@@ -173,9 +173,9 @@
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
 - **Funktion** `cmd_doctor` Zeilen 3896-4042
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 4049-4506
+- **Funktion** `cmd_setup` Zeilen 4049-4588
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4509-4737
+- **Funktion** `main` Zeilen 4591-4819
   `def main():`
 - **Funktion** `__getattr__` Zeilen 74-78
   `def __getattr__(self, name: str):`
@@ -201,6 +201,10 @@
   `def _api_get_raw(url, user, token, path):`
 - **Funktion** `_api_post_raw` Zeilen 4107-4117
   `def _api_post_raw(url, user, token, path, data: dict):`
+- **Funktion** `_box` Zeilen 4125-4133
+  `def _box(title: str, lines: list) -> None:`
+- **Funktion** `_step_done` Zeilen 4135-4143
+  `def _step_done(n: int, title: str, detail: str = "") -> None:`
 - **Funktion** `_is_excluded` Zeilen 1954-1955
   `def _is_excluded(f: str) -> bool:`
 - **Funktion** `_len` Zeilen 3113-3118
