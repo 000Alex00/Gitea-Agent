@@ -4438,43 +4438,60 @@ def cmd_setup() -> None:
             "W\u00e4hle den Typ deines Projekts. Der Agent aktiviert dann",
             "automatisch die passenden Features.",
             "",
-            "  1) web_api  \u2014 REST-API / Web-Server",
-            "  2) llm_chat \u2014 LLM-Chat-Anwendung mit Eval-Tests",
-            "  3) cli_tool \u2014 Kommandozeilen-Programm",
-            "  4) library  \u2014 Python-Bibliothek",
-            "  5) custom   \u2014 Eigene Konfiguration",
-            "",
-            "  Features: eval, health_checks, auto_issues,",
-            "            changelog, watch, pr_workflow",
+            "  1) web_api         \u2014 REST-API / Web-Server",
+            "  2) llm_chat        \u2014 LLM-Chat mit Eval-Tests",
+            "  3) voice_assistant \u2014 Voice-Pipeline (STT/TTS/LLM)",
+            "  4) iot             \u2014 IoT / Embedded / Edge (z.B. Jetson)",
+            "  5) cli_tool        \u2014 Kommandozeilen-Programm",
+            "  6) library         \u2014 Python-Bibliothek",
+            "  7) custom          \u2014 Alle Features manuell w\u00e4hlen",
         ])
-        type_map = {"1": "web_api", "2": "llm_chat", "3": "cli_tool", "4": "library", "5": "custom"}
-        type_choice = _ask("  Projekttyp (1-5)", "2")
+        type_map = {
+            "1": "web_api", "2": "llm_chat", "3": "voice_assistant",
+            "4": "iot", "5": "cli_tool", "6": "library", "7": "custom",
+        }
+        type_choice = _ask("  Projekttyp (1-7)", "2")
         proj_type = type_map.get(type_choice, "custom")
         feature_defaults = {
-            "web_api":  {"eval": True,  "health_checks": True,  "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
-            "llm_chat": {"eval": True,  "health_checks": True,  "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
-            "cli_tool": {"eval": False, "health_checks": False, "auto_issues": True,  "changelog": True, "watch": False, "pr_workflow": True},
-            "library":  {"eval": False, "health_checks": False, "auto_issues": True,  "changelog": True, "watch": False, "pr_workflow": True},
-            "custom":   {"eval": True,  "health_checks": False, "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
+            "web_api":         {"eval": True,  "health_checks": True,  "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
+            "llm_chat":        {"eval": True,  "health_checks": True,  "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
+            "voice_assistant": {"eval": True,  "health_checks": True,  "auto_issues": True,  "changelog": True, "watch": True,  "pr_workflow": True},
+            "iot":             {"eval": False, "health_checks": False, "auto_issues": True,  "changelog": True, "watch": False, "pr_workflow": True},
+            "cli_tool":        {"eval": False, "health_checks": False, "auto_issues": True,  "changelog": True, "watch": False, "pr_workflow": True},
+            "library":         {"eval": False, "health_checks": False, "auto_issues": True,  "changelog": True, "watch": False, "pr_workflow": True},
+            "custom":          {"eval": False, "health_checks": False, "auto_issues": False, "changelog": True, "watch": False, "pr_workflow": False},
         }
-        features = feature_defaults.get(proj_type, feature_defaults["custom"])
-        print(f"\n  Voreinstellungen f\u00fcr '{proj_type}':")
+        feature_desc = {
+            "eval":          "Bewertet Server-Antworten automatisch  [ben\u00f6tigt: server_url]",
+            "health_checks": "Pr\u00fcft ob Server erreichbar ist         [ben\u00f6tigt: server_url]",
+            "auto_issues":   "Erstellt Issues bei Testfehlern        [ben\u00f6tigt: eval]",
+            "changelog":     "Generiert CHANGELOG.md aus Commits",
+            "watch":         "\u00dcberwacht Gitea auf neue Issues",
+            "pr_workflow":   "Erstellt PRs nach Implementierung automatisch",
+        }
+        features = dict(feature_defaults.get(proj_type, feature_defaults["custom"]))
+        print(f"\n  Voreinstellungen f\u00fcr '{proj_type}':\n")
         for k, v in features.items():
-            chk = '✅' if v else '❌'
-            print(f"    {chk}  {k}")
-        if _ask("\n  Features \u00fcbernehmen? [ja/nein]", "ja").lower() in ("ja", "j", "yes", "y"):
-            agent_config = Path(project_root) / "config"
-            agent_config.mkdir(parents=True, exist_ok=True)
-            proj_file = agent_config / "project.json"
-            if proj_file.exists():
-                if _ask("  project.json existiert. \u00dcberschreiben? [ja/nein]", "nein").lower() not in ("ja", "j", "yes", "y"):
-                    proj_file = None
-            if proj_file:
-                proj_file.write_text(json.dumps({"type": proj_type, "features": features}, indent=4, ensure_ascii=False), encoding="utf-8")
-                print("  \u2705 project.json geschrieben\n")
-                _log("Schritt 7 project.json", "OK", f"type={proj_type}")
-        else:
-            print("  Manuelle Konfiguration: project.json nach config/ kopieren und anpassen.\n")
+            chk = '\u2705' if v else '\u274c'
+            print(f"    {chk}  {k:<14}  {feature_desc.get(k, '')}")
+        print()
+        if _ask("  Einzelne Features anpassen? [j/N]", "n").lower() in ("j", "y"):
+            print()
+            for k in list(features):
+                cur = "j" if features[k] else "n"
+                ans = _ask(f"  {k:<14} aktivieren? [j/n]", cur)
+                features[k] = ans.lower() in ("j", "y")
+            print()
+        agent_config = Path(project_root) / "config"
+        agent_config.mkdir(parents=True, exist_ok=True)
+        proj_file = agent_config / "project.json"
+        if proj_file.exists():
+            if _ask("  project.json existiert. \u00dcberschreiben? [ja/nein]", "nein").lower() not in ("ja", "j", "yes", "y"):
+                proj_file = None
+        if proj_file:
+            proj_file.write_text(json.dumps({"type": proj_type, "features": features}, indent=4, ensure_ascii=False), encoding="utf-8")
+            print("  \u2705 project.json geschrieben\n")
+            _log("Schritt 7 project.json", "OK", f"type={proj_type}")
 
         # \u2500\u2500 Schritt 8: LLM-Routing \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
         _box("Schritt 8/9 \u2014 LLM-Routing", [
