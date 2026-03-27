@@ -154,6 +154,46 @@ STALENESS_CHECK=true
 STALENESS_INTERVAL=7200
 
 # ══════════════════════════════════════════════════════════
+# TOKEN-BUDGET-TRACKER
+# ══════════════════════════════════════════════════════════
+
+# Schätzfaktor: Zeilen × TOKEN_LINES_FACTOR ≈ Token
+TOKEN_LINES_FACTOR=10
+
+# Warnschwelle (Sonnet 4.x Kontextfenster: 200K)
+TOKEN_BUDGET_WARN=150000
+
+# ══════════════════════════════════════════════════════════
+# SLICE-GATE
+# ══════════════════════════════════════════════════════════
+
+# true → Slice-Warnung wird zu hartem Fehler (blockiert --pr)
+SLICE_GATE_ENABLED=false
+
+# Dateien mit mehr als N Zeilen müssen via --get-slice gelesen worden sein
+SLICE_GATE_MIN_LINES=100
+
+# ══════════════════════════════════════════════════════════
+# SELF-HEALING
+# ══════════════════════════════════════════════════════════
+
+# Maximale Versuche pro Heilungs-Lauf (--heal)
+HEALING_MAX_ATTEMPTS=3
+
+# Token-Budget pro Heilungs-Lauf (Abbruch bei Überschreitung)
+HEALING_MAX_TOKENS=50000
+
+# ══════════════════════════════════════════════════════════
+# SESSION-TRACKING
+# ══════════════════════════════════════════════════════════
+
+# Maximale abgeschlossene Issues pro Session (Drift-Warnung danach)
+SESSION_LIMIT=2
+
+# Stunden ohne Aktivität nach denen session.json zurückgesetzt wird
+SESSION_RESET_HOURS=4
+
+# ══════════════════════════════════════════════════════════
 # LOGGING
 # ══════════════════════════════════════════════════════════
 
@@ -215,6 +255,26 @@ HTTP_RETRY_DELAY=5
 - `USE_SKELETON`: Token-Reduktion ([Rezept 20](20-ast-skeleton.md))
 - `TAG_AGGREGATION`: Mehrere Failures → 1 Issue ([Rezept 18](18-tag-aggregation.md))
 - `VERSION_COMPARE`: Code-Diff bei Regression ([Rezept 24](24-gitea-version-compare.md))
+
+### Token-Budget-Tracker
+- `TOKEN_LINES_FACTOR`: Näherung `Zeilen × 10 ≈ Token` (basiert auf ~40 Zeichen/Zeile ≈ 4 Zeichen/Token)
+- `TOKEN_BUDGET_WARN`: Warnung wenn geschätzter Kontext diese Schwelle überschreitet — Standard 150.000 (bei 200K-Fenster)
+- Angezeigt im Metadata-Block jedes Plan-Kommentars
+
+### Slice-Gate
+- `SLICE_GATE_ENABLED=false`: Standardmäßig nur Warnung; `true` → blockiert `--pr` wenn Dateien ohne `--get-slice` geändert wurden
+- `SLICE_GATE_MIN_LINES=100`: Nur Dateien über dieser Zeilenzahl werden geprüft
+- Verhindert halluzinierte Änderungen an Dateien die der Agent nie gelesen hat
+
+### Self-Healing
+- `HEALING_MAX_ATTEMPTS=3`: Wie oft der Healing-Loop einen fehlgeschlagenen Test erneut zu fixen versucht
+- `HEALING_MAX_TOKENS=50000`: Abbruch wenn geschätzter Token-Verbrauch überschritten wird
+- Aktivierung: `healing=true` in `config/project.json` + Aufruf via `--heal`
+
+### Session-Tracking
+- `SESSION_LIMIT=2`: Nach N abgeschlossenen Issues erscheint Drift-Warnung (neue Claude-Session empfohlen)
+- `SESSION_RESET_HOURS=4`: Nach N Stunden Inaktivität wird `session.json` automatisch zurückgesetzt
+- Schützt vor Context-Drift: LLM "vergisst" frühere Regeln nach zu vielen Issues in einer Session
 
 ---
 

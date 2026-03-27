@@ -88,9 +88,10 @@ Ein vollständiges Infrastruktur-System für KI-gestützte Code-Entwicklung: Iss
 ### 🔬 **Extreme Technical Enforcement**
 - **Gitea-Version-Compare:** AST-Diff zeigt Code-Änderungen bei Score-Regression
 - **Server-Staleness-Check:** Blockiert PR wenn Server veraltet ist
-- **Slice-Tracking:** Warnt wenn Dateien ohne `--get-slice` geändert wurden
+- **Slice-Gate:** `SLICE_GATE_ENABLED=true` blockiert `--pr` wenn Dateien ohne `--get-slice` geändert wurden (verhindert halluzinierte Patches)
 - **Docs-Check:** Automatische Warnung wenn Code geändert aber Doku nicht
 - **Metadaten in jedem Plan:** Token-Schätzung, Modell, Zeitstempel, gelesene Dateien
+- **Token-Budget-Tracker:** Schätzt Kontext-Größe in Token, warnt bei Annäherung an das Limit (`TOKEN_BUDGET_WARN`)
 
 ### 📊 **Monitoring & Debugging**
 - **Live-Dashboard:** HTML-Übersicht mit Score-Charts, System-Status
@@ -110,10 +111,11 @@ Ein vollständiges Infrastruktur-System für KI-gestützte Code-Entwicklung: Iss
 ### 🔄 **Lifecycle-Management**
 - **Auto-Changelog:** Generiert `CHANGELOG.md` aus Conventional Commits
 - **Auto-Cleanup:** Verschiebt geschlossene Issues nach `workspace/done/`
-- **Session-Tracking:** Warnt bei Context-Drift nach N Issues
+- **Session-Tracking:** Warnt bei Context-Drift nach `SESSION_LIMIT` Issues — schützt vor schleichenden Prompt-Regressionen
 - **Label-Automation:** Kompletter Label-Lifecycle automatisiert
 - **Risk-Classification:** 4-Stufen-System (Docs → Enhancement → Bug → Breaking Change)
 - **Auto-Neustart:** Watch-Modus startet Server bei Inaktivität + neuen Commits
+- **Self-Healing:** `--heal` startet automatischen Fix-Loop: Eval → Analyse → Patch → Eval (max. `HEALING_MAX_ATTEMPTS` Versuche)
 
 ### 🎯 **LLM-Agnostisch & Flexibel**
 - **Context-Export-Script:** Unterstützt plain Terminal, Gemini CLI, File-Export für Web-Chats
@@ -207,6 +209,9 @@ Das **Cookbook** ist die zentrale Anlaufstelle für alle technischen Details, Wo
 | [23](docs/23-search-replace-patches.md) | SEARCH/REPLACE-Patches anwenden |
 | [24](docs/24-gitea-version-compare.md) | AST-Diff bei Regression zeigen |
 | [25](docs/25-log-analyzer.md) | Projekt-eigene Log-Analyse integrieren |
+| [26 §](docs/26-env-configuration.md#slice-gate) | Slice-Gate: halluzinierte Patches verhindern |
+| [26 §](docs/26-env-configuration.md#self-healing) | Self-Healing Loop (`--heal`) konfigurieren |
+| [26 §](docs/26-env-configuration.md#token-budget-tracker) | Token-Budget-Tracker: Kontext-Limit überwachen |
 
 ### 🔧 Configuration & Customization
 
