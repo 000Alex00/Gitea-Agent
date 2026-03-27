@@ -4601,7 +4601,10 @@ def cmd_setup() -> None:
         print(f"{_TL}{hr}{_TR}")
         print(f"{_V}{'  SETUP ABGESCHLOSSEN':^{W - 2}}{_V}")
         print(f"{_ML}{hr}{_MR}")
-        print(f"{_V}  {'Install-Log: ' + str(_LOG_FILE):<{inner}}{_V}")
+        _log_label = "Install-Log: " + str(_LOG_FILE)
+        if len(_log_label) > inner:
+            _log_label = "Log: ..." + str(_LOG_FILE)[-(inner - 5):]
+        print(f"{_V}  {_log_label:<{inner}}{_V}")
         print(f"{_BL}{hr}{_BR}\n")
         print("  Starte Health-Check...\n")
         cmd_doctor()
