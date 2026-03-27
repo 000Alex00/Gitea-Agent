@@ -4372,7 +4372,9 @@ def cmd_setup() -> None:
             "                 http://192.168.1.x  (ohne Port wenn Standard)",
             "",
             "  [2] Log-Pfad \u2014 vollst\u00e4ndiger Pfad zur Log-Datei",
-            "      Beispiel: /home/user/mein-projekt/logs/app.log",
+            "      Mehrere Pfade kommagetrennt m\u00f6glich.",
+            "      Beispiel: /home/user/projekt/logs/app.log",
+            "                /home/user/projekt/logs/app.log,/var/log/syslog",
             "",
             "  [3] Start-Script \u2014 Script zum Starten des Servers (optional)",
             "      Beispiel: /home/user/mein-projekt/start.sh",
@@ -4385,12 +4387,15 @@ def cmd_setup() -> None:
             write_eval = input("  agent_eval.json existiert bereits \u2014 \u00fcberschreiben? [j/N]: ").strip().lower() in ("j", "y")
         if write_eval:
             server_url   = _ask("  [1] Server-URL")
-            log_path     = _ask("  [2] Log-Pfad")
+            log_path_raw = _ask("  [2] Log-Pfad (kommagetrennt f\u00fcr mehrere)")
+            log_paths    = [p.strip() for p in log_path_raw.split(",") if p.strip()]
+            log_path     = log_paths[0] if log_paths else ""
             start_script = _ask("  [3] Start-Script (leer = keins)", "")
             if not start_script:
                 print("  \u26a0\ufe0f  Kein Start-Script \u2014 automatischer Neustart nicht m\u00f6glich.\n")
                 _log("Schritt 5 Start-Script", "WARNUNG", "Kein Start-Script angegeben")
             eval_data = {"server_url": server_url, "log_path": log_path,
+                         "log_paths": log_paths,
                          "start_script": start_script, "watch_interval_minutes": 60}
             eval_file.parent.mkdir(parents=True, exist_ok=True)
             eval_file.write_text(json.dumps(eval_data, indent=2), encoding="utf-8")
