@@ -153,6 +153,8 @@ class ClaudeClient:
 class OpenAIClient:
     """OpenAI-kompatible Chat-Completions API."""
 
+    _PROVIDER = "openai"
+
     def __init__(self, model: str, api_key: str, base_url: str = "https://api.openai.com/v1",
                  max_tokens: int = 1024, timeout: int = 60, system_prompt: str = ""):
         self.model = model
@@ -184,9 +186,34 @@ class OpenAIClient:
             )
             text = result["choices"][0]["message"]["content"].strip()
             tokens = result.get("usage", {}).get("total_tokens", 0)
-            return LLMResponse(text=text, provider="openai", model=self.model, tokens_used=tokens)
+            return LLMResponse(text=text, provider=self._PROVIDER, model=self.model, tokens_used=tokens)
         except Exception as exc:
-            return LLMResponse(text="", provider="openai", model=self.model, error=str(exc))
+            return LLMResponse(text="", provider=self._PROVIDER, model=self.model, error=str(exc))
+
+
+class DeepseekClient(OpenAIClient):
+    """Deepseek API — OpenAI-kompatibel, eigene Base-URL."""
+
+    _PROVIDER = "deepseek"
+    _BASE_URL  = "https://api.deepseek.com/v1"
+
+    def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):
+        super().__init__(model=model, api_key=api_key,
+                         base_url=self._BASE_URL,
+                         max_tokens=max_tokens, timeout=timeout)
+
+
+class LMStudioClient(OpenAIClient):
+    """LM Studio lokale API — OpenAI-kompatibel, Standard-Port 1234."""
+
+    _PROVIDER = "lmstudio"
+    _BASE_URL  = "http://localhost:1234/v1"
+
+    def __init__(self, model: str, api_key: str = "lm-studio",
+                 base_url: str = _BASE_URL, max_tokens: int = 1024, timeout: int = 60):
+        super().__init__(model=model, api_key=api_key,
+                         base_url=base_url,
+                         max_tokens=max_tokens, timeout=timeout)
 
 
 class GeminiClient:
@@ -281,11 +308,23 @@ def _client_from_env() -> Optional["ClaudeClient | LocalClient"]:
     def _get(key: str, default: str = "") -> str:
         return os.environ.get(key, env.get(key, default))
 
+    deepseek_enabled = _get("DEEPSEEK_API_ENABLED", "false").lower() in ("true", "1", "yes")
+    deepseek_key = _get("DEEPSEEK_API_KEY", "")
+    if deepseek_enabled and deepseek_key:
+        model = _get("DEEPSEEK_MODEL", "deepseek-chat")
+        return DeepseekClient(model=model, api_key=deepseek_key)
+
     claude_enabled = _get("CLAUDE_API_ENABLED", "false").lower() in ("true", "1", "yes")
     api_key = _get("ANTHROPIC_API_KEY", "")
     if claude_enabled and api_key:
         model = _get("CLAUDE_MODEL", "claude-sonnet-4-6")
         return ClaudeClient(model=model, api_key=api_key)
+
+    lmstudio_enabled = _get("LMSTUDIO_ENABLED", "false").lower() in ("true", "1", "yes")
+    if lmstudio_enabled:
+        model = _get("LMSTUDIO_MODEL", "local-model")
+        base_url = _get("LMSTUDIO_URL", LMStudioClient._BASE_URL)
+        return LMStudioClient(model=model, base_url=base_url)
 
     local_url = _get("LLM_LOCAL_URL", "http://localhost:11434")
     local_model = _get("LLM_LOCAL_MODEL", "llama3")
@@ -330,6 +369,14 @@ def _build_client(cfg: dict) -> "ClaudeClient | OpenAIClient | GeminiClient | Lo
         return GeminiClient(model=model or "gemini-1.5-flash",
                             api_key=api_key, max_tokens=max_tokens, timeout=timeout,
                             system_prompt=system_prompt)
+    elif provider == "deepseek":
+        api_key = _get_key("DEEPSEEK_API_KEY")
+        return DeepseekClient(model=model or "deepseek-chat",
+                              api_key=api_key, max_tokens=max_tokens, timeout=timeout)
+    elif provider == "lmstudio":
+        base_url = cfg.get("base_url", LMStudioClient._BASE_URL)
+        return LMStudioClient(model=model or "local-model",
+                              base_url=base_url, max_tokens=max_tokens, timeout=timeout)
     elif provider in ("local", "ollama"):
         base_url = cfg.get("base_url", "http://localhost:11434")
         return LocalClient(model=model or "llama3",
