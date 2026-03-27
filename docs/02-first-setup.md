@@ -214,6 +214,7 @@ PROJECT_ROOT=/home/user/mein-projekt
 > # → Provider wechseln, per-Task Routing, Fallback-Kette konfigurieren
 > # → Kein Setup-Neustart nötig
 > ```
+> → Vollständige Dokumentation: [Rezept 42 — LLM-Routing](42-llm-routing.md)
 
 > [!TIP]
 > **Mehrere Projekte:**

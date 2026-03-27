@@ -271,6 +271,7 @@ Das **Cookbook** ist die zentrale Anlaufstelle für alle technischen Details, Wo
 | [39](docs/39-api-functions.md) | Funktions-Referenz (evaluation, gitea_api) |
 | [40](docs/40-best-practices.md) | Best Practices & Patterns |
 | [41](docs/41-security-guide.md) | Sicherheitshinweise |
+| [42](docs/42-llm-routing.md) | LLM-Routing: Provider wechseln, per-Task Modelle, Fallback-Kette (`--llm`) |
 
 > [!IMPORTANT]
 > **Alle Features erklärt im Cookbook:** Jedes Rezept enthält Copy-Paste-ready Code, Erklärungen, Tipps und Warnungen. → [docs/](docs/)
