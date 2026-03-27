@@ -4229,7 +4229,7 @@ def cmd_setup() -> None:
             "\u00fcberwachen und bearbeiten soll.",
             "",
             "  Format:  besitzer/reponame  (nur der Pfad, keine URL!)",
-            "  Beispiel: Alexmistrator/jetson-llm-chat",
+            "  Beispiel: mein-user/mein-projekt",
             "",
             "  Das Repository muss bereits in Gitea existieren.",
             "  Falls ein Bot-User konfiguriert wurde: er muss als",
