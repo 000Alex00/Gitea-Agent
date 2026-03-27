@@ -4050,10 +4050,29 @@ def cmd_setup() -> None:
     """--setup: Interaktiver Einrichtungs-Wizard für neue Projekte (Issue #77)."""
     import base64
 
+    _STATE_FILE = Path(__file__).parent / ".setup_state.json"
+
+    def _load_state() -> dict:
+        if _STATE_FILE.exists():
+            try:
+                return json.loads(_STATE_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                return {}
+        return {}
+
+    def _save_state(state: dict) -> None:
+        _STATE_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+
     def _ask(prompt: str, default: str = "") -> str:
         disp = f" [{default}]" if default else ""
         val = input(f"  {prompt}{disp}: ").strip()
         return val or default
+
+    def _sanitize_repo(val: str) -> str:
+        return val.strip().strip("`'\"").strip()
+
+    def _retry(msg: str) -> bool:
+        return input(f"  {msg} Erneut versuchen? [J/n]: ").strip().lower() in ("", "j", "y")
 
     def _api_get_raw(url, user, token, path):
         import urllib.request, urllib.error
@@ -4080,40 +4099,127 @@ def cmd_setup() -> None:
     print("  gitea-agent Setup-Wizard")
     print(f"{'═' * 60}\n")
 
-    # ── Schritt 1: Gitea-Verbindung ────────────────────────────────
-    print("Schritt 1/9 — Gitea-Verbindung\n")
-    gitea_url   = _ask("Gitea URL (z.B. http://192.168.1.x:3001)")
-    gitea_user  = _ask("Gitea Benutzername")
-    gitea_token = _ask("Gitea API-Token")
-    bot_user    = _ask("Bot-User (leer = kein Bot)", "")
-    bot_token   = _ask("Bot-Token (leer = kein Bot)", "") if bot_user else ""
+    # ── Resume prüfen ─────────────────────────────────────────────
+    state = _load_state()
+    if state:
+        completed = [k for k in ("gitea_url", "gitea_repo", "project_root") if k in state]
+        print(f"  ℹ️  Vorheriger Setup-Fortschritt gefunden ({', '.join(completed)})")
+        if input("  Dort weitermachen? [J/n]: ").strip().lower() in ("", "j", "y"):
+            print()
+        else:
+            state = {}
+            _STATE_FILE.unlink(missing_ok=True)
+            print()
 
-    try:
-        _api_get_raw(gitea_url, gitea_user, gitea_token, "/user")
-        print("  ✅ Verbindung erfolgreich\n")
-    except Exception as exc:
-        print(f"  ❌ Verbindungsfehler: {exc}")
-        print("  ⚠️  Fortfahren trotz Fehler?\n")
+    # ── Schritt 1: Gitea-Verbindung ────────────────────────────────
+    if "gitea_url" not in state:
+        print("Schritt 1/9 — Gitea-Verbindung\n")
+        print("  ℹ️  Nur die Root-URL eingeben, z.B. http://192.168.1.60:3001")
+        print("       (kein /user oder /repo am Ende)\n")
+        print("  ℹ️  Token erstellen: Gitea → Einstellungen → Anwendungen → Token generieren")
+        print("       Empfohlener Name: gitea-agent")
+        print("       Berechtigungen:  issue Read+Write, repository Read+Write, user Read")
+        print("       Token einmalig kopieren — wird danach nicht mehr angezeigt.\n")
+
+        while True:
+            gitea_url   = _ask("Gitea URL (z.B. http://192.168.1.x:3001)")
+            gitea_user  = _ask("Gitea Benutzername")
+            gitea_token = _ask("Gitea API-Token")
+            try:
+                _api_get_raw(gitea_url, gitea_user, gitea_token, "/user")
+                print("  ✅ Verbindung erfolgreich\n")
+                break
+            except Exception as exc:
+                print(f"  ❌ Verbindungsfehler: {exc}")
+                if not _retry(""):
+                    print("  ⚠️  Fortfahren trotz Fehler\n")
+                    break
+
+        print("  ℹ️  Bot-User = optionaler separater Gitea-Account für Kommentare/PRs")
+        print("       Vorteil: Aktionen erscheinen unter Bot-Name statt Haupt-Account")
+        print("       Bot anlegen: Gitea Admin → Benutzer → Neuen Benutzer erstellen")
+        print("       Bot muss als Collaborator zum Ziel-Repo hinzugefügt werden")
+        print("       (Repo → Einstellungen → Collaborators → Write)")
+        print("       Leer lassen = Agent nutzt Haupt-Account\n")
+        bot_user  = _ask("Bot-User (leer = kein Bot)", "")
+        bot_token = _ask("Bot-Token", "") if bot_user else ""
+
+        state.update(gitea_url=gitea_url, gitea_user=gitea_user, gitea_token=gitea_token,
+                     bot_user=bot_user, bot_token=bot_token)
+        _save_state(state)
+    else:
+        gitea_url   = state["gitea_url"]
+        gitea_user  = state["gitea_user"]
+        gitea_token = state["gitea_token"]
+        bot_user    = state["bot_user"]
+        bot_token   = state["bot_token"]
+        print(f"Schritt 1/9 — Gitea-Verbindung ✅ (Resume: {gitea_url}, {gitea_user})\n")
 
     # ── Schritt 2: Repository ──────────────────────────────────────
-    print("Schritt 2/9 — Repository\n")
-    gitea_repo = _ask("Repository (user/name, z.B. admin/myproject)")
-    try:
-        _api_get_raw(gitea_url, gitea_user, gitea_token, f"/repos/{gitea_repo}")
-        print("  ✅ Repository gefunden\n")
-    except Exception as exc:
-        print(f"  ❌ Repo nicht gefunden: {exc}\n")
+    if "gitea_repo" not in state:
+        print("Schritt 2/9 — Repository\n")
+        print("  ℹ️  Format: besitzer/reponame  (nur Pfad, keine vollständige URL)")
+        print("       Beispiel: Alexmistrator/mein-projekt\n")
+
+        try:
+            repos_data = _api_get_raw(gitea_url, gitea_user, gitea_token,
+                                      "/repos/search?limit=50&sort=updated")
+            repos = [r["full_name"] for r in repos_data.get("data", [])]
+            if repos:
+                print("  Verfügbare Repositories:")
+                for r in repos[:15]:
+                    print(f"    • {r}")
+                print()
+        except Exception:
+            pass
+
+        while True:
+            raw = _ask("Repository (user/name)")
+            gitea_repo = _sanitize_repo(raw)
+            if gitea_repo != raw:
+                print(f"  ℹ️  Eingabe bereinigt: '{gitea_repo}'")
+            try:
+                _api_get_raw(gitea_url, gitea_user, gitea_token, f"/repos/{gitea_repo}")
+                print("  ✅ Repository gefunden\n")
+                break
+            except Exception as exc:
+                print(f"  ❌ Repo nicht gefunden: {exc}")
+                if not _retry(""):
+                    print("  ⚠️  Fortfahren trotz Fehler\n")
+                    break
+
+        state["gitea_repo"] = gitea_repo
+        _save_state(state)
+    else:
+        gitea_repo = state["gitea_repo"]
+        print(f"Schritt 2/9 — Repository ✅ (Resume: {gitea_repo})\n")
 
     # ── Schritt 3: Projektverzeichnis ─────────────────────────────
-    print("Schritt 3/9 — Projektverzeichnis\n")
-    project_root = _ask("Lokaler Pfad zum Projekt-Repo")
-    if Path(project_root).is_dir():
-        if (Path(project_root) / ".git").exists():
-            print("  ✅ git-Repo gefunden\n")
-        else:
-            print("  ⚠️  Kein git-Repo — PROJECT_ROOT trotzdem gesetzt\n")
+    if "project_root" not in state:
+        print("Schritt 3/9 — Projektverzeichnis\n")
+        while True:
+            project_root = _ask("Lokaler Pfad zum Projekt-Repo")
+            if Path(project_root).is_dir():
+                if (Path(project_root) / ".git").exists():
+                    print("  ✅ git-Repo gefunden\n")
+                else:
+                    print("  ⚠️  Kein git-Repo gefunden.")
+                    if input("  Trotzdem als PROJECT_ROOT verwenden? [J/n]: ").strip().lower() in ("", "j", "y"):
+                        print()
+                    else:
+                        continue
+                break
+            else:
+                print(f"  ❌ Verzeichnis existiert nicht: {project_root}")
+                if not _retry(""):
+                    print("  ⚠️  Fortfahren trotz Fehler\n")
+                    break
+
+        state["project_root"] = project_root
+        _save_state(state)
     else:
-        print("  ❌ Verzeichnis existiert nicht\n")
+        project_root = state["project_root"]
+        print(f"Schritt 3/9 — Projektverzeichnis ✅ (Resume: {project_root})\n")
 
     # ── Schritt 4: Labels ─────────────────────────────────────────
     print("Schritt 4/9 — Labels\n")
@@ -4125,26 +4231,31 @@ def cmd_setup() -> None:
         (settings.LABEL_HELP,     "ee0701", "Manuelle Hilfe benötigt"),
     ]
 
-    try:
-        existing_resp = _api_get_raw(gitea_url, gitea_user, gitea_token,
-                                     f"/repos/{gitea_repo}/labels")
-        existing_names = {lbl["name"] for lbl in existing_resp}
-        missing = [(n, c, d) for n, c, d in required_labels if n not in existing_names]
+    while True:
+        try:
+            existing_resp = _api_get_raw(gitea_url, gitea_user, gitea_token,
+                                         f"/repos/{gitea_repo}/labels")
+            existing_names = {lbl["name"] for lbl in existing_resp}
+            missing = [(n, c, d) for n, c, d in required_labels if n not in existing_names]
 
-        if not missing:
-            print(f"  ✅ Alle {len(required_labels)} Labels bereits vorhanden\n")
-        else:
-            print(f"  Fehlende Labels: {', '.join(n for n,_,_ in missing)}")
-            confirm = input("  Jetzt anlegen? [J/n]: ").strip().lower()
-            if confirm in ("", "j", "y"):
-                for name, color, desc in missing:
-                    _api_post_raw(gitea_url, gitea_user, gitea_token,
-                                  f"/repos/{gitea_repo}/labels",
-                                  {"name": name, "color": f"#{color}", "description": desc})
-                    print(f"  ✅ Label '{name}' angelegt")
-            print()
-    except Exception as exc:
-        print(f"  ❌ Label-Prüfung fehlgeschlagen: {exc}\n")
+            if not missing:
+                print(f"  ✅ Alle {len(required_labels)} Labels bereits vorhanden\n")
+            else:
+                print(f"  Fehlende Labels: {', '.join(n for n,_,_ in missing)}")
+                confirm = input("  Jetzt anlegen? [J/n]: ").strip().lower()
+                if confirm in ("", "j", "y"):
+                    for name, color, desc in missing:
+                        _api_post_raw(gitea_url, gitea_user, gitea_token,
+                                      f"/repos/{gitea_repo}/labels",
+                                      {"name": name, "color": f"#{color}", "description": desc})
+                        print(f"  ✅ Label '{name}' angelegt")
+                print()
+            break
+        except Exception as exc:
+            print(f"  ❌ Label-Prüfung fehlgeschlagen: {exc}")
+            if not _retry(""):
+                print("  ⚠️  Labels übersprungen\n")
+                break
 
     # ── Schritt 5: agent_eval.json ────────────────────────────────
     print("Schritt 5/9 — agent_eval.json\n")
@@ -4155,8 +4266,8 @@ def cmd_setup() -> None:
         write_eval = confirm in ("j", "y")
 
     if write_eval:
-        server_url  = _ask("Server-URL für Eval (z.B. http://localhost:8080)")
-        log_path    = _ask("Log-Pfad (z.B. /home/user/llm-chat/gitea-agent.log)")
+        server_url   = _ask("Server-URL für Eval (z.B. http://localhost:8080)")
+        log_path     = _ask("Log-Pfad (z.B. /home/user/llm-chat/gitea-agent.log)")
         start_script = _ask("Start-Script (z.B. /home/user/start_llm.sh)", "")
         eval_data = {
             "server_url": server_url,
@@ -4334,7 +4445,8 @@ def cmd_setup() -> None:
     else:
         print(f"  ℹ️  Prompts bereits unter {prompts_dst}\n")
 
-    # ── Health-Check zum Abschluss ────────────────────────────────
+    # ── Aufräumen & Health-Check ──────────────────────────────────
+    _STATE_FILE.unlink(missing_ok=True)
     print(f"{'═' * 60}")
     print("  SETUP ABGESCHLOSSEN — starte Health-Check...\n")
     cmd_doctor()

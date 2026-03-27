@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4575 Zeilen)*
+## agent_start.py  *(4687 Zeilen)*
 
 - **Klasse** `_LazyGitea` Zeilen 70-78
   `class _LazyGitea:`
@@ -173,9 +173,9 @@
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
 - **Funktion** `cmd_doctor` Zeilen 3896-4042
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 4049-4340
+- **Funktion** `cmd_setup` Zeilen 4049-4452
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4343-4571
+- **Funktion** `main` Zeilen 4455-4683
   `def main():`
 - **Funktion** `__getattr__` Zeilen 74-78
   `def __getattr__(self, name: str):`
@@ -183,11 +183,19 @@
   `def _sym_map(content: str) -> dict[str, dict]:`
 - **Funktion** `_chk` Zeilen 3902-3903
   `def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:`
-- **Funktion** `_ask` Zeilen 4053-4056
+- **Funktion** `_load_state` Zeilen 4055-4061
+  `def _load_state() -> dict:`
+- **Funktion** `_save_state` Zeilen 4063-4064
+  `def _save_state(state: dict) -> None:`
+- **Funktion** `_ask` Zeilen 4066-4069
   `def _ask(prompt: str, default: str = "") -> str:`
-- **Funktion** `_api_get_raw` Zeilen 4058-4065
+- **Funktion** `_sanitize_repo` Zeilen 4071-4072
+  `def _sanitize_repo(val: str) -> str:`
+- **Funktion** `_retry` Zeilen 4074-4075
+  `def _retry(msg: str) -> bool:`
+- **Funktion** `_api_get_raw` Zeilen 4077-4084
   `def _api_get_raw(url, user, token, path):`
-- **Funktion** `_api_post_raw` Zeilen 4067-4077
+- **Funktion** `_api_post_raw` Zeilen 4086-4096
   `def _api_post_raw(url, user, token, path, data: dict):`
 - **Funktion** `_is_excluded` Zeilen 1954-1955
   `def _is_excluded(f: str) -> bool:`
