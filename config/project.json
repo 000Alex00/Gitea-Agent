@@ -11,10 +11,26 @@
         "pr_workflow": true,
         "healing": false,
         "log_anomaly": false,
-        "optimizer": false
+        "optimizer": false,
+        "docs_check": true,
+        "docstring_check": true
     },
-    "_comment_healing": "healing=true: Autonomous Self-Healing Loop — erfordert LLM-Backend (Risikostufe 4/4)",
     "_comment_features": "Fehlende project.json oder fehlende Einträge → alle Features aktiv (Rückwärtskompatibilität)",
+    "_comment_healing": "healing=true: Autonomous Self-Healing Loop — erfordert LLM-Backend (Risikostufe 4/4)",
     "_comment_log_anomaly": "log_anomaly=true: Log-Anomalie-Detektor — ohne API regelbasiert, mit API LLM-Analyse",
-    "_comment_optimizer": "optimizer=true: Code-Optimizer — ohne API nur Analyse-Issue, mit API autonomer Fix-Loop (CLAUDE_API_ENABLED erforderlich)"
+    "_comment_optimizer": "optimizer=true: Code-Optimizer — ohne API nur Analyse-Issue, mit API autonomer Fix-Loop (CLAUDE_API_ENABLED erforderlich)",
+    "_comment_docs_check": "docs_check=true: Warnt im PR wenn Code geändert aber docs/ nicht aktualisiert",
+    "_comment_docstring_check": "docstring_check=true: Warnt im PR wenn öffentliche Funktionen keinen Docstring haben",
+
+    "docs_check_threshold": 1,
+    "_comment_docs_check_threshold": "Ab N geänderten Code-Dateien warnen (Standard: 1). Bei 3 z.B. nur bei größeren Änderungen warnen",
+
+    "docs_check_exclude": [
+        "tests/",
+        "config/",
+        "scripts/",
+        "data/",
+        ".github/"
+    ],
+    "_comment_docs_check_exclude": "Pfad-Präfixe die weder für docs_check noch docstring_check als 'Code' gelten"
 }

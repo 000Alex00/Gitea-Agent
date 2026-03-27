@@ -295,6 +295,7 @@ def _load_features() -> dict:
         "eval": True, "health_checks": False, "auto_issues": True,
         "changelog": True, "watch": True, "pr_workflow": True,
         "healing": False, "log_anomaly": False, "optimizer": False,
+        "docs_check": True, "docstring_check": True,
     }
     config_path = (
         (_AGENT_DIR / "config" / "project.json") if _AGENT_DIR
@@ -326,6 +327,33 @@ def _load_project_type() -> str:
     return "custom"
 
 PROJECT_TYPE = _load_project_type()
+
+
+def _load_docs_check_config() -> dict:
+    """Lädt docs_check-Konfiguration aus project.json."""
+    import json
+    config_path = (
+        (_AGENT_DIR / "config" / "project.json") if _AGENT_DIR
+        else (_HERE_SETTINGS / "config" / "project.json")
+    )
+    defaults = {
+        "docs_check_threshold": 1,         # ab N geänderten Code-Dateien warnen
+        "docs_check_exclude": [            # Pfad-Präfixe die nicht als Code zählen
+            "tests/", "config/", "scripts/", "data/", ".github/",
+        ],
+    }
+    if config_path and config_path.exists():
+        try:
+            data = json.loads(config_path.read_text(encoding="utf-8"))
+            for k in defaults:
+                if k in data:
+                    defaults[k] = data[k]
+        except Exception:
+            pass
+    return defaults
+
+
+DOCS_CHECK_CONFIG: dict = _load_docs_check_config()
 
 # Pflichtfelder pro Kommentar-Typ — _validate_comment() prüft ob alle enthalten
 COMMENT_REQUIRED_FIELDS: dict[str, list[str]] = {

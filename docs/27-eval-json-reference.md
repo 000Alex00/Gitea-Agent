@@ -42,6 +42,25 @@ Du willst alle möglichen Felder in `agent_eval.json` kennen mit Beispielen.
     "function": "analyze_logs",
     "log_dir": "/var/log/server"
   },
+  "services": [
+    {
+      "name": "api-worker",
+      "cmd": "./scripts/restart_worker.sh",
+      "auto_restart": true,
+      "wait_seconds": 2
+    },
+    {
+      "name": "main-server",
+      "cmd": "./scripts/restart_server.sh",
+      "auto_restart": false,
+      "on_regression": "issue"
+    },
+    {
+      "name": "cache",
+      "cmd": "systemctl restart redis",
+      "auto_restart": true
+    }
+  ],
   "tests": [
     {
       "name": "Health-Check",
@@ -104,6 +123,18 @@ Du willst alle möglichen Felder in `agent_eval.json` kennen mit Beispielen.
 | `diff_validation` | string | ✗ | `strict` / `warn` / `off` ([Rezept 22](22-diff-validation.md)) |
 | `oos_whitelist` | array | ✗ | Erlaubte Out-of-Scope Patterns |
 | `log_analyzer` | object | ✗ | Log-Analyzer-Config ([Rezept 25](25-log-analyzer.md)) |
+| `services` | array | ✗ | Service-Neustart-Matrix (granularer als `restart_script`) |
+| `restart_script` | string | ✗ | Legacy: einzelnes Restart-Script (wird durch `services` ersetzt) |
+
+**Services-Felder (in `services`):**
+
+| Feld | Typ | Pflicht | Beschreibung |
+|------|-----|---------|--------------|
+| `name` | string | ✓ | Dienst-Name (für Logs und Issues) |
+| `cmd` | string | ✓ | Shell-Befehl oder Script-Pfad |
+| `auto_restart` | bool | ✗ | `true` = automatisch neustarten; `false` = nur Issue, kein Neustart (Standard: true) |
+| `wait_seconds` | int | ✗ | Wartezeit nach Neustart in Sekunden (Standard: 0) |
+| `on_regression` | string | ✗ | Aktion bei `auto_restart: false` — aktuell nur `"issue"` unterstützt |
 
 **Test-Felder:**
 
@@ -171,6 +202,28 @@ Du willst alle möglichen Felder in `agent_eval.json` kennen mit Beispielen.
 > ```
 > → Ermöglicht Sub-Kategorie-Aggregation
 
+> [!TIP]
+> **Service-Matrix für gemischte Dienste:**
+> ```json
+> {
+>   "services": [
+>     {"name": "worker",      "cmd": "systemctl restart worker",  "auto_restart": true,  "wait_seconds": 3},
+>     {"name": "main-server", "cmd": "systemctl restart server",  "auto_restart": false},
+>     {"name": "cache",       "cmd": "systemctl restart redis",   "auto_restart": true}
+>   ]
+> }
+> ```
+> → Worker und Cache werden automatisch neugestartet
+> → `main-server`: Gitea-Issue wird erstellt, kein automatischer Neustart
+> → Alle Warnungen landen im Issue (nicht nur im Terminal)
+
+> [!TIP]
+> **Legacy restart_script weiterhin nutzbar:**
+> ```json
+> {"restart_script": "./scripts/restart.sh"}
+> ```
+> → Wird automatisch als `{"name": "server", "cmd": "...", "auto_restart": true}` behandelt
+
 ---
 
 ### Warnung
@@ -205,6 +258,21 @@ Du willst alle möglichen Felder in `agent_eval.json` kennen mit Beispielen.
 > }
 > ```
 > → `steps` überschreibt `message`
+
+> [!WARNING]
+> **auto_restart: false ohne Monitoring:**
+> ```json
+> {"name": "main-server", "auto_restart": false}
+> ```
+> → Issue wird erstellt aber niemand sieht es wenn kein Gitea-Monitoring aktiv
+> → Eval bleibt FAIL bis manueller Neustart + neuer Eval-Lauf
+
+> [!WARNING]
+> **services + restart_script gleichzeitig:**
+> ```json
+> {"restart_script": "...", "services": [...]}
+> ```
+> → `services` hat Vorrang — `restart_script` wird ignoriert
 
 ---
 

@@ -1,20 +1,20 @@
-## Labels und Workflow-Anpassung
+## Labels und Workflow
 
-Custom Labels für Agent-Steuerung.
+Alle Built-in-Labels, ihre Bedeutung und der `help wanted`-Flow.
 
 ---
 
 ### Voraussetzungen
 
 > [!IMPORTANT]
-> - Gitea-Repo mit Issues
-> - Agent läuft ([Rezept 03](03-first-issue.md))
+> - Basis-Setup durchgeführt ([Rezept 02](02-first-setup.md))
+> - Labels in Gitea angelegt (`--setup-labels`)
 
 ---
 
 ### Problem
 
-Standard-Labels passen nicht zu deinem Workflow. Du willst eigene Labels und Regeln.
+Welche Labels setzt der Agent wann? Was bedeutet `help wanted` und wie kommt ein Issue wieder in den normalen Flow?
 
 ---
 
@@ -22,166 +22,157 @@ Standard-Labels passen nicht zu deinem Workflow. Du willst eigene Labels und Reg
 
 ```bash
 # ──────────────────────────────────────────────────────────
-# Schritt 1: Custom Labels in Gitea erstellen
+# Labels anlegen (einmalig, Teil von --setup)
 # ──────────────────────────────────────────────────────────
-# Gitea-Repo → Settings → Labels → New Label
-
-agent:todo          # 🔵 Blau     → Agent soll bearbeiten
-agent:in-progress   # 🟡 Gelb     → Agent arbeitet gerade
-agent:review        # 🟠 Orange   → Code-Review erforderlich
-agent:blocked       # 🔴 Rot      → Agent kann nicht weitermachen
-agent:done          # 🟢 Grün     → Abgeschlossen
-
-agent:low-risk      # 🟦 Hellblau → Night-Modus OK
-agent:high-risk     # 🟥 Dunkelrot→ Nur manuell / Patch-Modus
-
-agent:regression    # 🟣 Lila     → Eval-Failure
-agent:perf          # 🟤 Braun    → Performance-Problem
-
-agent:skip          # ⚫ Schwarz  → Agent soll ignorieren
+python3 agent_start.py --project ~/mein-projekt --setup
+# Schritt 4/9 im Wizard legt alle 5 Labels automatisch an
 
 # ──────────────────────────────────────────────────────────
-# Schritt 2: Label-Konfiguration im Agent
+# Standard-Workflow (Risikostufe 1)
 # ──────────────────────────────────────────────────────────
-# ~/mein-projekt/config/labels.json
 
-{
-  "workflow": {
-    "todo": "agent:todo",
-    "in_progress": "agent:in-progress",
-    "review": "agent:review",
-    "blocked": "agent:blocked",
-    "done": "agent:done",
-    "skip": "agent:skip"
-  },
-  "risk_levels": {
-    "low": "agent:low-risk",
-    "high": "agent:high-risk"
-  },
-  "issue_types": {
-    "regression": "agent:regression",
-    "performance": "agent:perf"
-  },
-  "rules": {
-    "night_mode": {
-      "allowed_labels": ["agent:low-risk"],
-      "forbidden_labels": ["agent:high-risk", "agent:skip"]
-    },
-    "auto_close": {
-      "required_labels": ["agent:done"],
-      "forbidden_labels": ["agent:blocked"]
-    }
-  }
-}
+# 1. Issue erstellen + Label setzen
+#    Gitea: Neues Issue → Label "ready-for-agent" setzen
+
+# 2. Plan posten
+python3 agent_start.py --project ~/proj --issue 42
+# → Label: agent-proposed  (ready-for-agent wird entfernt)
+# → Gitea: Plan-Kommentar mit "OK zum Implementieren?"
+
+# 3. Freigabe geben
+#    Gitea: Kommentar "ok" oder "ja" oder "✅"
+
+# 4. Implementierung starten
+python3 agent_start.py --project ~/proj --implement 42
+# → Label: in-progress  (agent-proposed wird entfernt)
+# → Branch erstellt
+
+# 5. PR erstellen
+python3 agent_start.py --project ~/proj --pr 42
+# → Label: needs-review  (in-progress wird entfernt)
+# → PR in Gitea erstellt
 
 # ──────────────────────────────────────────────────────────
-# Schritt 3: Agent mit Custom-Labels starten
+# help wanted-Workflow (Risikostufe ≥ 2: Bug / Feature)
 # ──────────────────────────────────────────────────────────
-cd ~/Gitea-Agent
-python3 agent_start.py \
-  --project ~/mein-projekt \
-  --label-config config/labels.json \
-  --watch
 
-# Verhalten:
-# ──────────────────────────────────────────────────────────
-# Issue #42: "Fix typo"
-# Labels: agent:todo, agent:low-risk
-# 
-# Agent-Workflow:
-# 1. Findet Issue (hat agent:todo)
-# 2. Setzt Label: agent:in-progress
-# 3. Erstellt Branch, implementiert Fix
-# 4. Setzt Label: agent:review
-# 5. Erstellt PR
-# 6. Nach Eval-Pass: Setzt Label: agent:done
-# 7. Entfernt Label: agent:in-progress
+# 1. Issue mit Label "ready-for-agent"
+#    (enthält Bug-Label oder Feature-Label)
+
+# 2. Plan + Analyse-Kommentar
+python3 agent_start.py --project ~/proj --issue 42
+# → Labels: agent-proposed + help wanted  (beide gesetzt)
+# → Gitea: Plan-Kommentar + Analyse mit offenen Fragen
+
+# 3. User klärt Fragen (Kommentare in Gitea)
+
+# 4. User gibt manuell frei:
+#    a) Label "help wanted" in Gitea manuell ENTFERNEN
+#    b) Kommentar "ok" schreiben
+
+# 5. Implementierung (manuell oder auto-scan)
+python3 agent_start.py --project ~/proj --implement 42
+# → Prüft: help wanted nicht mehr vorhanden + ok-Kommentar
+# → Label: in-progress
 ```
 
 ---
 
 ### Erklärung
 
-**Label-Lifecycle:**
+**Die 5 Built-in-Labels:**
 
-```
-┌─────────────────┐
-│  Issue created  │
-│  (no labels)    │
-└────────┬────────┘
-         │
-         ↓ User adds: agent:todo
-┌─────────────────┐
-│   agent:todo    │ ← Agent scannt Issues
-└────────┬────────┘
-         │
-         ↓ Agent startet Arbeit
-┌─────────────────┐
-│ agent:in-progress│
-└────────┬────────┘
-         │
-         ↓ Code fertig
-┌─────────────────┐
-│  agent:review   │ ← PR erstellt
-└────────┬────────┘
-         │
-         ↓ Eval PASS + Review approved
-┌─────────────────┐
-│   agent:done    │ ← Issue geschlossen
-└─────────────────┘
+| Label | Variable | Standard-Name | Bedeutung |
+|-------|----------|---------------|-----------|
+| LABEL_READY | `LABEL_READY` | `ready-for-agent` | User-Signal: Issue bearbeiten |
+| LABEL_PROPOSED | `LABEL_PROPOSED` | `agent-proposed` | Plan gepostet, wartet auf Freigabe |
+| LABEL_PROGRESS | `LABEL_PROGRESS` | `in-progress` | Agent implementiert gerade |
+| LABEL_REVIEW | `LABEL_REVIEW` | `needs-review` | PR erstellt, wartet auf Review |
+| LABEL_HELP | `LABEL_HELP` | `help wanted` | Hohe Risikostufe — Mensch muss entscheiden |
+
+Alle Namen per `.env` änderbar:
+```bash
+LABEL_READY=ready-for-agent
+LABEL_PROPOSED=agent-proposed
+LABEL_PROGRESS=in-progress
+LABEL_REVIEW=needs-review
+LABEL_HELP=help wanted
 ```
 
-**Risk-Level-Logik:**
+---
 
-```python
-# agent_start.py (vereinfacht)
-def scan_issues():
-    issues = gitea.get_issues(repo)
-    
-    for issue in issues:
-        labels = [l["name"] for l in issue["labels"]]
-        
-        # Skip-Check
-        if "agent:skip" in labels:
-            continue
-        
-        # Night-Mode-Check
-        if night_mode_active():
-            if "agent:high-risk" in labels:
-                continue  # Überspringe high-risk
-            if "agent:low-risk" not in labels:
-                continue  # Nur explizit low-risk
-        
-        # Workflow-Check
-        if "agent:todo" in labels:
-            process_issue(issue)
+**Label-Lifecycle (Standard):**
+
+```
+Issue erstellt
+     │
+     ↓  User setzt Label
+ ready-for-agent
+     │
+     ↓  --issue N  (cmd_plan)
+ agent-proposed         ← wartet auf "ok"-Kommentar
+     │
+     ↓  --implement N  (cmd_implement)
+ in-progress
+     │
+     ↓  --pr N  (cmd_pr)
+ needs-review
+     │
+     ↓  Merge + Issue schließen (manuell)
+ [geschlossen]
 ```
 
-**Custom-Workflow-Regeln:**
+---
 
-### Auto-Review-Merge:
-```json
-{
-  "rules": {
-    "auto_merge": {
-      "required_labels": ["agent:low-risk", "agent:done"],
-      "forbidden_labels": ["agent:blocked", "breaking-change"]
-    }
-  }
-}
+**help wanted-Lifecycle (Risikostufe ≥ 2):**
+
+```
+ ready-for-agent
+     │
+     ↓  --issue N  (Bug oder Feature erkannt)
+ agent-proposed
+ + help wanted          ← BEIDE Labels gleichzeitig!
+     │                    Gitea: Analyse-Kommentar mit Fragen
+     │
+     ↓  User: Fragen beantworten + "help wanted" MANUELL entfernen
+ agent-proposed          ← nur noch agent-proposed
+     │
+     ↓  User: "ok" kommentieren
+     │
+     ↓  --implement N (oder auto-scan)
+ in-progress
 ```
 
-### Priority-Queue:
-```json
-{
-  "rules": {
-    "priority": {
-      "high": ["agent:urgent", "agent:security"],
-      "medium": ["agent:todo"],
-      "low": ["agent:nice-to-have"]
-    }
-  }
-}
+> **Wichtig:** `agent-proposed` bleibt während `help wanted` aktiv.
+> So findet der Auto-Scan das Issue weiterhin und prüft nach der manuellen
+> Label-Entfernung automatisch auf Freigabe.
+
+---
+
+**Risikostufen:**
+
+| Stufe | Auslöser | Verhalten |
+|-------|----------|-----------|
+| 1 | Enhancement mit safe Keywords (docs, cleanup, import) | Direkt `agent-proposed`, kein `help wanted` |
+| 2 | Enhancement ohne safe Keywords | `agent-proposed` + `help wanted` |
+| 3 | Bug-Label oder Feature-Label | `agent-proposed` + `help wanted` |
+| 4 | Manuell gesetzt (kritische Issues) | Kein Auto-Implement möglich |
+
+---
+
+**Auto-Freigabe-Prüfung (`check_approval`):**
+
+```
+check_approval(#42, blocked_label="help wanted")
+    │
+    ├─ "help wanted" noch am Issue?
+    │      → Nein weiter
+    │      → Ja: return False (blockiert)
+    │
+    └─ Kommentar nach letztem Agent-Kommentar?
+           enthält "ok" / "ja" / "✅" / "approved"?
+               → Ja: return True
+               → Nein: return False
 ```
 
 ---
@@ -189,42 +180,25 @@ def scan_issues():
 ### Best Practice
 
 > [!TIP]
-> **Label-Template in Issue-Templates:**
-> ```markdown
-> ---
-> name: Bug Report
-> labels: agent:todo, agent:high-risk
-> ---
-> 
-> ## Bug Description
-> ...
+> **Labels via `--setup` anlegen:**
+> ```bash
+> python3 agent_start.py --project ~/proj --setup
+> # Schritt 4/9: Labels anlegen (interaktiv, prüft vorhandene)
+> # Alternativ: Gitea → Repo → Settings → Labels → manuell anlegen
 > ```
 
 > [!TIP]
-> **Color-Coding konsequent:**
-> ```
-> 🔵 Blau    → To-Do / Neu
-> 🟡 Gelb    → In Arbeit
-> 🟢 Grün    → Fertig / OK
-> 🔴 Rot     → Fehler / Blockiert
-> 🟣 Lila    → Automatisch erstellt (Agent)
+> **Approval-Keywords anpassen:**
+> ```bash
+> # .env
+> APPROVAL_KEYWORDS=ok,yes,ja,approved,freigabe,👍,✅,lgtm
 > ```
 
 > [!TIP]
-> **Label-Sync mit CI/CD:**
-> ```yaml
-> # .github/workflows/label-sync.yml
-> on:
->   issues:
->     types: [labeled]
-> 
-> jobs:
->   sync:
->     if: contains(github.event.label.name, 'agent:')
->     runs-on: ubuntu-latest
->     steps:
->       - name: Trigger Agent
->         run: curl -X POST http://agent-server:5000/webhook
+> **help wanted-Issues in Gitea erkennen:**
+> ```
+> Gitea → Issues → Filter: Label = "help wanted"
+> → Zeigt alle Issues die menschliche Entscheidung brauchen
 > ```
 
 ---
@@ -232,38 +206,34 @@ def scan_issues():
 ### Warnung
 
 > [!WARNING]
-> **Label-Typo:**
+> **"help wanted" entfernen ohne "ok" zu kommentieren:**
 > ```
-> Issue hat: agent:todo
-> Agent sucht: agent:to-do
-> → Issue wird nicht gefunden
+> Label entfernt, aber kein Freigabe-Kommentar
+> → check_approval gibt False zurück
+> → --implement schlägt fehl
 > ```
-> → labels.json als Single-Source-of-Truth
+> → Erst Label entfernen, dann "ok" kommentieren
 
 > [!WARNING]
-> **Zu viele Labels:**
+> **"ok" kommentieren ohne "help wanted" zu entfernen:**
 > ```
-> Issue hat: agent:todo, agent:bug, agent:frontend, agent:urgent, agent:low-risk
-> → Unübersichtlich
+> Kommentar "ok" vorhanden, aber Label noch aktiv
+> → check_approval gibt False zurück (Label blockiert)
 > ```
-> → Max. 3-4 Labels pro Issue
+> → `help wanted` Label muss manuell entfernt werden
 
 > [!WARNING]
-> **Forbidden-Labels überschreibbar:**
-> ```json
-> {
->   "auto_merge": {
->     "forbidden_labels": ["agent:blocked"]
->   }
-> }
+> **Night-Modus und help wanted:**
 > ```
-> → User kann `agent:blocked` entfernen → Auto-Merge aktiv
-> → Nur als Sicherheitsnetz, nicht als Hard-Lock
+> Night-Modus implementiert KEINE Issues autonom.
+> help wanted-Issues werden nur als Auto-Issues erstellt (nicht implementiert).
+> ```
 
 ---
 
 ### Nächste Schritte
 
-✅ Labels konfiguriert  
-→ [16 — Night vs Patch Modus](16-night-vs-patch.md)  
-→ [40 — Best Practices](40-best-practices.md)
+✅ Labels und Workflow verstanden
+→ [05 — Standard-Workflow](05-issue-to-pr.md)
+→ [16 — Night vs Patch Modus](16-night-vs-patch.md)
+→ [26 — .env-Konfiguration](26-env-configuration.md)

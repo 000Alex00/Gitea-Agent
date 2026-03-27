@@ -7,7 +7,16 @@ from pathlib import Path
 _HERE = Path(__file__).parent.parent  # gitea-agent/
 sys.path.insert(0, str(_HERE))
 
-import gitea_api as gitea  # noqa: E402
+class _LazyGitea:
+    _mod = None
+
+    def __getattr__(self, name: str):
+        if self.__class__._mod is None:
+            import gitea_api
+            self.__class__._mod = gitea_api
+        return getattr(self.__class__._mod, name)
+
+gitea = _LazyGitea()  # noqa: E402
 import settings  # noqa: E402
 from log import get_logger  # noqa: E402
 

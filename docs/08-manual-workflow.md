@@ -33,9 +33,18 @@ python3 agent_start.py --list
 # Schritt 2: Spezifisches Issue bearbeiten
 python3 agent_start.py --issue 21
 # → Nur Issue #21, nicht #22
+# → Setzt Label "agent-proposed"
 
 # Schritt 3: In Gitea Freigabe geben
 # (manuell im Browser: Kommentar "ok")
+
+# ─── Bei Bug/Feature (Risikostufe ≥ 2): ───
+# Agent setzt zusätzlich "help wanted" + postet Analyse
+# → Gitea: Fragen beantworten als Kommentare
+# → Gitea: Label "help wanted" manuell ENTFERNEN
+# → Gitea: Kommentar "ok" schreiben
+# Erst dann geht --implement weiter!
+# ──────────────────────────────────────────
 
 # Schritt 4: Branch erstellen
 python3 agent_start.py --implement 21
@@ -121,9 +130,17 @@ python3 agent_start.py --issue 21  # nur dieses Issue
 > [!WARNING]
 > **--implement ohne Freigabe:**
 > ```
-> [!] Keine Freigabe gefunden
-> → Erst Freigabe geben, dann --implement
+> [✗] Keine Freigabe für Issue #21.
+>     Kommentiere 'ok' auf: https://gitea.example.com/.../issues/21
 > ```
+
+> [!WARNING]
+> **--implement bei aktivem "help wanted":**
+> ```
+> [✗] Keine Freigabe für Issue #22.
+> ```
+> → Ursache: "help wanted" noch am Issue
+> → Fix: Label in Gitea entfernen + "ok" kommentieren
 
 ---
 

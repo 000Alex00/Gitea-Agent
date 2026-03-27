@@ -46,517 +46,535 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4476,
-    "size_kb": 162,
+    "lines": 4575,
+    "size_kb": 167,
     "symbols": [
+      {
+        "type": "class",
+        "name": "_LazyGitea",
+        "lines": "70-78",
+        "signature": "class _LazyGitea:"
+      },
       {
         "type": "function",
         "name": "_project_root",
-        "lines": "70-92",
+        "lines": "96-118",
         "signature": "def _project_root() -> Path:"
       },
       {
         "type": "function",
         "name": "risk_level",
-        "lines": "103-124",
+        "lines": "129-150",
         "signature": "def risk_level(issue: dict) -> tuple[int, str]:"
       },
       {
         "type": "function",
         "name": "issue_type",
-        "lines": "127-139",
+        "lines": "153-165",
         "signature": "def issue_type(issue: dict) -> str:"
       },
       {
         "type": "function",
         "name": "relevant_files",
-        "lines": "147-165",
+        "lines": "173-191",
         "signature": "def relevant_files(issue: dict) -> list[Path]:"
       },
       {
         "type": "function",
         "name": "find_relevant_files_advanced",
-        "lines": "168-194",
+        "lines": "194-220",
         "signature": "def find_relevant_files_advanced(issue: dict) -> list[Path]:"
       },
       {
         "type": "function",
         "name": "branch_name",
-        "lines": "197-225",
+        "lines": "223-251",
         "signature": "def branch_name(issue: dict) -> str:"
       },
       {
         "type": "function",
         "name": "build_plan_comment",
-        "lines": "233-279",
+        "lines": "259-305",
         "signature": "def build_plan_comment(issue: dict) -> str:"
       },
       {
         "type": "function",
         "name": "print_context",
-        "lines": "287-318",
+        "lines": "313-344",
         "signature": "def print_context(issue: dict) -> None:"
       },
       {
         "type": "function",
         "name": "_context_dir",
-        "lines": "326-336",
+        "lines": "352-362",
         "signature": "def _context_dir() -> Path:"
       },
       {
         "type": "function",
         "name": "_issue_dir",
-        "lines": "339-346",
+        "lines": "365-372",
         "signature": "def _issue_dir(issue: dict) -> Path:"
       },
       {
         "type": "function",
         "name": "_find_issue_dir",
-        "lines": "349-359",
+        "lines": "375-385",
         "signature": "def _find_issue_dir(number: int) -> Path | None:"
       },
       {
         "type": "function",
         "name": "_done_dir",
-        "lines": "362-366",
+        "lines": "388-392",
         "signature": "def _done_dir() -> Path:"
       },
       {
         "type": "function",
         "name": "save_plan_context",
-        "lines": "369-423",
+        "lines": "395-449",
         "signature": "def save_plan_context(issue: dict) -> Path:"
       },
       {
         "type": "function",
         "name": "save_tests_context",
-        "lines": "427-463",
+        "lines": "453-489",
         "signature": "def save_tests_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:"
       },
       {
         "type": "function",
         "name": "save_implement_context",
-        "lines": "465-591",
+        "lines": "491-617",
         "signature": "def save_implement_context(issue: dict, files_dict: dict) -> tuple[Path, Path]:"
       },
       {
         "type": "function",
         "name": "_build_issue_context_silent",
-        "lines": "594-620",
+        "lines": "620-646",
         "signature": "def _build_issue_context_silent(issue: dict) -> bool:"
       },
       {
         "type": "function",
         "name": "_get_exclude_dirs",
-        "lines": "648-668",
+        "lines": "674-694",
         "signature": "def _get_exclude_dirs(project: Path) -> set[str]:"
       },
       {
         "type": "function",
         "name": "_extract_ast_symbols",
-        "lines": "694-716",
+        "lines": "720-742",
         "signature": "def _extract_ast_symbols(content: str) -> list[dict]:"
       },
       {
         "type": "function",
         "name": "_create_repo_skeleton",
-        "lines": "719-773",
+        "lines": "745-799",
         "signature": "def _create_repo_skeleton(files: list[Path], output_dir: Path, max_size_kb: int = _MAX_SKELETON_FILE_SIZE_KB) -> Path:"
       },
       {
         "type": "function",
         "name": "_skeleton_to_md",
-        "lines": "776-795",
+        "lines": "802-821",
         "signature": "def _skeleton_to_md(skeleton_data: list[dict]) -> str:"
       },
       {
         "type": "function",
         "name": "cmd_build_skeleton",
-        "lines": "798-806",
+        "lines": "824-832",
         "signature": "def cmd_build_skeleton() -> None:"
       },
       {
         "type": "function",
         "name": "_update_skeleton_incremental",
-        "lines": "809-841",
+        "lines": "835-867",
         "signature": "def _update_skeleton_incremental(changed_files: list[str]) -> None:"
       },
       {
         "type": "function",
         "name": "_load_skeleton_map",
-        "lines": "844-855",
+        "lines": "870-881",
         "signature": "def _load_skeleton_map(issue_dir: Path | None = None) -> dict:"
       },
       {
         "type": "function",
         "name": "_find_imports",
-        "lines": "858-898",
+        "lines": "884-924",
         "signature": "def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:"
       },
       {
         "type": "function",
         "name": "_search_keywords",
-        "lines": "901-951",
+        "lines": "927-977",
         "signature": "def _search_keywords(issue_text: str, repo_path: Path) -> list[Path]:"
       },
       {
         "type": "function",
         "name": "_build_analyse_comment",
-        "lines": "959-1036",
+        "lines": "985-1062",
         "signature": "def _build_analyse_comment(issue: dict, files: list[Path]) -> str:"
       },
       {
         "type": "function",
         "name": "_has_detailed_plan",
-        "lines": "1044-1063",
+        "lines": "1070-1089",
         "signature": "def _has_detailed_plan(number: int) -> bool:"
       },
       {
         "type": "function",
         "name": "_parse_diff_changed_lines",
-        "lines": "1071-1102",
+        "lines": "1097-1128",
         "signature": "def _parse_diff_changed_lines(branch: str) -> dict[str, list[int]]:"
       },
       {
         "type": "function",
         "name": "_warn_diff_out_of_scope",
-        "lines": "1105-1191",
+        "lines": "1131-1217",
         "signature": "def _warn_diff_out_of_scope(number: int, branch: str) -> None:"
       },
       {
         "type": "function",
         "name": "_warn_slices_not_requested",
-        "lines": "1194-1290",
+        "lines": "1220-1316",
         "signature": "def _warn_slices_not_requested(number: int, branch: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_check_pr_preconditions",
-        "lines": "1293-1458",
+        "lines": "1319-1494",
         "signature": "def _check_pr_preconditions(number: int, branch: str) -> None:"
       },
       {
         "type": "function",
         "name": "_validate_pr_completion",
-        "lines": "1461-1505",
+        "lines": "1497-1541",
         "signature": "def _validate_pr_completion("
       },
       {
         "type": "function",
         "name": "_validate_comment",
-        "lines": "1508-1531",
+        "lines": "1544-1567",
         "signature": "def _validate_comment(body: str, comment_type: str, *, critical: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "_update_discussion",
-        "lines": "1534-1569",
+        "lines": "1570-1605",
         "signature": "def _update_discussion(issue: dict, starter_path: Path) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_list",
-        "lines": "1577-1595",
+        "lines": "1613-1631",
         "signature": "def cmd_list() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_plan",
-        "lines": "1598-1702",
+        "lines": "1634-1737",
         "signature": "def cmd_plan(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_implement",
-        "lines": "1705-1848",
+        "lines": "1740-1883",
         "signature": "def cmd_implement(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "_neustart_required",
-        "lines": "1861-1866",
+        "lines": "1896-1901",
         "signature": "def _neustart_required(changed_files: list[str]) -> str:"
       },
       {
         "type": "function",
         "name": "cmd_pr",
-        "lines": "1869-2034",
+        "lines": "1904-2096",
         "signature": "def cmd_pr("
       },
       {
         "type": "function",
         "name": "cmd_generate_tests",
-        "lines": "2038-2063",
+        "lines": "2100-2125",
         "signature": "def cmd_generate_tests(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "_current_issue_from_branch",
-        "lines": "2065-2080",
+        "lines": "2127-2142",
         "signature": "def _current_issue_from_branch() -> int | None:"
       },
       {
         "type": "function",
         "name": "_estimate_slice_tokens",
-        "lines": "2083-2094",
+        "lines": "2145-2156",
         "signature": "def _estimate_slice_tokens(spec: str) -> int:"
       },
       {
         "type": "function",
         "name": "_log_slice_request",
-        "lines": "2097-2139",
+        "lines": "2159-2201",
         "signature": "def _log_slice_request(spec: str) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_get_slice",
-        "lines": "2142-2172",
+        "lines": "2204-2234",
         "signature": "def cmd_get_slice(spec: str) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_get_llm_cmd",
-        "lines": "2175-2189",
+        "lines": "2237-2251",
         "signature": "def cmd_get_llm_cmd(task: str) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_fixup",
-        "lines": "2198-2242",
+        "lines": "2260-2304",
         "signature": "def cmd_fixup(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "_auto_issue_exists",
-        "lines": "2250-2254",
+        "lines": "2312-2316",
         "signature": "def _auto_issue_exists(test_name: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_auto_perf_issue_exists",
-        "lines": "2256-2260",
+        "lines": "2318-2322",
         "signature": "def _auto_perf_issue_exists(test_name: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_auto_improvement_issue_exists",
-        "lines": "2264-2267",
+        "lines": "2326-2329",
         "signature": "def _auto_improvement_issue_exists(tag: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_check_systematic_tag_failures",
-        "lines": "2269-2343",
+        "lines": "2331-2405",
         "signature": "def _check_systematic_tag_failures(project_root) -> None:"
       },
       {
         "type": "function",
         "name": "_sync_closed_contexts",
-        "lines": "2346-2371",
+        "lines": "2408-2433",
         "signature": "def _sync_closed_contexts() -> None:"
       },
       {
         "type": "function",
         "name": "_consecutive_passes_for_test",
-        "lines": "2374-2399",
+        "lines": "2436-2461",
         "signature": "def _consecutive_passes_for_test(test_name: str) -> int:"
       },
       {
         "type": "function",
         "name": "_close_resolved_auto_issues",
-        "lines": "2402-2481",
+        "lines": "2464-2543",
         "signature": "def _close_resolved_auto_issues(result: \"evaluation.EvalResult\") -> None:"
       },
       {
         "type": "function",
         "name": "_build_metadata",
-        "lines": "2484-2563",
+        "lines": "2546-2625",
         "signature": "def _build_metadata("
       },
       {
         "type": "function",
         "name": "_session_path",
-        "lines": "2566-2568",
+        "lines": "2628-2630",
         "signature": "def _session_path() -> Path:"
       },
       {
         "type": "function",
         "name": "_session_load",
-        "lines": "2571-2595",
+        "lines": "2633-2657",
         "signature": "def _session_load() -> dict:"
       },
       {
         "type": "function",
         "name": "_session_increment",
-        "lines": "2598-2608",
+        "lines": "2660-2670",
         "signature": "def _session_increment() -> dict:"
       },
       {
         "type": "function",
         "name": "_session_status_line",
-        "lines": "2611-2624",
+        "lines": "2673-2686",
         "signature": "def _session_status_line(data: dict) -> str:"
       },
       {
         "type": "function",
         "name": "_format_history_block",
-        "lines": "2627-2663",
+        "lines": "2689-2725",
         "signature": "def _format_history_block(project_root: Path, n: int = 5) -> str:"
       },
       {
         "type": "function",
         "name": "_last_chat_inactive_minutes",
-        "lines": "2666-2714",
+        "lines": "2728-2776",
         "signature": "def _last_chat_inactive_minutes(log_path: str | Path) -> float | None:"
       },
       {
         "type": "function",
         "name": "_server_start_time",
-        "lines": "2717-2765",
+        "lines": "2779-2827",
         "signature": "def _server_start_time(log_path: str | Path) -> datetime.datetime | None:"
       },
       {
         "type": "function",
         "name": "_check_server_staleness",
-        "lines": "2768-2836",
+        "lines": "2830-2898",
         "signature": "def _check_server_staleness(branch: str, force: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "_restart_server_for_eval",
-        "lines": "2839-2861",
+        "lines": "2901-2939",
         "signature": "def _restart_server_for_eval() -> None:"
       },
       {
         "type": "function",
         "name": "_has_new_commits_since_last_eval",
-        "lines": "2864-2895",
+        "lines": "2942-2973",
         "signature": "def _has_new_commits_since_last_eval(project_root: Path) -> bool:"
       },
       {
         "type": "function",
         "name": "_wait_for_server",
-        "lines": "2898-2943",
+        "lines": "2976-3021",
         "signature": "def _wait_for_server("
       },
       {
         "type": "function",
         "name": "cmd_eval_after_restart",
-        "lines": "2946-3008",
+        "lines": "3024-3086",
         "signature": "def cmd_eval_after_restart(number: int | None = None) -> None:"
       },
       {
         "type": "function",
         "name": "_ast_diff",
-        "lines": "3011-3051",
+        "lines": "3089-3129",
         "signature": "def _ast_diff(old_content: str, new_content: str) -> list[str]:"
       },
       {
         "type": "function",
         "name": "_gitea_version_compare",
-        "lines": "3054-3105",
+        "lines": "3132-3183",
         "signature": "def _gitea_version_compare(commit: str, changed_files: list[str]) -> str:"
       },
       {
         "type": "function",
         "name": "_build_auto_issue_body",
-        "lines": "3108-3223",
+        "lines": "3186-3301",
         "signature": "def _build_auto_issue_body("
       },
       {
         "type": "function",
         "name": "cmd_watch",
-        "lines": "3226-3461",
+        "lines": "3304-3557",
         "signature": "def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False, night_mode: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "_dashboard_event",
-        "lines": "3469-3476",
+        "lines": "3565-3572",
         "signature": "def _dashboard_event(context: str = \"\") -> None:"
       },
       {
         "type": "function",
         "name": "cmd_install_service",
-        "lines": "3502-3547",
+        "lines": "3598-3643",
         "signature": "def cmd_install_service() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_dashboard",
-        "lines": "3555-3561",
+        "lines": "3651-3657",
         "signature": "def cmd_dashboard() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_auto",
-        "lines": "3563-3655",
+        "lines": "3659-3751",
         "signature": "def cmd_auto() -> None:"
       },
       {
         "type": "function",
         "name": "_apply_auto_approve",
-        "lines": "3663-3691",
+        "lines": "3759-3787",
         "signature": "def _apply_auto_approve() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_heal",
-        "lines": "3698-3797",
+        "lines": "3794-3893",
         "signature": "def cmd_heal(test_name: str = \"\", log_lines: int = 30) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_doctor",
-        "lines": "3800-3946",
+        "lines": "3896-4042",
         "signature": "def cmd_doctor() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "3953-4244",
+        "lines": "4049-4340",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "4247-4472",
+        "lines": "4343-4571",
         "signature": "def main():"
       },
       {
         "type": "function",
+        "name": "__getattr__",
+        "lines": "74-78",
+        "signature": "def __getattr__(self, name: str):"
+      },
+      {
+        "type": "function",
         "name": "_sym_map",
-        "lines": "3022-3024",
+        "lines": "3100-3102",
         "signature": "def _sym_map(content: str) -> dict[str, dict]:"
       },
       {
         "type": "function",
         "name": "_chk",
-        "lines": "3806-3807",
+        "lines": "3902-3903",
         "signature": "def _chk(name: str, status: str, detail: str = \"\", fix: str = \"\") -> None:"
       },
       {
         "type": "function",
         "name": "_ask",
-        "lines": "3957-3960",
+        "lines": "4053-4056",
         "signature": "def _ask(prompt: str, default: str = \"\") -> str:"
       },
       {
         "type": "function",
         "name": "_api_get_raw",
-        "lines": "3962-3969",
+        "lines": "4058-4065",
         "signature": "def _api_get_raw(url, user, token, path):"
       },
       {
         "type": "function",
         "name": "_api_post_raw",
-        "lines": "3971-3981",
+        "lines": "4067-4077",
         "signature": "def _api_post_raw(url, user, token, path, data: dict):"
       },
       {
         "type": "function",
+        "name": "_is_excluded",
+        "lines": "1954-1955",
+        "signature": "def _is_excluded(f: str) -> bool:"
+      },
+      {
+        "type": "function",
         "name": "_len",
-        "lines": "3035-3040",
+        "lines": "3113-3118",
         "signature": "def _len(s: dict) -> int:"
       }
     ]
@@ -694,8 +712,8 @@
   {
     "path": "settings.py",
     "truncated": false,
-    "lines": 336,
-    "size_kb": 13,
+    "lines": 364,
+    "size_kb": 14,
     "symbols": [
       {
         "type": "function",
@@ -724,14 +742,20 @@
       {
         "type": "function",
         "name": "_load_features",
-        "lines": "291-310",
+        "lines": "291-311",
         "signature": "def _load_features() -> dict:"
       },
       {
         "type": "function",
         "name": "_load_project_type",
-        "lines": "315-326",
+        "lines": "316-327",
         "signature": "def _load_project_type() -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_load_docs_check_config",
+        "lines": "332-353",
+        "signature": "def _load_docs_check_config() -> dict:"
       }
     ]
   },
@@ -874,38 +898,100 @@
   {
     "path": "plugins/patch.py",
     "truncated": false,
-    "lines": 200,
-    "size_kb": 5,
+    "lines": 209,
+    "size_kb": 6,
     "symbols": [
+      {
+        "type": "class",
+        "name": "_LazyGitea",
+        "lines": "10-17",
+        "signature": "class _LazyGitea:"
+      },
       {
         "type": "function",
         "name": "_project_root",
-        "lines": "17-22",
+        "lines": "26-31",
         "signature": "def _project_root() -> Path:"
       },
       {
         "type": "function",
         "name": "_normalize_ws",
-        "lines": "32-34",
+        "lines": "41-43",
         "signature": "def _normalize_ws(text: str) -> str:"
       },
       {
         "type": "function",
         "name": "_parse_search_replace",
-        "lines": "37-83",
+        "lines": "46-92",
         "signature": "def _parse_search_replace(text: str) -> list[dict]:"
       },
       {
         "type": "function",
         "name": "_apply_patch",
-        "lines": "86-147",
+        "lines": "95-156",
         "signature": "def _apply_patch("
       },
       {
         "type": "function",
         "name": "cmd_apply_patch",
-        "lines": "150-200",
+        "lines": "159-209",
         "signature": "def cmd_apply_patch(number: int, dry_run: bool = False) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "__getattr__",
+        "lines": "13-17",
+        "signature": "def __getattr__(self, name: str):"
+      }
+    ]
+  },
+  {
+    "path": "plugins/docstring_check.py",
+    "truncated": false,
+    "lines": 147,
+    "size_kb": 4,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "MissingDocstring",
+        "lines": "21-27",
+        "signature": "class MissingDocstring:"
+      },
+      {
+        "type": "class",
+        "name": "DocstringReport",
+        "lines": "31-72",
+        "signature": "class DocstringReport:"
+      },
+      {
+        "type": "function",
+        "name": "_check_file",
+        "lines": "75-101",
+        "signature": "def _check_file(path: Path, rel_path: str) -> list[MissingDocstring]:"
+      },
+      {
+        "type": "function",
+        "name": "check_changed_files",
+        "lines": "104-147",
+        "signature": "def check_changed_files("
+      },
+      {
+        "type": "function",
+        "name": "has_missing",
+        "lines": "40-42",
+        "signature": "def has_missing(self) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "to_markdown",
+        "lines": "44-58",
+        "signature": "def to_markdown(self) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "to_terminal",
+        "lines": "60-72",
+        "signature": "def to_terminal(self) -> str:"
       }
     ]
   },
@@ -1653,6 +1739,74 @@
         "name": "attempt_count",
         "lines": "85-86",
         "signature": "def attempt_count(self) -> int:"
+      }
+    ]
+  },
+  {
+    "path": "plugins/restart_manager.py",
+    "truncated": false,
+    "lines": 263,
+    "size_kb": 9,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "ServiceResult",
+        "lines": "36-42",
+        "signature": "class ServiceResult:"
+      },
+      {
+        "type": "class",
+        "name": "RestartReport",
+        "lines": "46-117",
+        "signature": "class RestartReport:"
+      },
+      {
+        "type": "function",
+        "name": "_load_services",
+        "lines": "124-138",
+        "signature": "def _load_services(eval_cfg: dict) -> list[dict]:"
+      },
+      {
+        "type": "function",
+        "name": "restart_services",
+        "lines": "145-214",
+        "signature": "def restart_services("
+      },
+      {
+        "type": "function",
+        "name": "build_manual_restart_issue",
+        "lines": "221-263",
+        "signature": "def build_manual_restart_issue(report: RestartReport, trigger: str = \"\") -> tuple[str, str]:"
+      },
+      {
+        "type": "function",
+        "name": "has_manual_required",
+        "lines": "54-55",
+        "signature": "def has_manual_required(self) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "has_failures",
+        "lines": "58-59",
+        "signature": "def has_failures(self) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "total_services",
+        "lines": "62-63",
+        "signature": "def total_services(self) -> int:"
+      },
+      {
+        "type": "function",
+        "name": "to_markdown",
+        "lines": "65-101",
+        "signature": "def to_markdown(self) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "to_terminal",
+        "lines": "103-117",
+        "signature": "def to_terminal(self) -> str:"
       }
     ]
   },

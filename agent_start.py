@@ -48,10 +48,36 @@ if "--self" in sys.argv:
                 os.environ.setdefault(_k.strip(), _v.strip())
         os.environ["AGENT_ENV_FILE"] = str(_agent_env)
 
+# --env-file: explizite .env-Datei (Multi-Projekt-Support, vor allen anderen Imports)
+elif "--env-file" in sys.argv:
+    _ef_idx = sys.argv.index("--env-file")
+    if _ef_idx + 1 < len(sys.argv):
+        _ef_path = Path(sys.argv[_ef_idx + 1])
+        if _ef_path.exists():
+            for _line in _ef_path.read_text(encoding="utf-8").splitlines():
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and "=" in _line:
+                    _k, _v = _line.split("=", 1)
+                    os.environ.setdefault(_k.strip(), _v.strip())
+            os.environ["AGENT_ENV_FILE"] = str(_ef_path)
+        else:
+            print(f"[✗] --env-file: Datei nicht gefunden: {_ef_path}", file=sys.stderr)
+            sys.exit(1)
+
 sys.path.insert(0, str(_HERE))
 import evaluation
 import dashboard
-import gitea_api as gitea
+class _LazyGitea:
+    """Verzögerter Import von gitea_api — wird erst beim ersten Zugriff geladen."""
+    _mod = None
+
+    def __getattr__(self, name: str):
+        if self.__class__._mod is None:
+            import gitea_api
+            self.__class__._mod = gitea_api
+        return getattr(self.__class__._mod, name)
+
+gitea = _LazyGitea()
 import settings
 from log import get_logger
 from plugins.patch import (
@@ -1382,23 +1408,33 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
     else:
         log.debug("Kein agent_eval.json — Eval-Prüfung übersprungen")
 
-    # 5. Pflicht-Kette: Server-Neustart vor PR (nur wenn restart_script konfiguriert)
+    # 5. Pflicht-Kette: Server-Neustart vor PR (services-Matrix oder restart_script)
     if eval_cfg.exists():
         try:
             with eval_cfg.open(encoding="utf-8") as f:
                 cfg_data = json.load(f)
-            restart_script = cfg_data.get("restart_script")
-            if restart_script and Path(restart_script).exists():
-                # Prüfen ob Server seit letztem Commit neu gestartet wurde
-                # (heuristisch: wenn Eval nach letztem Commit fehlt, wurde
-                # vermutlich auch nicht neu gestartet)
+            has_services = cfg_data.get("services") or cfg_data.get("restart_script")
+            if has_services:
+                # Warnung wenn Eval fehlt (heuristisch: Neustart wahrscheinlich auch nicht)
                 if fehler and any("Eval nicht nach letztem Commit" in e for e in fehler):
-                    fehler.append(
-                        f"Server-Neustart empfohlen vor PR — restart_script: {restart_script}\n"
-                        f"    → Lösung: --restart-before-eval beim PR-Aufruf verwenden"
+                    # Zusätzlich: welche Services nicht auto-restart?
+                    manual_svcs = [
+                        s.get("name", "?")
+                        for s in cfg_data.get("services", [])
+                        if not s.get("auto_restart", True)
+                    ]
+                    hint = (
+                        "Server-Neustart empfohlen vor PR\n"
+                        "    → Lösung: --restart-before-eval beim PR-Aufruf verwenden"
                     )
+                    if manual_svcs:
+                        hint += (
+                            f"\n    ⚠️ Manuelle Neustarts erforderlich: {', '.join(manual_svcs)}"
+                            f"\n    Diese Dienste werden NICHT automatisch neugestartet!"
+                        )
+                    fehler.append(hint)
         except Exception as e:
-            log.warning(f"restart_script Prüfung fehlgeschlagen: {e}")
+            log.warning(f"Services-Prüfung fehlgeschlagen: {e}")
 
     # 6. Agent-Self-Check (if agent code is modified)
     try:
@@ -1681,18 +1717,17 @@ def cmd_plan(number: int) -> None:
             analyse_body = _build_analyse_comment(issue, files)
             gitea.post_comment(number, analyse_body)
             gitea.add_label(number, settings.LABEL_HELP)
-            gitea.remove_label(
-                number, settings.LABEL_PROPOSED
-            )  # Plan noch nicht freigegeben
+            # agent-proposed BLEIBT — damit auto_scan das Issue weiterhin findet.
+            # check_approval blockiert solange help wanted noch drauf ist.
             out.write_text(
                 out.read_text(encoding="utf-8") + "\n## Analyse\n" + analyse_body,
                 encoding="utf-8",
             )
             log.info(
-                f"Analyse-Kommentar gepostet, Label '{settings.LABEL_HELP}' gesetzt, '{settings.LABEL_PROPOSED}' entfernt"
+                f"Analyse-Kommentar gepostet, Label '{settings.LABEL_HELP}' gesetzt"
             )
             print(
-                f"[✓] Analyse-Kommentar gepostet, Label '{settings.LABEL_HELP}' gesetzt, '{settings.LABEL_PROPOSED}' entfernt"
+                f"[✓] Analyse-Kommentar gepostet, Label '{settings.LABEL_HELP}' gesetzt"
             )
         else:
             print(
@@ -1901,26 +1936,52 @@ Implementierung für Issue #{number}.
     # Prüfen ob docs/ seit Abzweig von main aktualisiert wurde
     docs_warning = ""
     changed = []
-    try:
-        changed = (
-            subprocess.check_output(
-                ["git", "diff", "--name-only", f"main...{branch}"],
-                cwd=PROJECT,
-                stderr=subprocess.DEVNULL,
+    if settings.FEATURES.get("docs_check", True):
+        try:
+            changed = (
+                subprocess.check_output(
+                    ["git", "diff", "--name-only", f"main...{branch}"],
+                    cwd=PROJECT,
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .splitlines()
             )
-            .decode()
-            .splitlines()
-        )
-        code_changed = [f for f in changed if not f.startswith("docs/")]
-        docs_changed = [f for f in changed if f.startswith("docs/")]
-        if code_changed and not docs_changed:
-            log.warning("Code geändert aber docs/ nicht aktualisiert")
-            print(
-                "[!] Warnung: Code geändert aber keine docs/*.md aktualisiert."
+            _dc = settings.DOCS_CHECK_CONFIG
+            _exclude = _dc.get("docs_check_exclude", [])
+            _threshold = _dc.get("docs_check_threshold", 1)
+
+            def _is_excluded(f: str) -> bool:
+                return f.startswith("docs/") or any(f.startswith(p) for p in _exclude)
+
+            code_changed = [f for f in changed if not _is_excluded(f)]
+            docs_changed = [f for f in changed if f.startswith("docs/")]
+            if len(code_changed) >= _threshold and not docs_changed:
+                log.warning(f"Code geändert ({len(code_changed)} Dateien) aber docs/ nicht aktualisiert")
+                print(
+                    f"[!] Warnung: {len(code_changed)} Code-Datei(en) geändert aber keine docs/*.md aktualisiert."
+                )
+                docs_warning = "\n> ⚠️ **Hinweis:** `docs/` wurde nicht aktualisiert — bitte vor dem Merge nachholen."
+        except Exception:
+            pass
+
+    # Docstring-Check: geänderte .py-Dateien auf fehlende Docstrings prüfen
+    docstring_warning = ""
+    if settings.FEATURES.get("docstring_check", True):
+        try:
+            from plugins.docstring_check import check_changed_files
+            _dc_cfg = settings.DOCS_CHECK_CONFIG
+            ds_report = check_changed_files(
+                project_root=PROJECT,
+                branch=branch,
+                exclude_prefixes=_dc_cfg.get("docs_check_exclude", []),
             )
-            docs_warning = "\n> ⚠️ **Hinweis:** `docs/` wurde nicht aktualisiert — bitte vor dem Merge nachholen."
-    except Exception:
-        pass
+            if ds_report.has_missing:
+                print(ds_report.to_terminal())
+                log.warning(f"Fehlende Docstrings: {len(ds_report.missing)} Funktionen/Klassen")
+                docstring_warning = "\n\n" + ds_report.to_markdown()
+        except Exception as _dse:
+            log.debug(f"Docstring-Check Fehler: {_dse}")
 
     # Server-Aktualitäts-Check: Commit neuer als Server-Start? (Issue #30)
     if restart_before_eval:
@@ -2000,7 +2061,8 @@ Implementierung für Issue #{number}.
         f"{session_line}\n\n"
         f"**Branch:** `{branch}`\n"
         f"**PR:** {pr_url}\n"
-        f"{docs_warning}\n\n"
+        f"{docs_warning}"
+        f"{docstring_warning}\n\n"
         f"{summary_block}\n\n"
         f"{history_block}\n\n"
         f"**Neustart erforderlich:** {_neustart_required(changed)}\n\n"
@@ -2838,25 +2900,41 @@ def _check_server_staleness(branch: str, force: bool = False) -> None:
 
 def _restart_server_for_eval() -> None:
     """
-    Startet den Server neu (via restart_script aus agent_eval.json) und wartet bis bereit.
+    Startet Services neu (via restart_manager / services-Matrix aus agent_eval.json).
 
     Aufgerufen von:
         cmd_pr() — bei --restart-before-eval
 
     Seiteneffekte:
-        subprocess.run(restart_script), _wait_for_server()
+        subprocess.run(services[*].cmd), _wait_for_server()
     """
+    from plugins.restart_manager import restart_services, build_manual_restart_issue
     eval_cfg = evaluation._load_config(PROJECT) or {}
-    restart_sc = eval_cfg.get("restart_script")
-    if not restart_sc:
+    if not eval_cfg.get("services") and not eval_cfg.get("restart_script"):
         print(
-            "[!] --restart-before-eval: kein restart_script in agent_eval.json konfiguriert"
+            "[!] --restart-before-eval: kein restart_script / services in agent_eval.json konfiguriert"
         )
-        log.warning("--restart-before-eval: restart_script fehlt in agent_eval.json")
+        log.warning("--restart-before-eval: restart_script/services fehlt in agent_eval.json")
         return
-    print(f"[→] --restart-before-eval: Neustart via {restart_sc}...")
-    log.info(f"Neustart via {restart_sc}")
-    subprocess.run([restart_sc], check=False)
+    print("[→] --restart-before-eval: Service-Neustart via restart_manager...")
+    rr = restart_services(eval_cfg, project_root=PROJECT, trigger="restart-before-eval")
+    _out = rr.to_terminal()
+    if _out:
+        print(_out)
+    if rr.has_manual_required or rr.has_failures:
+        _title, _body = build_manual_restart_issue(rr, trigger="--restart-before-eval")
+        if _title:
+            try:
+                gitea.create_issue(title=_title, body=_body, labels=[settings.LABEL_READY])
+                log.info(f"Issue erstellt: {_title}")
+            except Exception as _e:
+                log.warning(f"Issue-Erstellung fehlgeschlagen: {_e}")
+    if rr.skipped:
+        print(
+            "[!] Nicht alle Services neugestartet — manuelle Neustarts nötig. "
+            "Gitea-Issue wurde erstellt."
+        )
+        log.warning("Manuelle Neustarts nötig — Issue erstellt")
     server_url = eval_cfg.get("server_url", settings.SERVER_URL)
     _wait_for_server(url=server_url)
 
@@ -3368,7 +3446,8 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False, night_mode: 
         restart_sc = eval_cfg.get("restart_script")
         log_path = eval_cfg.get("log_path")
         threshold = eval_cfg.get("inactivity_minutes", 5)
-        if restart_sc and log_path:
+        _has_services = eval_cfg.get("services") or restart_sc
+        if _has_services and log_path:
             inactive = _last_chat_inactive_minutes(log_path)
             if patch_mode or (inactive is not None and inactive >= threshold):
                 inactive_str = f"{inactive:.1f}min" if inactive is not None else "N/A"
@@ -3376,9 +3455,26 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False, night_mode: 
                     print(
                         f"[Watch] Chat inaktiv ({inactive_str}) + neue Commits → Neustart (Patch: {patch_mode})"
                     )
-                    log.info(f"Szenario 2: Neustart via {restart_sc}")
-                    subprocess.run([restart_sc], check=False)
-                    cmd_eval_after_restart()
+                    log.info("Szenario 2: Service-Neustart via restart_manager")
+                    from plugins.restart_manager import restart_services, build_manual_restart_issue
+                    rr = restart_services(eval_cfg, project_root=PROJECT, trigger="watch")
+                    _rt_out = rr.to_terminal()
+                    if _rt_out:
+                        print(_rt_out)
+                    if rr.has_manual_required or rr.has_failures:
+                        _rt_title, _rt_body = build_manual_restart_issue(rr, trigger="Watch-Neustart")
+                        if _rt_title:
+                            try:
+                                gitea.create_issue(
+                                    title=_rt_title,
+                                    body=_rt_body,
+                                    labels=[settings.LABEL_READY],
+                                )
+                                log.info(f"Issue erstellt: {_rt_title}")
+                            except Exception as _rt_e:
+                                log.warning(f"Issue-Erstellung fehlgeschlagen: {_rt_e}")
+                    if not rr.skipped and (rr.restarted or rr.legacy_mode):
+                        cmd_eval_after_restart()
 
         # ── Self-Healing (plugins/healing.py) ───────────────────────────
         if settings.FEATURES.get("healing", False) and not result.skipped:
@@ -4052,7 +4148,7 @@ def cmd_setup() -> None:
 
     # ── Schritt 5: agent_eval.json ────────────────────────────────
     print("Schritt 5/9 — agent_eval.json\n")
-    eval_file = PROJECT / "tests" / "agent_eval.json"
+    eval_file = PROJECT / "config" / "agent_eval.json"
     write_eval = True
     if eval_file.exists():
         confirm = input(f"  {eval_file} existiert bereits — überschreiben? [j/N]: ").strip().lower()
@@ -4381,6 +4477,11 @@ Ohne Argumente: automatischer Modus.
         help="gitea-agent Eigenentwicklung: lädt .env.agent statt .env",
     )
     parser.add_argument(
+        "--env-file",
+        metavar="PFAD",
+        help="Explizite .env-Datei (Multi-Projekt: z.B. /home/user/proj/.env)",
+    )
+    parser.add_argument(
         "--install-service",
         action="store_true",
         help="Systemd-Units für Night- und Patch-Modus installieren",
@@ -4447,9 +4548,7 @@ Ohne Argumente: automatischer Modus.
         interval = args.interval
         if interval is None:
             try:
-                cfg_path = PROJECT / "tests" / "agent_eval.json"
-                with cfg_path.open(encoding="utf-8") as f:
-                    cfg = json.load(f)
+                cfg = evaluation._load_config(PROJECT) or {}
                 interval = cfg.get("watch_interval_minutes", 60)
             except Exception:
                 interval = 60
