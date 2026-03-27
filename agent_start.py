@@ -4496,38 +4496,36 @@ def cmd_setup() -> None:
         # \u2500\u2500 Schritt 8: LLM-Routing \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
         _box("Schritt 8/9 \u2014 LLM-Routing", [
             "Der Agent verwendet ein KI-Modell f\u00fcr seine Aufgaben.",
-            "Hier konfigurierst du welchen Anbieter und Modell er nutzen soll.",
+            "W\u00e4hle Standard-Provider und Modell.",
             "",
-            "  Verf\u00fcgbare Anbieter:",
-            "  \u2022 claude  \u2014 Anthropic Claude (empfohlen)",
-            "              API-Key: ANTHROPIC_API_KEY in .env eintragen",
-            "  \u2022 openai  \u2014 OpenAI GPT",
-            "              API-Key: OPENAI_API_KEY in .env eintragen",
-            "  \u2022 gemini  \u2014 Google Gemini",
-            "              API-Key: GEMINI_API_KEY in .env eintragen",
-            "  \u2022 local   \u2014 Lokales Modell via Ollama (kein API-Key n\u00f6tig)",
-            "              Ollama muss laufen: http://localhost:11434",
+            "  \u2022 claude   \u2014 Anthropic Claude  (ANTHROPIC_API_KEY)",
+            "  \u2022 openai   \u2014 OpenAI GPT        (OPENAI_API_KEY)",
+            "  \u2022 gemini   \u2014 Google Gemini     (GEMINI_API_KEY)",
+            "  \u2022 deepseek \u2014 DeepSeek          (DEEPSEEK_API_KEY)",
+            "  \u2022 local    \u2014 Ollama, kein Key n\u00f6tig",
             "",
-            "  Warum braucht der Agent einen eigenen API-Key?",
-            "  Er f\u00fchrt Aktionen autonom aus. Ein eigener Key hat",
-            "  nur die n\u00f6tigen Rechte und l\u00e4sst sich jederzeit",
-            "  widerrufen, ohne dein pers\u00f6nliches Konto zu sperren.",
+            "  Warum eigener Key? Gezielt widerrufbar ohne dein",
+            "  pers\u00f6nliches Konto zu sperren.",
+            "",
+            "  Per-Task Routing & Fallback: --llm",
         ])
-        routing_file = Path(project_root) / "config" / "llm" / "routing.json"
+        routing_file = _HERE / "config" / "llm" / "routing.json"
         write_routing = True
         if routing_file.exists():
             write_routing = input("  routing.json existiert bereits \u2014 \u00fcberschreiben? [j/N]: ").strip().lower() in ("j", "y")
         if write_routing:
-            default_provider = _ask("  Standard-Anbieter", "claude")
-            _provider_models = {
-                "claude": ("claude-sonnet-4-6",  "ANTHROPIC_API_KEY",
-                           ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]),
-                "openai": ("gpt-4o-mini",         "OPENAI_API_KEY",
-                           ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]),
-                "gemini": ("gemini-1.5-flash",    "GEMINI_API_KEY",
-                           ["gemini-1.5-pro", "gemini-1.5-flash"]),
+            _s8_providers = {
+                "claude":   ("claude-sonnet-4-6",  "ANTHROPIC_API_KEY",
+                             ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]),
+                "openai":   ("gpt-4o-mini",        "OPENAI_API_KEY",
+                             ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]),
+                "gemini":   ("gemini-1.5-flash",   "GEMINI_API_KEY",
+                             ["gemini-1.5-pro", "gemini-1.5-flash"]),
+                "deepseek": ("deepseek-chat",      "DEEPSEEK_API_KEY",
+                             ["deepseek-chat", "deepseek-coder"]),
             }
-            _pm = _provider_models.get(default_provider, ("llama3", "", ["llama3", "mistral", "phi3"]))
+            default_provider = _ask("  Standard-Anbieter", "claude")
+            _pm = _s8_providers.get(default_provider, ("llama3", "", ["llama3", "mistral", "phi3"]))
             model_default, api_key_hint, model_list = _pm
             if model_list:
                 print("  Bekannte Modelle:")
@@ -4541,36 +4539,15 @@ def cmd_setup() -> None:
                 print("  \u274c Modell darf nicht leer sein.")
             if api_key_hint:
                 print(f"\n  \u26a0\ufe0f  Nicht vergessen: {api_key_hint}=... in .env eintragen\n")
-            tasks: dict = {}
-            if input("  F\u00fcr verschiedene Aufgaben unterschiedliche Modelle? [J/n]: ").strip().lower() in ("", "j", "y"):
-                task_defs = [
-                    ("issue_analysis",  "Issue-Analyse",    "claude-haiku-4-5-20251001", "prompts/analyst.md"),
-                    ("implementation",  "Implementierung",  default_model,               "prompts/senior_python.md"),
-                    ("pr_review",       "PR-Review",        default_model,               "prompts/reviewer.md"),
-                    ("test_generation", "Test-Generierung", default_model,               "prompts/senior_python.md"),
-                    ("log_analysis",    "Log-Analyse",      "claude-haiku-4-5-20251001", "prompts/log_analyst.md"),
-                    ("healing",         "Self-Healing",     default_model,               "prompts/healer.md"),
-                ]
-                print()
-                for task_key, task_label, suggested_model, default_prompt in task_defs:
-                    tp = _ask(f"  {task_label} \u2014 Anbieter", default_provider)
-                    tm = _ask(f"  {task_label} \u2014 Modell",   suggested_model)
-                    tc: dict = {"provider": tp, "model": tm, "system_prompt": default_prompt}
-                    if tp == "local":
-                        tc["base_url"] = _ask(f"  {task_label} \u2014 Base-URL", "http://localhost:11434")
-                    tasks[task_key] = tc
-                    print()
             routing_data: dict = {
-                "_comment": "LLM-Routing \u2014 generiert vom Setup-Wizard",
-                "_comment_system_prompt": "system_prompt: relativer Pfad zu .md-Datei im Projekt-Root",
+                "_comment": "LLM-Routing \u2014 generiert vom Setup-Wizard. Erweitern: --llm",
                 "default": {"provider": default_provider, "model": default_model,
                             "max_tokens": 1024, "timeout": 60},
             }
-            if tasks:
-                routing_data["tasks"] = tasks
             routing_file.parent.mkdir(parents=True, exist_ok=True)
             routing_file.write_text(json.dumps(routing_data, indent=4, ensure_ascii=False), encoding="utf-8")
             print("  \u2705 routing.json geschrieben\n")
+            print("  \U0001f4a1 Per-Task Routing & Fallback: python3 agent_start.py --llm\n")
             _log("Schritt 8 LLM-Routing", "OK", f"provider={default_provider} model={default_model}")
         else:
             _log("Schritt 8 LLM-Routing", "INFO", "\u00dcbersprungen")
@@ -4796,6 +4773,11 @@ Ohne Argumente: automatischer Modus.
         help="Interaktiver Einrichtungs-Wizard für neue Projekte",
     )
     parser.add_argument(
+        "--llm",
+        action="store_true",
+        help="LLM-Konfiguration verwalten (Provider, Modell, Fallback, Task-Routing)",
+    )
+    parser.add_argument(
         "--heal",
         metavar="TEST",
         nargs="?",
@@ -4806,6 +4788,9 @@ Ohne Argumente: automatischer Modus.
 
     if args.setup:
         cmd_setup()
+    elif args.llm:
+        from plugins.llm_wizard import cmd_llm
+        cmd_llm()
     elif args.doctor:
         cmd_doctor()
     elif args.build_skeleton:

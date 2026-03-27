@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4867 Zeilen)*
+## agent_start.py  *(4852 Zeilen)*
 
 - **Klasse** `_LazyGitea` Zeilen 70-78
   `class _LazyGitea:`
@@ -173,9 +173,9 @@
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
 - **Funktion** `cmd_doctor` Zeilen 3896-4042
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 4049-4632
+- **Funktion** `cmd_setup` Zeilen 4049-4609
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4635-4863
+- **Funktion** `main` Zeilen 4612-4848
   `def main():`
 - **Funktion** `__getattr__` Zeilen 74-78
   `def __getattr__(self, name: str):`
@@ -560,6 +560,29 @@
   `def failures(self) -> list[ConfigFileResult]:`
 - **Funktion** `_flush` Zeilen 255-264
   `def _flush():`
+
+## plugins/llm_wizard.py  *(224 Zeilen)*
+
+- **Funktion** `_box` Zeilen 23-31
+  `def _box(title: str, lines: list) -> None:`
+- **Funktion** `_ask` Zeilen 34-37
+  `def _ask(prompt: str, default: str = "") -> str:`
+- **Funktion** `_load_routing` Zeilen 40-46
+  `def _load_routing() -> dict:`
+- **Funktion** `_save_routing` Zeilen 49-51
+  `def _save_routing(data: dict) -> None:`
+- **Funktion** `_show_current` Zeilen 77-93
+  `def _show_current(routing: dict) -> None:`
+- **Funktion** `_menu_default` Zeilen 96-126
+  `def _menu_default(routing: dict) -> None:`
+- **Funktion** `_menu_tasks` Zeilen 129-148
+  `def _menu_tasks(routing: dict) -> None:`
+- **Funktion** `_menu_fallback` Zeilen 151-169
+  `def _menu_fallback(routing: dict) -> None:`
+- **Funktion** `_menu_test` Zeilen 172-191
+  `def _menu_test(routing: dict) -> None:`
+- **Funktion** `cmd_llm` Zeilen 194-224
+  `def cmd_llm() -> None:`
 
 ## plugins/healing.py  *(474 Zeilen)*
 
