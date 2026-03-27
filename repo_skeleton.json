@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4305,
-    "size_kb": 154,
+    "lines": 4401,
+    "size_kb": 159,
     "symbols": [
       {
         "type": "function",
@@ -514,13 +514,13 @@
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "3883-4078",
+        "lines": "3883-4174",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "4081-4301",
+        "lines": "4177-4397",
         "signature": "def main():"
       },
       {

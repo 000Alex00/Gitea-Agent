@@ -3915,7 +3915,7 @@ def cmd_setup() -> None:
     print(f"{'═' * 60}\n")
 
     # ── Schritt 1: Gitea-Verbindung ────────────────────────────────
-    print("Schritt 1/6 — Gitea-Verbindung\n")
+    print("Schritt 1/9 — Gitea-Verbindung\n")
     gitea_url   = _ask("Gitea URL (z.B. http://192.168.1.x:3001)")
     gitea_user  = _ask("Gitea Benutzername")
     gitea_token = _ask("Gitea API-Token")
@@ -3930,7 +3930,7 @@ def cmd_setup() -> None:
         print("  ⚠️  Fortfahren trotz Fehler?\n")
 
     # ── Schritt 2: Repository ──────────────────────────────────────
-    print("Schritt 2/6 — Repository\n")
+    print("Schritt 2/9 — Repository\n")
     gitea_repo = _ask("Repository (user/name, z.B. admin/myproject)")
     try:
         _api_get_raw(gitea_url, gitea_user, gitea_token, f"/repos/{gitea_repo}")
@@ -3939,7 +3939,7 @@ def cmd_setup() -> None:
         print(f"  ❌ Repo nicht gefunden: {exc}\n")
 
     # ── Schritt 3: Projektverzeichnis ─────────────────────────────
-    print("Schritt 3/6 — Projektverzeichnis\n")
+    print("Schritt 3/9 — Projektverzeichnis\n")
     project_root = _ask("Lokaler Pfad zum Projekt-Repo")
     if Path(project_root).is_dir():
         if (Path(project_root) / ".git").exists():
@@ -3950,7 +3950,7 @@ def cmd_setup() -> None:
         print("  ❌ Verzeichnis existiert nicht\n")
 
     # ── Schritt 4: Labels ─────────────────────────────────────────
-    print("Schritt 4/6 — Labels\n")
+    print("Schritt 4/9 — Labels\n")
     required_labels = [
         (settings.LABEL_READY,    "0075ca", "Bereit für Agent-Bearbeitung"),
         (settings.LABEL_PROPOSED, "e4e669", "Agent hat Plan vorgeschlagen"),
@@ -3981,7 +3981,7 @@ def cmd_setup() -> None:
         print(f"  ❌ Label-Prüfung fehlgeschlagen: {exc}\n")
 
     # ── Schritt 5: agent_eval.json ────────────────────────────────
-    print("Schritt 5/6 — agent_eval.json\n")
+    print("Schritt 5/9 — agent_eval.json\n")
     eval_file = PROJECT / "tests" / "agent_eval.json"
     write_eval = True
     if eval_file.exists():
@@ -4005,7 +4005,7 @@ def cmd_setup() -> None:
         print("  Übersprungen\n")
 
     # ── Schritt 6: .env schreiben ─────────────────────────────────
-    print("Schritt 6/6 — .env\n")
+    print("Schritt 6/9 — .env\n")
     env_file = PROJECT / ".env"
     write_env = True
     if env_file.exists():
@@ -4029,7 +4029,7 @@ def cmd_setup() -> None:
         print("  Übersprungen\n")
 
     # ── Schritt 7: Projekttyp + Feature-Flags ──────────────────────
-    print("Schritt 7/7 — Projekttyp & Feature-Flags\n")
+    print("Schritt 7/9 — Projekttyp & Feature-Flags\n")
     print("  Projekttypen:")
     print("    1) web_api    — REST-API / Web-Server")
     print("    2) llm_chat   — LLM-Chat mit Eval-Tests")
@@ -4071,6 +4071,102 @@ def cmd_setup() -> None:
         if proj_file:
             proj_file.write_text(json.dumps(project_json, indent=4, ensure_ascii=False), encoding="utf-8")
             print(f"  ✅ project.json geschrieben: {proj_file}\n")
+
+    # ── Schritt 8: LLM-Routing ────────────────────────────────────
+    print("Schritt 8/9 — LLM-Routing\n")
+    routing_file = Path(project_root) / "config" / "llm" / "routing.json"
+    write_routing = True
+    if routing_file.exists():
+        confirm = input(f"  {routing_file} existiert bereits — überschreiben? [j/N]: ").strip().lower()
+        write_routing = confirm in ("j", "y")
+
+    if write_routing:
+        print("  Provider-Optionen: claude, openai, gemini, local (Ollama)")
+        default_provider = _ask("Standard-Provider", "claude")
+        default_model = ""
+        api_key_hint = ""
+        if default_provider == "claude":
+            default_model = _ask("Standard-Modell", "claude-sonnet-4-6")
+            api_key_hint = "ANTHROPIC_API_KEY"
+        elif default_provider == "openai":
+            default_model = _ask("Standard-Modell", "gpt-4o-mini")
+            api_key_hint = "OPENAI_API_KEY"
+        elif default_provider == "gemini":
+            default_model = _ask("Standard-Modell", "gemini-1.5-flash")
+            api_key_hint = "GEMINI_API_KEY"
+        else:
+            default_model = _ask("Standard-Modell", "llama3")
+
+        if api_key_hint:
+            print(f"  ℹ️  API-Key in .env als {api_key_hint}=... eintragen\n")
+
+        use_task_routing = input("  Task-spezifisches Routing konfigurieren? [J/n]: ").strip().lower()
+        tasks: dict = {}
+        if use_task_routing in ("", "j", "y"):
+            task_defs = [
+                ("issue_analysis",  "Issue-Analyse",    "claude-haiku-4-5-20251001", "prompts/analyst.md"),
+                ("implementation",  "Implementierung",  default_model,               "prompts/senior_python.md"),
+                ("pr_review",       "PR-Review",        default_model,               "prompts/reviewer.md"),
+                ("test_generation", "Test-Generierung", default_model,               "prompts/senior_python.md"),
+                ("log_analysis",    "Log-Analyse",      "claude-haiku-4-5-20251001", "prompts/log_analyst.md"),
+                ("healing",         "Self-Healing",     default_model,               "prompts/healer.md"),
+            ]
+            print()
+            for task_key, task_label, suggested_model, default_prompt in task_defs:
+                task_provider = _ask(f"  {task_label} — Provider", default_provider)
+                task_model    = _ask(f"  {task_label} — Modell", suggested_model)
+                task_cfg: dict = {
+                    "provider": task_provider,
+                    "model": task_model,
+                    "system_prompt": default_prompt,
+                }
+                if task_provider == "local":
+                    task_cfg["base_url"] = _ask(f"  {task_label} — Base-URL", "http://localhost:11434")
+                tasks[task_key] = task_cfg
+                print()
+
+        routing_data: dict = {
+            "_comment": "LLM-Routing — generiert vom Setup-Wizard",
+            "_comment_system_prompt": "system_prompt: relativer Pfad zu .md-Datei im Projekt-Root",
+            "default": {
+                "provider": default_provider,
+                "model": default_model,
+                "max_tokens": 1024,
+                "timeout": 60,
+            },
+        }
+        if tasks:
+            routing_data["tasks"] = tasks
+
+        routing_file.parent.mkdir(parents=True, exist_ok=True)
+        routing_file.write_text(json.dumps(routing_data, indent=4, ensure_ascii=False), encoding="utf-8")
+        print(f"  ✅ llm_routing.json geschrieben: {routing_file}\n")
+    else:
+        print("  Übersprungen\n")
+
+    # ── Schritt 9: System-Prompts ─────────────────────────────────
+    print("Schritt 9/9 — System-Prompts\n")
+    prompts_src = Path(__file__).parent / "config" / "llm" / "prompts"
+    prompts_dst = Path(project_root) / "config" / "llm" / "prompts"
+    if prompts_src.exists() and prompts_src.resolve() != prompts_dst.resolve():
+        copy_prompts = input("  Rollen-Prompts (config/llm/prompts/*.md) ins Projekt kopieren? [J/n]: ").strip().lower()
+        if copy_prompts in ("", "j", "y"):
+            prompts_dst.mkdir(parents=True, exist_ok=True)
+            copied = 0
+            for src_file in prompts_src.glob("*.md"):
+                dst_file = prompts_dst / src_file.name
+                if not dst_file.exists():
+                    dst_file.write_text(src_file.read_text(encoding="utf-8"), encoding="utf-8")
+                    copied += 1
+            if copied:
+                print(f"  ✅ {copied} Prompt-Dateien nach {prompts_dst} kopiert")
+            else:
+                print("  ℹ️  Alle Prompts bereits vorhanden")
+            print()
+        else:
+            print("  Übersprungen — config/llm/prompts/*.md manuell nach Bedarf anlegen\n")
+    else:
+        print(f"  ℹ️  Prompts bereits unter {prompts_dst}\n")
 
     # ── Health-Check zum Abschluss ────────────────────────────────
     print(f"{'═' * 60}")
