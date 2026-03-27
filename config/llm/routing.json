@@ -52,6 +52,20 @@
             "model": "claude-sonnet-4-6",
             "system_prompt": "config/llm/prompts/healer.md",
             "_comment": "Präzise für Self-Healing Entscheidungen"
+        },
+        "docs": {
+            "provider": "claude",
+            "model": "claude-haiku-4-5-20251001",
+            "system_prompt": "config/llm/prompts/docs_writer.md",
+            "cli_cmd": "claude",
+            "_comment": "Günstig + schnell für Dokumentation, Docstrings, Kommentare"
+        },
+        "deep_coding": {
+            "provider": "claude",
+            "model": "claude-sonnet-4-6",
+            "system_prompt": "config/llm/prompts/senior_python.md",
+            "cli_cmd": "claude",
+            "_comment": "Komplexe Implementierungen, Refactorings, Architektur-Entscheidungen"
         }
     },
 
