@@ -4192,11 +4192,12 @@ def cmd_setup() -> None:
                 "      Repo \u2192 Einstellungen \u2192 Collaborators \u2192 Write",
                 "      \u2192 Leer lassen wenn du keinen Bot-Account hast",
             ])
+            gitea_url = gitea_user = gitea_token = ""
             while True:
                 print("  Bitte gib folgendes ein:\n")
-                gitea_url   = _ask("[1] Gitea URL (z.B. http://192.168.1.x:3001)")
-                gitea_user  = _ask("[2] Gitea Benutzername")
-                gitea_token = _ask("[3] Gitea API-Token")
+                gitea_url   = _ask("[1] Gitea URL (z.B. http://192.168.1.x:3001)", gitea_url)
+                gitea_user  = _ask("[2] Gitea Benutzername", gitea_user)
+                gitea_token = _ask("[3] Gitea API-Token", gitea_token)
                 try:
                     _api_get_raw(gitea_url, gitea_user, gitea_token, "/user")
                     print("  \u2705 Verbindung erfolgreich\n")
@@ -4481,6 +4482,11 @@ def cmd_setup() -> None:
             "              API-Key: GEMINI_API_KEY in .env eintragen",
             "  \u2022 local   \u2014 Lokales Modell via Ollama (kein API-Key n\u00f6tig)",
             "              Ollama muss laufen: http://localhost:11434",
+            "",
+            "  Warum braucht der Agent einen eigenen API-Key?",
+            "  Er f\u00fchrt Aktionen autonom aus. Ein eigener Key hat",
+            "  nur die n\u00f6tigen Rechte und l\u00e4sst sich jederzeit",
+            "  widerrufen, ohne dein pers\u00f6nliches Konto zu sperren.",
         ])
         routing_file = Path(project_root) / "config" / "llm" / "routing.json"
         write_routing = True
@@ -4488,18 +4494,26 @@ def cmd_setup() -> None:
             write_routing = input("  routing.json existiert bereits \u2014 \u00fcberschreiben? [j/N]: ").strip().lower() in ("j", "y")
         if write_routing:
             default_provider = _ask("  Standard-Anbieter", "claude")
-            default_model, api_key_hint = "", ""
-            if default_provider == "claude":
-                default_model = _ask("  Standard-Modell", "claude-sonnet-4-6")
-                api_key_hint = "ANTHROPIC_API_KEY"
-            elif default_provider == "openai":
-                default_model = _ask("  Standard-Modell", "gpt-4o-mini")
-                api_key_hint = "OPENAI_API_KEY"
-            elif default_provider == "gemini":
-                default_model = _ask("  Standard-Modell", "gemini-1.5-flash")
-                api_key_hint = "GEMINI_API_KEY"
-            else:
-                default_model = _ask("  Standard-Modell", "llama3")
+            _provider_models = {
+                "claude": ("claude-sonnet-4-6",  "ANTHROPIC_API_KEY",
+                           ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"]),
+                "openai": ("gpt-4o-mini",         "OPENAI_API_KEY",
+                           ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"]),
+                "gemini": ("gemini-1.5-flash",    "GEMINI_API_KEY",
+                           ["gemini-1.5-pro", "gemini-1.5-flash"]),
+            }
+            _pm = _provider_models.get(default_provider, ("llama3", "", ["llama3", "mistral", "phi3"]))
+            model_default, api_key_hint, model_list = _pm
+            if model_list:
+                print("  Bekannte Modelle:")
+                for _m in model_list:
+                    print(f"    \u2022 {_m}")
+                print()
+            while True:
+                default_model = _ask("  Standard-Modell", model_default)
+                if default_model.strip():
+                    break
+                print("  \u274c Modell darf nicht leer sein.")
             if api_key_hint:
                 print(f"\n  \u26a0\ufe0f  Nicht vergessen: {api_key_hint}=... in .env eintragen\n")
             tasks: dict = {}

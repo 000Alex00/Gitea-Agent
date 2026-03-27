@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4828 Zeilen)*
+## agent_start.py  *(4842 Zeilen)*
 
 - **Klasse** `_LazyGitea` Zeilen 70-78
   `class _LazyGitea:`
@@ -173,9 +173,9 @@
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
 - **Funktion** `cmd_doctor` Zeilen 3896-4042
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 4049-4593
+- **Funktion** `cmd_setup` Zeilen 4049-4607
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4596-4824
+- **Funktion** `main` Zeilen 4610-4838
   `def main():`
 - **Funktion** `__getattr__` Zeilen 74-78
   `def __getattr__(self, name: str):`
