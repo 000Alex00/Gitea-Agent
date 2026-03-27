@@ -134,6 +134,21 @@ Ein vollständiges Infrastruktur-System für KI-gestützte Code-Entwicklung: Iss
 
 ---
 
+## 🤖 Was braucht ein LLM-API-Backend?
+
+Der Agent hat zwei Betriebsmodi:
+
+| Modus | LLM-API nötig? | Beschreibung |
+|-------|---------------|--------------|
+| **Manuell** | ❌ Nein | `--issue` erstellt Kontext, Mensch kopiert ihn in Web-Chat (Claude, GPT, Gemini). Agent postet PR via `--pr` |
+| **Autonom** | ✅ Ja | `--watch` / Night-Modus / `--heal` — Agent analysiert, implementiert und postet PR ohne menschliche Interaktion |
+
+**Ohne API (lokal, kein API-Key):** Manueller Workflow vollständig nutzbar — Issue-Tracking, Eval, Dashboard, Kontext-Export, PR-Erstellung alles funktional.
+
+**Mit API (`CLAUDE_API_ENABLED=true` oder `config/llm/routing.json`):** Autonomer 24/7-Betrieb via Watch-Modus, Night-Service, Self-Healing.
+
+---
+
 ## 🚀 Quick Start
 
 ```bash
@@ -144,11 +159,15 @@ cd ~/Gitea-Agent
 # 2. Projekt einrichten (interaktiver Wizard, 9 Schritte)
 python3 agent_start.py --setup
 
-# 3. Erstes Issue automatisieren
+# 3a. Manueller Workflow (kein API-Key nötig)
 # → Gitea: Issue mit Label "ready-for-agent" versehen
-python3 agent_start.py  # Auto-Modus: Plan wird gepostet
-# → Gitea: "ok" kommentieren
-python3 agent_start.py  # Implementierung + PR
+python3 agent_start.py --issue 42      # Kontext erstellen + Plan posten
+scripts/context_export.sh 42 file      # context_42.md → in Web-Chat hochladen
+# → Im Web-Chat implementieren, dann:
+python3 agent_start.py --pr 42 --branch feat/issue-42 --summary "..."
+
+# 3b. Autonomer Workflow (LLM-API erforderlich)
+python3 agent_start.py --watch         # Loop: Issues scannen → implementieren → PR
 ```
 
 > [!TIP]

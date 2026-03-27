@@ -10,6 +10,13 @@ Wann welchen Workflow nutzen?
 > - Watch-Modus verstanden ([Rezept 14](14-watch-mode-tmux.md) oder [15](15-watch-mode-systemd.md))
 > - Issues haben Risk-Level Labels
 
+> [!WARNING]
+> **Night-Modus und Patch-Modus erfordern ein LLM-API-Backend.**
+> Der Agent läuft ohne menschliche Interaktion — er muss Issues selbstständig analysieren und implementieren.
+> Ohne konfiguriertes LLM-Backend (`CLAUDE_API_ENABLED=true` oder `config/llm/routing.json`) startet der Watch-Loop zwar, kann aber keine Issues bearbeiten.
+>
+> **Manueller Workflow ohne API:** `--issue` + `context_export.sh` → Kontext manuell in Web-Chat einfügen → Agent postet PR via `--pr`. Kein API-Backend nötig.
+
 ---
 
 ### Problem
@@ -23,19 +30,17 @@ Du willst nachts nur sichere Änderungen, tagsüber aggressive Bugfixes. Unklar 
 ```bash
 # ══════════════════════════════════════════════════════════
 # NIGHT-MODUS — Sichere, nächtliche Automatisierung
+# (läuft als systemd-Service, nicht als CLI-Flag)
 # ══════════════════════════════════════════════════════════
-cd ~/Gitea-Agent
-python3 agent_start.py \
-  --project ~/mein-projekt \
-  --watch \
-  --night-mode \
-  --eval-interval 14400
-  
+python3 agent_start.py --project ~/mein-projekt --install-service night
+systemctl --user start gitea-agent-night
+
 # Verhalten:
 # ✓ Nur Issues mit Label: agent:low-risk
 # ✓ Eval-Lauf alle 4 Stunden
 # ✓ PR erstellt ohne Merge (Review nächsten Morgen)
 # ✓ Consecutive-Pass-Gate: 3 Durchläufe (konservativ)
+# ✓ Erfordert LLM-API (CLAUDE_API_ENABLED=true oder routing.json)
 
 # ══════════════════════════════════════════════════════════
 # PATCH-MODUS — Schnelle, aggressive Bugfixes
