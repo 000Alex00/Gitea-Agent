@@ -649,7 +649,7 @@ def _get_exclude_dirs(project: Path) -> set[str]:
     """
     Gibt die kombinierten Exclude-Verzeichnisse zurück.
 
-    Lädt project/agent/config/agent_eval.json und liest context_loader.exclude_dirs
+    Lädt project/config/agent_eval.json und liest context_loader.exclude_dirs
     falls vorhanden. Kombiniert mit _EXCLUDE_DIRS_DEFAULT.
     Bei Fehler: nur Default zurückgeben.
 
@@ -660,9 +660,7 @@ def _get_exclude_dirs(project: Path) -> set[str]:
         Set von Verzeichnisnamen die beim Keyword-Scan ignoriert werden.
     """
     try:
-        cfg_path = (Path(project) / "config" / "agent_eval.json"
-                    if (Path(project) / "config" / "agent_eval.json").exists()
-                    else Path(project) / "agent" / "config" / "agent_eval.json")
+        cfg_path = Path(project) / "config" / "agent_eval.json"
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         extra = cfg.get("context_loader", {}).get("exclude_dirs", [])
         return _EXCLUDE_DIRS_DEFAULT | set(extra)
@@ -2552,7 +2550,7 @@ def _build_metadata(
 
 
 def _session_path() -> Path:
-    """Gibt den Pfad zur session.json zurück (neu: agent/data/, Fallback: workspace/)."""
+    """Gibt den Pfad zur session.json zurück."""
     return settings.SESSION_FILE_PATH
 
 
@@ -3319,12 +3317,11 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
         if not patch_mode:
             _check_systematic_tag_failures(PROJECT)
 
-        # Optionaler Log-Analyzer: neue Struktur (agent/config/) oder Legacy (tools/)
+        # Optionaler Log-Analyzer: config/log_analyzer.py
         analyzer_path = next(
             (p for p in [
                 settings.LOG_ANALYZER_PATH,
                 PROJECT / "config" / "log_analyzer.py",
-                PROJECT / "tools" / "log_analyzer.py",  # Legacy
             ] if p and p.exists()),
             None,
         )
@@ -3649,7 +3646,7 @@ def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:
 
     if not settings.FEATURES.get("healing", False):
         print("[!] Self-Healing deaktiviert (project.json: healing=false)")
-        print("    Aktivieren: healing=true in agent/config/project.json setzen")
+        print("    Aktivieren: healing=true in config/project.json setzen")
         return
 
     print("[→] Self-Healing Loop gestartet\n")
@@ -3779,15 +3776,8 @@ def cmd_doctor() -> None:
         _chk("repo_skeleton.md", "warn", "Nicht vorhanden",
              "python3 agent_start.py --build-skeleton ausführen")
 
-    # 4. agent_eval.json (neue Struktur: agent/config/, Fallback: tests/)
-    eval_cfg = next(
-        (p for p in [
-            PROJECT / "config" / "agent_eval.json",
-            PROJECT / "agent" / "config" / "agent_eval.json",
-            PROJECT / "tests" / "agent_eval.json",
-        ] if p.exists()),
-        PROJECT / "config" / "agent_eval.json",  # Fallback für Fehlermeldung
-    )
+    # 4. agent_eval.json
+    eval_cfg = PROJECT / "config" / "agent_eval.json"
     if eval_cfg.exists():
         try:
             with eval_cfg.open(encoding="utf-8") as f:
@@ -4064,13 +4054,13 @@ def cmd_setup() -> None:
 
     confirm = _ask("\n  Features übernehmen? (ja/nein)", "ja")
     if confirm.lower() not in ("ja", "j", "yes", "y"):
-        print("  Manuelle Konfiguration: project.json nach agent/config/ kopieren und anpassen.")
+        print("  Manuelle Konfiguration: project.json nach config/ kopieren und anpassen.")
     else:
         project_json = {
             "type": proj_type,
             "features": features,
         }
-        agent_config = Path(project_root) / "agent" / "config"
+        agent_config = Path(project_root) / "config"
         agent_config.mkdir(parents=True, exist_ok=True)
         proj_file = agent_config / "project.json"
         if proj_file.exists():

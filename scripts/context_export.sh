@@ -8,7 +8,7 @@
 #   ./context_export.sh NR --self            → gitea-agent Repo statt Projekt
 #   ./context_export.sh NR --self llm [TASK]
 #
-# LLM-Routing: agent/config/llm_routing.json — cli_cmd Feld pro Task.
+# LLM-Routing: config/llm/routing.json — cli_cmd Feld pro Task.
 # Ohne cli_cmd → Fehler mit Hinweis welches Feld fehlt.
 
 set -euo pipefail
@@ -62,13 +62,7 @@ fi
 
 CONTEXT_DIR="$(grep '^CONTEXT_DIR=' "$ENV_FILE" 2>/dev/null | cut -d= -f2)"
 if [ -z "${CONTEXT_DIR:-}" ]; then
-    if [ -d "$PROJECT_ROOT/workspace/open" ]; then
-        CONTEXT_DIR="$PROJECT_ROOT/workspace/open"
-    elif [ -d "$PROJECT_ROOT/agent/data/workspace/open" ]; then
-        CONTEXT_DIR="$PROJECT_ROOT/agent/data/workspace/open"
-    else
-        CONTEXT_DIR="$PROJECT_ROOT/workspace/open"
-    fi
+    CONTEXT_DIR="$PROJECT_ROOT/workspace/open"
 fi
 
 # --- Kontext finden ---
@@ -172,7 +166,7 @@ case "$FORMAT" in
         LLM_CMD=$(python3 "$AGENT_DIR/agent_start.py" ${SELF:+--self} --get-llm-cmd "$LLM_TASK" 2>/dev/null || true)
         if [ -z "${LLM_CMD:-}" ]; then
             echo "[✗] Kein cli_cmd für Task '$LLM_TASK' in llm_routing.json konfiguriert."
-            echo "    Beispiel in agent/config/llm_routing.json:"
+            echo "    Beispiel in config/llm/routing.json:"
             echo "      \"$LLM_TASK\": {\"provider\": \"deepseek\", \"model\": \"deepseek-chat\", \"cli_cmd\": \"lmstudio\"}"
             exit 1
         fi

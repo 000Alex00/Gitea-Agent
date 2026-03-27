@@ -34,7 +34,6 @@ from typing import Optional
 
 _ROUTING_PATHS = [
     Path(__file__).parent.parent / "config" / "llm" / "routing.json",
-    Path(__file__).parent.parent / "agent" / "config" / "llm_routing.json",  # Legacy
 ]
 
 

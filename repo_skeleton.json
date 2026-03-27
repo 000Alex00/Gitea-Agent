@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4411,
-    "size_kb": 159,
+    "lines": 4401,
+    "size_kb": 158,
     "symbols": [
       {
         "type": "function",
@@ -148,415 +148,415 @@
       {
         "type": "function",
         "name": "_get_exclude_dirs",
-        "lines": "648-670",
+        "lines": "648-668",
         "signature": "def _get_exclude_dirs(project: Path) -> set[str]:"
       },
       {
         "type": "function",
         "name": "_extract_ast_symbols",
-        "lines": "696-718",
+        "lines": "694-716",
         "signature": "def _extract_ast_symbols(content: str) -> list[dict]:"
       },
       {
         "type": "function",
         "name": "_create_repo_skeleton",
-        "lines": "721-775",
+        "lines": "719-773",
         "signature": "def _create_repo_skeleton(files: list[Path], output_dir: Path, max_size_kb: int = _MAX_SKELETON_FILE_SIZE_KB) -> Path:"
       },
       {
         "type": "function",
         "name": "_skeleton_to_md",
-        "lines": "778-797",
+        "lines": "776-795",
         "signature": "def _skeleton_to_md(skeleton_data: list[dict]) -> str:"
       },
       {
         "type": "function",
         "name": "cmd_build_skeleton",
-        "lines": "800-808",
+        "lines": "798-806",
         "signature": "def cmd_build_skeleton() -> None:"
       },
       {
         "type": "function",
         "name": "_update_skeleton_incremental",
-        "lines": "811-843",
+        "lines": "809-841",
         "signature": "def _update_skeleton_incremental(changed_files: list[str]) -> None:"
       },
       {
         "type": "function",
         "name": "_load_skeleton_map",
-        "lines": "846-857",
+        "lines": "844-855",
         "signature": "def _load_skeleton_map(issue_dir: Path | None = None) -> dict:"
       },
       {
         "type": "function",
         "name": "_find_imports",
-        "lines": "860-900",
+        "lines": "858-898",
         "signature": "def _find_imports(files: list[Path], depth: int = 1) -> list[Path]:"
       },
       {
         "type": "function",
         "name": "_search_keywords",
-        "lines": "903-953",
+        "lines": "901-951",
         "signature": "def _search_keywords(issue_text: str, repo_path: Path) -> list[Path]:"
       },
       {
         "type": "function",
         "name": "_build_analyse_comment",
-        "lines": "961-1038",
+        "lines": "959-1036",
         "signature": "def _build_analyse_comment(issue: dict, files: list[Path]) -> str:"
       },
       {
         "type": "function",
         "name": "_has_detailed_plan",
-        "lines": "1046-1065",
+        "lines": "1044-1063",
         "signature": "def _has_detailed_plan(number: int) -> bool:"
       },
       {
         "type": "function",
         "name": "_parse_diff_changed_lines",
-        "lines": "1073-1104",
+        "lines": "1071-1102",
         "signature": "def _parse_diff_changed_lines(branch: str) -> dict[str, list[int]]:"
       },
       {
         "type": "function",
         "name": "_warn_diff_out_of_scope",
-        "lines": "1107-1193",
+        "lines": "1105-1191",
         "signature": "def _warn_diff_out_of_scope(number: int, branch: str) -> None:"
       },
       {
         "type": "function",
         "name": "_warn_slices_not_requested",
-        "lines": "1196-1292",
+        "lines": "1194-1290",
         "signature": "def _warn_slices_not_requested(number: int, branch: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_check_pr_preconditions",
-        "lines": "1295-1446",
+        "lines": "1293-1444",
         "signature": "def _check_pr_preconditions(number: int, branch: str) -> None:"
       },
       {
         "type": "function",
         "name": "_validate_pr_completion",
-        "lines": "1449-1493",
+        "lines": "1447-1491",
         "signature": "def _validate_pr_completion("
       },
       {
         "type": "function",
         "name": "_validate_comment",
-        "lines": "1496-1519",
+        "lines": "1494-1517",
         "signature": "def _validate_comment(body: str, comment_type: str, *, critical: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "_update_discussion",
-        "lines": "1522-1557",
+        "lines": "1520-1555",
         "signature": "def _update_discussion(issue: dict, starter_path: Path) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_list",
-        "lines": "1565-1583",
+        "lines": "1563-1581",
         "signature": "def cmd_list() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_plan",
-        "lines": "1586-1690",
+        "lines": "1584-1688",
         "signature": "def cmd_plan(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_implement",
-        "lines": "1693-1836",
+        "lines": "1691-1834",
         "signature": "def cmd_implement(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "_neustart_required",
-        "lines": "1849-1854",
+        "lines": "1847-1852",
         "signature": "def _neustart_required(changed_files: list[str]) -> str:"
       },
       {
         "type": "function",
         "name": "cmd_pr",
-        "lines": "1857-2022",
+        "lines": "1855-2020",
         "signature": "def cmd_pr("
       },
       {
         "type": "function",
         "name": "cmd_generate_tests",
-        "lines": "2026-2051",
+        "lines": "2024-2049",
         "signature": "def cmd_generate_tests(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "_current_issue_from_branch",
-        "lines": "2053-2068",
+        "lines": "2051-2066",
         "signature": "def _current_issue_from_branch() -> int | None:"
       },
       {
         "type": "function",
         "name": "_estimate_slice_tokens",
-        "lines": "2071-2082",
+        "lines": "2069-2080",
         "signature": "def _estimate_slice_tokens(spec: str) -> int:"
       },
       {
         "type": "function",
         "name": "_log_slice_request",
-        "lines": "2085-2127",
+        "lines": "2083-2125",
         "signature": "def _log_slice_request(spec: str) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_get_slice",
-        "lines": "2130-2160",
+        "lines": "2128-2158",
         "signature": "def cmd_get_slice(spec: str) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_get_llm_cmd",
-        "lines": "2163-2177",
+        "lines": "2161-2175",
         "signature": "def cmd_get_llm_cmd(task: str) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_fixup",
-        "lines": "2186-2230",
+        "lines": "2184-2228",
         "signature": "def cmd_fixup(number: int) -> None:"
       },
       {
         "type": "function",
         "name": "_auto_issue_exists",
-        "lines": "2238-2242",
+        "lines": "2236-2240",
         "signature": "def _auto_issue_exists(test_name: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_auto_perf_issue_exists",
-        "lines": "2244-2248",
+        "lines": "2242-2246",
         "signature": "def _auto_perf_issue_exists(test_name: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_auto_improvement_issue_exists",
-        "lines": "2252-2255",
+        "lines": "2250-2253",
         "signature": "def _auto_improvement_issue_exists(tag: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_check_systematic_tag_failures",
-        "lines": "2257-2331",
+        "lines": "2255-2329",
         "signature": "def _check_systematic_tag_failures(project_root) -> None:"
       },
       {
         "type": "function",
         "name": "_sync_closed_contexts",
-        "lines": "2334-2359",
+        "lines": "2332-2357",
         "signature": "def _sync_closed_contexts() -> None:"
       },
       {
         "type": "function",
         "name": "_consecutive_passes_for_test",
-        "lines": "2362-2387",
+        "lines": "2360-2385",
         "signature": "def _consecutive_passes_for_test(test_name: str) -> int:"
       },
       {
         "type": "function",
         "name": "_close_resolved_auto_issues",
-        "lines": "2390-2469",
+        "lines": "2388-2467",
         "signature": "def _close_resolved_auto_issues(result: \"evaluation.EvalResult\") -> None:"
       },
       {
         "type": "function",
         "name": "_build_metadata",
-        "lines": "2472-2551",
+        "lines": "2470-2549",
         "signature": "def _build_metadata("
       },
       {
         "type": "function",
         "name": "_session_path",
-        "lines": "2554-2556",
+        "lines": "2552-2554",
         "signature": "def _session_path() -> Path:"
       },
       {
         "type": "function",
         "name": "_session_load",
-        "lines": "2559-2583",
+        "lines": "2557-2581",
         "signature": "def _session_load() -> dict:"
       },
       {
         "type": "function",
         "name": "_session_increment",
-        "lines": "2586-2596",
+        "lines": "2584-2594",
         "signature": "def _session_increment() -> dict:"
       },
       {
         "type": "function",
         "name": "_session_status_line",
-        "lines": "2599-2612",
+        "lines": "2597-2610",
         "signature": "def _session_status_line(data: dict) -> str:"
       },
       {
         "type": "function",
         "name": "_format_history_block",
-        "lines": "2615-2651",
+        "lines": "2613-2649",
         "signature": "def _format_history_block(project_root: Path, n: int = 5) -> str:"
       },
       {
         "type": "function",
         "name": "_last_chat_inactive_minutes",
-        "lines": "2654-2702",
+        "lines": "2652-2700",
         "signature": "def _last_chat_inactive_minutes(log_path: str | Path) -> float | None:"
       },
       {
         "type": "function",
         "name": "_server_start_time",
-        "lines": "2705-2753",
+        "lines": "2703-2751",
         "signature": "def _server_start_time(log_path: str | Path) -> datetime.datetime | None:"
       },
       {
         "type": "function",
         "name": "_check_server_staleness",
-        "lines": "2756-2824",
+        "lines": "2754-2822",
         "signature": "def _check_server_staleness(branch: str, force: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "_restart_server_for_eval",
-        "lines": "2827-2849",
+        "lines": "2825-2847",
         "signature": "def _restart_server_for_eval() -> None:"
       },
       {
         "type": "function",
         "name": "_has_new_commits_since_last_eval",
-        "lines": "2852-2883",
+        "lines": "2850-2881",
         "signature": "def _has_new_commits_since_last_eval(project_root: Path) -> bool:"
       },
       {
         "type": "function",
         "name": "_wait_for_server",
-        "lines": "2886-2931",
+        "lines": "2884-2929",
         "signature": "def _wait_for_server("
       },
       {
         "type": "function",
         "name": "cmd_eval_after_restart",
-        "lines": "2934-2996",
+        "lines": "2932-2994",
         "signature": "def cmd_eval_after_restart(number: int | None = None) -> None:"
       },
       {
         "type": "function",
         "name": "_ast_diff",
-        "lines": "2999-3039",
+        "lines": "2997-3037",
         "signature": "def _ast_diff(old_content: str, new_content: str) -> list[str]:"
       },
       {
         "type": "function",
         "name": "_gitea_version_compare",
-        "lines": "3042-3093",
+        "lines": "3040-3091",
         "signature": "def _gitea_version_compare(commit: str, changed_files: list[str]) -> str:"
       },
       {
         "type": "function",
         "name": "_build_auto_issue_body",
-        "lines": "3096-3211",
+        "lines": "3094-3209",
         "signature": "def _build_auto_issue_body("
       },
       {
         "type": "function",
         "name": "cmd_watch",
-        "lines": "3214-3394",
+        "lines": "3212-3391",
         "signature": "def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "_dashboard_event",
-        "lines": "3402-3409",
+        "lines": "3399-3406",
         "signature": "def _dashboard_event(context: str = \"\") -> None:"
       },
       {
         "type": "function",
         "name": "cmd_install_service",
-        "lines": "3435-3480",
+        "lines": "3432-3477",
         "signature": "def cmd_install_service() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_dashboard",
-        "lines": "3488-3494",
+        "lines": "3485-3491",
         "signature": "def cmd_dashboard() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_auto",
-        "lines": "3496-3588",
+        "lines": "3493-3585",
         "signature": "def cmd_auto() -> None:"
       },
       {
         "type": "function",
         "name": "_apply_auto_approve",
-        "lines": "3596-3624",
+        "lines": "3593-3621",
         "signature": "def _apply_auto_approve() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_heal",
-        "lines": "3631-3730",
+        "lines": "3628-3727",
         "signature": "def cmd_heal(test_name: str = \"\", log_lines: int = 30) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_doctor",
-        "lines": "3733-3886",
+        "lines": "3730-3876",
         "signature": "def cmd_doctor() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "3893-4184",
+        "lines": "3883-4174",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "4187-4407",
+        "lines": "4177-4397",
         "signature": "def main():"
       },
       {
         "type": "function",
         "name": "_sym_map",
-        "lines": "3010-3012",
+        "lines": "3008-3010",
         "signature": "def _sym_map(content: str) -> dict[str, dict]:"
       },
       {
         "type": "function",
         "name": "_chk",
-        "lines": "3739-3740",
+        "lines": "3736-3737",
         "signature": "def _chk(name: str, status: str, detail: str = \"\", fix: str = \"\") -> None:"
       },
       {
         "type": "function",
         "name": "_ask",
-        "lines": "3897-3900",
+        "lines": "3887-3890",
         "signature": "def _ask(prompt: str, default: str = \"\") -> str:"
       },
       {
         "type": "function",
         "name": "_api_get_raw",
-        "lines": "3902-3909",
+        "lines": "3892-3899",
         "signature": "def _api_get_raw(url, user, token, path):"
       },
       {
         "type": "function",
         "name": "_api_post_raw",
-        "lines": "3911-3921",
+        "lines": "3901-3911",
         "signature": "def _api_post_raw(url, user, token, path, data: dict):"
       },
       {
         "type": "function",
         "name": "_len",
-        "lines": "3023-3028",
+        "lines": "3021-3026",
         "signature": "def _len(s: dict) -> int:"
       }
     ]
@@ -694,7 +694,7 @@
   {
     "path": "settings.py",
     "truncated": false,
-    "lines": 341,
+    "lines": 329,
     "size_kb": 13,
     "symbols": [
       {
@@ -724,13 +724,13 @@
       {
         "type": "function",
         "name": "_load_features",
-        "lines": "284-309",
+        "lines": "284-303",
         "signature": "def _load_features() -> dict:"
       },
       {
         "type": "function",
         "name": "_load_project_type",
-        "lines": "314-331",
+        "lines": "308-319",
         "signature": "def _load_project_type() -> str:"
       }
     ]
@@ -738,8 +738,8 @@
   {
     "path": "evaluation.py",
     "truncated": false,
-    "lines": 611,
-    "size_kb": 20,
+    "lines": 586,
+    "size_kb": 19,
     "symbols": [
       {
         "type": "class",
@@ -786,67 +786,67 @@
       {
         "type": "function",
         "name": "_resolve_path",
-        "lines": "240-261",
+        "lines": "240-243",
         "signature": "def _resolve_path(project_root: Path, new_rel: str, legacy_rel: str) -> Path:"
       },
       {
         "type": "function",
         "name": "_resolve_config",
-        "lines": "264-273",
+        "lines": "246-248",
         "signature": "def _resolve_config(project_root: Path) -> Path:"
       },
       {
         "type": "function",
         "name": "_load_config",
-        "lines": "276-282",
+        "lines": "251-257",
         "signature": "def _load_config(project_root: Path) -> dict | None:"
       },
       {
         "type": "function",
         "name": "_load_baseline",
-        "lines": "285-292",
+        "lines": "260-267",
         "signature": "def _load_baseline(project_root: Path) -> float | None:"
       },
       {
         "type": "function",
         "name": "_save_baseline",
-        "lines": "295-300",
+        "lines": "270-275",
         "signature": "def _save_baseline(project_root: Path, score: float) -> None:"
       },
       {
         "type": "function",
         "name": "_get_commit_hash",
-        "lines": "303-314",
+        "lines": "278-289",
         "signature": "def _get_commit_hash() -> str:"
       },
       {
         "type": "function",
         "name": "_save_score_history",
-        "lines": "317-353",
+        "lines": "292-328",
         "signature": "def _save_score_history(project_root: Path, result: \"EvalResult\", trigger: str) -> None:"
       },
       {
         "type": "function",
         "name": "run",
-        "lines": "361-532",
+        "lines": "336-507",
         "signature": "def run("
       },
       {
         "type": "function",
         "name": "format_terminal",
-        "lines": "540-564",
+        "lines": "515-539",
         "signature": "def format_terminal(r: EvalResult) -> str:"
       },
       {
         "type": "function",
         "name": "format_gitea_comment",
-        "lines": "567-586",
+        "lines": "542-561",
         "signature": "def format_gitea_comment(r: EvalResult) -> str:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "594-607",
+        "lines": "569-582",
         "signature": "def main() -> None:"
       }
     ]
@@ -950,67 +950,67 @@
   {
     "path": "plugins/health.py",
     "truncated": false,
-    "lines": 175,
+    "lines": 173,
     "size_kb": 5,
     "symbols": [
       {
         "type": "class",
         "name": "CheckResult",
-        "lines": "37-42",
+        "lines": "35-40",
         "signature": "class CheckResult:"
       },
       {
         "type": "class",
         "name": "HealthResult",
-        "lines": "46-52",
+        "lines": "44-50",
         "signature": "class HealthResult:"
       },
       {
         "type": "function",
         "name": "_load_config",
-        "lines": "55-63",
+        "lines": "53-61",
         "signature": "def _load_config(project_root: Path) -> dict | None:"
       },
       {
         "type": "function",
         "name": "_check_http",
-        "lines": "66-74",
+        "lines": "64-72",
         "signature": "def _check_http(target: str, timeout: int = 5) -> tuple[bool, str]:"
       },
       {
         "type": "function",
         "name": "_check_tcp",
-        "lines": "77-84",
+        "lines": "75-82",
         "signature": "def _check_tcp(target: str, timeout: int = 3) -> tuple[bool, str]:"
       },
       {
         "type": "function",
         "name": "_check_process",
-        "lines": "87-96",
+        "lines": "85-94",
         "signature": "def _check_process(target: str) -> tuple[bool, str]:"
       },
       {
         "type": "function",
         "name": "_check_disk",
-        "lines": "99-107",
+        "lines": "97-105",
         "signature": "def _check_disk(target: str, threshold: int = 90) -> tuple[bool, str]:"
       },
       {
         "type": "function",
         "name": "run_checks",
-        "lines": "110-165",
+        "lines": "108-163",
         "signature": "def run_checks(project_root: Path) -> HealthResult:"
       },
       {
         "type": "function",
         "name": "format_terminal",
-        "lines": "168-175",
+        "lines": "166-173",
         "signature": "def format_terminal(result: HealthResult) -> str:"
       },
       {
         "type": "function",
         "name": "all_passed",
-        "lines": "51-52",
+        "lines": "49-50",
         "signature": "def all_passed(self) -> bool:"
       }
     ]
@@ -1018,175 +1018,175 @@
   {
     "path": "plugins/llm.py",
     "truncated": false,
-    "lines": 439,
+    "lines": 438,
     "size_kb": 16,
     "symbols": [
       {
         "type": "function",
         "name": "_load_routing",
-        "lines": "41-50",
+        "lines": "40-49",
         "signature": "def _load_routing(extra_path: Optional[Path] = None) -> dict:"
       },
       {
         "type": "function",
         "name": "_resolve_task_config",
-        "lines": "53-64",
+        "lines": "52-63",
         "signature": "def _resolve_task_config(task: str, routing: dict) -> dict:"
       },
       {
         "type": "function",
         "name": "_load_system_prompt",
-        "lines": "67-82",
+        "lines": "66-81",
         "signature": "def _load_system_prompt(cfg: dict) -> str:"
       },
       {
         "type": "class",
         "name": "LLMResponse",
-        "lines": "90-99",
+        "lines": "89-98",
         "signature": "class LLMResponse:"
       },
       {
         "type": "function",
         "name": "_http_post",
-        "lines": "106-110",
+        "lines": "105-109",
         "signature": "def _http_post(url: str, payload: dict, headers: dict, timeout: int) -> dict:"
       },
       {
         "type": "class",
         "name": "ClaudeClient",
-        "lines": "113-151",
+        "lines": "112-150",
         "signature": "class ClaudeClient:"
       },
       {
         "type": "class",
         "name": "OpenAIClient",
-        "lines": "154-192",
+        "lines": "153-191",
         "signature": "class OpenAIClient:"
       },
       {
         "type": "class",
         "name": "DeepseekClient",
-        "lines": "195-204",
+        "lines": "194-203",
         "signature": "class DeepseekClient(OpenAIClient):"
       },
       {
         "type": "class",
         "name": "LMStudioClient",
-        "lines": "207-217",
+        "lines": "206-216",
         "signature": "class LMStudioClient(OpenAIClient):"
       },
       {
         "type": "class",
         "name": "GeminiClient",
-        "lines": "220-253",
+        "lines": "219-252",
         "signature": "class GeminiClient:"
       },
       {
         "type": "class",
         "name": "LocalClient",
-        "lines": "256-286",
+        "lines": "255-285",
         "signature": "class LocalClient:"
       },
       {
         "type": "function",
         "name": "_client_from_env",
-        "lines": "293-332",
+        "lines": "292-331",
         "signature": "def _client_from_env() -> Optional[\"ClaudeClient | LocalClient\"]:"
       },
       {
         "type": "function",
         "name": "_build_client",
-        "lines": "335-388",
+        "lines": "334-387",
         "signature": "def _build_client(cfg: dict) -> \"ClaudeClient | OpenAIClient | GeminiClient | LocalClient\":"
       },
       {
         "type": "function",
         "name": "get_client",
-        "lines": "395-424",
+        "lines": "394-423",
         "signature": "def get_client("
       },
       {
         "type": "function",
         "name": "complete",
-        "lines": "427-439",
+        "lines": "426-438",
         "signature": "def complete("
       },
       {
         "type": "function",
         "name": "ok",
-        "lines": "98-99",
+        "lines": "97-98",
         "signature": "def ok(self) -> bool:"
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "119-125",
+        "lines": "118-124",
         "signature": "def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,"
       },
       {
         "type": "function",
         "name": "complete",
-        "lines": "127-151",
+        "lines": "126-150",
         "signature": "def complete(self, prompt: str) -> LLMResponse:"
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "159-166",
+        "lines": "158-165",
         "signature": "def __init__(self, model: str, api_key: str, base_url: str = \"https://api.openai.com/v1\","
       },
       {
         "type": "function",
         "name": "complete",
-        "lines": "168-192",
+        "lines": "167-191",
         "signature": "def complete(self, prompt: str) -> LLMResponse:"
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "201-204",
+        "lines": "200-203",
         "signature": "def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):"
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "213-217",
+        "lines": "212-216",
         "signature": "def __init__(self, model: str, api_key: str = \"lm-studio\","
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "225-231",
+        "lines": "224-230",
         "signature": "def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,"
       },
       {
         "type": "function",
         "name": "complete",
-        "lines": "233-253",
+        "lines": "232-252",
         "signature": "def complete(self, prompt: str) -> LLMResponse:"
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "259-265",
+        "lines": "258-264",
         "signature": "def __init__(self, model: str, base_url: str = \"http://localhost:11434\","
       },
       {
         "type": "function",
         "name": "complete",
-        "lines": "267-286",
+        "lines": "266-285",
         "signature": "def complete(self, prompt: str) -> LLMResponse:"
       },
       {
         "type": "function",
         "name": "_get",
-        "lines": "309-310",
+        "lines": "308-309",
         "signature": "def _get(key: str, default: str = \"\") -> str:"
       },
       {
         "type": "function",
         "name": "_get_key",
-        "lines": "338-348",
+        "lines": "337-347",
         "signature": "def _get_key(env_var: str) -> str:"
       }
     ]

@@ -38,17 +38,13 @@ fi
 
 # Server-Neustart (falls restart_script konfiguriert)
 RESTART_SCRIPT=$(python3 -c "
-import json, sys
+import json
 from pathlib import Path
-for p in ['config/agent_eval.json', 'agent/config/agent_eval.json', 'tests/agent_eval.json']:
-    cfg = Path('${SCRIPT_DIR}').parent / p
-    if not cfg.exists():
-        cfg = Path(sys.argv[1]) / p if len(sys.argv) > 1 else cfg
-    try:
-        print(json.load(open(cfg))['restart_script'])
-        break
-    except Exception:
-        pass
+cfg = Path('${SCRIPT_DIR}').parent / 'config/agent_eval.json'
+try:
+    print(json.load(open(cfg))['restart_script'])
+except Exception:
+    pass
 " 2>/dev/null || true)
 
 if [ -n "$RESTART_SCRIPT" ] && [ -x "$RESTART_SCRIPT" ]; then

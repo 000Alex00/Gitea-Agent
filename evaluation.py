@@ -238,39 +238,14 @@ def _run_steps(
 
 
 def _resolve_path(project_root: Path, new_rel: str, legacy_rel: str) -> Path:
-    """
-    Löst einen Dateipfad auf — Priorität: standalone > agent/data/ > legacy.
-
-    Standalone:     project_root/data/<new_rel>        (gitea-agent auf sich selbst)
-    Neue Struktur:  project_root/agent/data/<new_rel>  (gitea-agent auf Zielprojekt)
-    Legacy:         project_root/<legacy_rel>
-
-    Returns:
-        Erster existierender Pfad; bei Neuanlage: data/ wenn vorhanden, sonst legacy.
-    """
-    project_root = Path(project_root)
-    standalone = project_root / "data" / new_rel
-    if standalone.exists():
-        return standalone
-    new_path = project_root / "agent" / "data" / new_rel
-    if new_path.exists():
-        return new_path
-    # Neuanlage: data/ bevorzugen wenn Verzeichnis existiert
-    if (project_root / "data").is_dir():
-        return standalone
-    return project_root / legacy_rel
+    """Gibt project_root/data/<new_rel> zurück (existierend oder für Neuanlage)."""
+    path = Path(project_root) / "data" / new_rel
+    return path
 
 
 def _resolve_config(project_root: Path) -> Path:
-    """Gibt den Pfad zu agent_eval.json zurück — standalone > agent/config/ > legacy."""
-    project_root = Path(project_root)
-    standalone = project_root / "config" / "agent_eval.json"
-    if standalone.exists():
-        return standalone
-    new_path = project_root / "agent" / "config" / "agent_eval.json"
-    if new_path.exists():
-        return new_path
-    return project_root / EVAL_CONFIG
+    """Gibt den Pfad zu config/agent_eval.json zurück."""
+    return Path(project_root) / "config" / "agent_eval.json"
 
 
 def _load_config(project_root: Path) -> dict | None:

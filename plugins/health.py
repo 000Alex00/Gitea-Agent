@@ -28,9 +28,7 @@ DB_DEFAULTS = {
     "mysql":      [{"name": "MySQL",      "type": "tcp",  "target": "localhost:3306"}],
 }
 
-CONFIG_PATH_NEW        = "config/health_checks.json"
-CONFIG_PATH_NEW_LEGACY = "agent/config/health_checks.json"
-CONFIG_PATH_LEGACY     = "health_checks.json"
+CONFIG_PATH = "config/health_checks.json"
 
 
 @dataclass
@@ -53,7 +51,7 @@ class HealthResult:
 
 
 def _load_config(project_root: Path) -> dict | None:
-    for rel in (CONFIG_PATH_NEW, CONFIG_PATH_NEW_LEGACY, CONFIG_PATH_LEGACY):
+    for rel in (CONFIG_PATH,):
         p = project_root / rel
         if p.exists():
             try:

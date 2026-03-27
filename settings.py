@@ -291,13 +291,7 @@ def _load_features() -> dict:
     }
     config_path = (
         (_AGENT_DIR / "config" / "project.json") if _AGENT_DIR
-        else next(
-            (p for p in [
-                _HERE_SETTINGS / "config" / "project.json",
-                _HERE_SETTINGS / "agent" / "config" / "project.json",
-            ] if p.exists()),
-            _HERE_SETTINGS / "config" / "project.json",
-        )
+        else (_HERE_SETTINGS / "config" / "project.json")
     )
     if config_path and config_path.exists():
         try:
@@ -315,13 +309,7 @@ def _load_project_type() -> str:
     import json
     config_path = (
         (_AGENT_DIR / "config" / "project.json") if _AGENT_DIR
-        else next(
-            (p for p in [
-                _HERE_SETTINGS / "config" / "project.json",
-                _HERE_SETTINGS / "agent" / "config" / "project.json",
-            ] if p.exists()),
-            _HERE_SETTINGS / "config" / "project.json",
-        )
+        else (_HERE_SETTINGS / "config" / "project.json")
     )
     if config_path and config_path.exists():
         try:
