@@ -138,14 +138,16 @@ Ein vollständiges Infrastruktur-System für KI-gestützte Code-Entwicklung: Iss
 
 Der Agent hat zwei Betriebsmodi:
 
-| Modus | LLM-API nötig? | Beschreibung |
-|-------|---------------|--------------|
-| **Manuell** | ❌ Nein | `--issue` erstellt Kontext, Mensch kopiert ihn in Web-Chat (Claude, GPT, Gemini). Agent postet PR via `--pr` |
-| **Autonom** | ✅ Ja | `--watch` / Night-Modus / `--heal` — Agent analysiert, implementiert und postet PR ohne menschliche Interaktion |
+| Funktion | LLM-API nötig? | Beschreibung |
+|----------|---------------|--------------|
+| `--issue`, `--implement`, `--pr` | ❌ Nein | Kontext erstellen, Branch anlegen, PR posten — Mensch liefert die Implementierung (Web-Chat oder lokal) |
+| `--watch`, `--night`, `--patch` | ❌ Nein | Eval-Loop, Auto-Issues bei Regressions, Context-Build — kein LLM-Aufruf im Loop selbst |
+| `--heal` | ✅ Ja | Autonomer Fix-Loop: Eval → LLM analysiert → Patch → Eval |
+| `context_export.sh NR llm` | ✅ Ja | Startet konfigurierten LLM-CLI direkt mit Kontext (`cli_cmd` in `routing.json`) |
 
-**Ohne API (lokal, kein API-Key):** Manueller Workflow vollständig nutzbar — Issue-Tracking, Eval, Dashboard, Kontext-Export, PR-Erstellung alles funktional.
+**Ohne API:** Vollständiger manueller Workflow nutzbar — Issue-Tracking, Eval, Dashboard, Kontext-Export, PR-Erstellung, Watch-Loop.
 
-**Mit API (`CLAUDE_API_ENABLED=true` oder `config/llm/routing.json`):** Autonomer 24/7-Betrieb via Watch-Modus, Night-Service, Self-Healing.
+**Mit API (`CLAUDE_API_ENABLED=true` oder `config/llm/routing.json`):** `--heal` Self-Healing aktivierbar + `context_export.sh NR llm` für interaktive Sessions.
 
 ---
 

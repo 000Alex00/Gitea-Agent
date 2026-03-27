@@ -1,5 +1,5 @@
 {
-    "_comment": "Vorlage für llm_routing.json — nach agent/config/llm_routing.json kopieren und anpassen",
+    "_comment": "LLM-Routing Konfiguration — liegt in config/llm/routing.json",
     "_comment_providers": "Unterstützte Provider: claude, openai, gemini, deepseek, lmstudio, local (Ollama-Format)",
     "_comment_fallback": "Ohne diese Datei → DEEPSEEK_API_ENABLED / CLAUDE_API_ENABLED / LLM_LOCAL_URL aus .env",
     "_comment_system_prompt": "system_prompt: relativer Pfad zu einer .md-Datei im Projekt-Root (z.B. config/llm/prompts/senior_python.md)",

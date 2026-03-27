@@ -1436,6 +1436,20 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
             f"{settings.SLICE_GATE_MIN_LINES}+ Zeilen-Dateien ohne --get-slice geändert"
         )
 
+    # 9. Branch auf Remote vorhanden (git push vergessen)?
+    try:
+        remote_refs = subprocess.check_output(
+            ["git", "ls-remote", "--heads", "origin", branch],
+            cwd=PROJECT, stderr=subprocess.DEVNULL,
+        ).decode().strip()
+        if not remote_refs:
+            fehler.append(
+                f"Branch '{branch}' nicht auf Remote — erst pushen:\n"
+                f"    git push origin {branch}"
+            )
+    except Exception as e:
+        log.debug(f"Remote-Branch-Prüfung übersprungen: {e}")
+
     if fehler:
         print("\n❌ cmd_pr abgebrochen — Prozess nicht vollständig:")
         for f in fehler:
@@ -3209,7 +3223,7 @@ def _build_auto_issue_body(
     return "\n".join(lines)
 
 
-def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
+def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False, night_mode: bool = False) -> None:
     """
     Periodischer Eval-Loop: läuft alle interval_minutes Minuten.
 
@@ -3220,7 +3234,8 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
     Aufgerufen von:
         main() wenn --watch gesetzt
     """
-    print(f"[→] Watch-Modus gestartet — Interval: {interval_minutes} Minuten")
+    mode_label = " (Night, max Risiko: " + str(settings.NIGHT_MAX_RISK) + ")" if night_mode else (" (Patch)" if patch_mode else "")
+    print(f"[→] Watch-Modus gestartet{mode_label} — Interval: {interval_minutes} Minuten")
     print(f"    Abbrechen mit Ctrl+C\n")
     log.info(f"Watch-Modus gestartet (Interval: {interval_minutes}min)")
     _sync_closed_contexts()
@@ -3257,6 +3272,11 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
                         
                     # 1. Funktionale Regression (Score Verlust)
                     if not t.passed:
+                        if night_mode:
+                            t_risk = 3  # Score-Verlust ist immer mittel-hoch
+                            if t_risk > settings.NIGHT_MAX_RISK:
+                                log.debug(f"[Night] Score-Verlust '{t.name}' übersteigt NIGHT_MAX_RISK={settings.NIGHT_MAX_RISK} — übersprungen")
+                                continue
                         if _auto_issue_exists(t.name):
                             log.debug(f"[Auto]-Issue für '{t.name}' bereits offen — kein Duplikat")
                         else:
@@ -3279,6 +3299,9 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
 
                     # 2. Performance Regression
                     if t.max_response_ms is not None and t.response_ms > t.max_response_ms:
+                        if night_mode and 2 > settings.NIGHT_MAX_RISK:
+                            log.debug(f"[Night] Perf-Regression '{t.name}' übersteigt NIGHT_MAX_RISK={settings.NIGHT_MAX_RISK} — übersprungen")
+                            continue
                         if _auto_perf_issue_exists(t.name):
                             log.debug(f"[Auto-Perf]-Issue für '{t.name}' bereits offen — kein Duplikat")
                         else:
@@ -3443,7 +3466,7 @@ def cmd_install_service() -> None:
         "gitea-agent-night": _UNIT_TEMPLATE.format(
             mode="night", user=user, workdir=workdir,
             python=python, agent_start=agent_start,
-            patch_flag="", path=path,
+            patch_flag=" --night", path=path,
         ),
         "gitea-agent-patch": _UNIT_TEMPLATE.format(
             mode="patch", user=user, workdir=workdir,
@@ -4268,6 +4291,11 @@ Ohne Argumente: automatischer Modus.
         help="Aktiviert den Patch-Modus im Watch-Loop (unterdrückt Auto-Issues, ignoriert Inaktivität)",
     )
     parser.add_argument(
+        "--night",
+        action="store_true",
+        help="Night-Modus: Auto-Issues nur bis Risikostufe NIGHT_MAX_RISK (Standard: 1)",
+    )
+    parser.add_argument(
         "--dashboard",
         action="store_true",
         help="Generiert das Live-Dashboard manuell",
@@ -4378,7 +4406,7 @@ Ohne Argumente: automatischer Modus.
                 interval = cfg.get("watch_interval_minutes", 60)
             except Exception:
                 interval = 60
-        cmd_watch(interval, patch_mode=args.patch)
+        cmd_watch(interval, patch_mode=args.patch, night_mode=args.night)
     elif args.pr:
         if not args.branch:
             log.error("--pr benötigt --branch <branch-name>")

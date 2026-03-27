@@ -218,6 +218,13 @@ TOKEN_LINES_FACTOR  = _env_int("TOKEN_LINES_FACTOR",  10)   # Zeilen × 10 ≈ T
 TOKEN_BUDGET_WARN   = _env_int("TOKEN_BUDGET_WARN",   150000)
 
 # ---------------------------------------------------------------------------
+# Night-Modus
+# ---------------------------------------------------------------------------
+
+# Maximale Risikostufe für Auto-Issues im Night-Modus (1=nur Docs/Cleanup, 2=Enhancements)
+NIGHT_MAX_RISK = _env_int("NIGHT_MAX_RISK", 1)
+
+# ---------------------------------------------------------------------------
 # Slice-Gate (Issue #94) — Schlupflöcher-Kontrolle
 # ---------------------------------------------------------------------------
 

@@ -154,6 +154,14 @@ STALENESS_CHECK=true
 STALENESS_INTERVAL=7200
 
 # ══════════════════════════════════════════════════════════
+# NIGHT-MODUS
+# ══════════════════════════════════════════════════════════
+
+# Maximale Risikostufe für Auto-Issues im Night-Modus
+# 1 = nur Docs/Cleanup, 2 = +Performance, 3 = alles (wie Patch)
+NIGHT_MAX_RISK=1
+
+# ══════════════════════════════════════════════════════════
 # TOKEN-BUDGET-TRACKER
 # ══════════════════════════════════════════════════════════
 
@@ -265,6 +273,9 @@ HTTP_RETRY_DELAY=5
 - `SLICE_GATE_ENABLED=false`: Standardmäßig nur Warnung; `true` → blockiert `--pr` wenn Dateien ohne `--get-slice` geändert wurden
 - `SLICE_GATE_MIN_LINES=100`: Nur Dateien über dieser Zeilenzahl werden geprüft
 - Verhindert halluzinierte Änderungen an Dateien die der Agent nie gelesen hat
+
+### Night-Modus
+- `NIGHT_MAX_RISK=1`: Maximale Risikostufe für Auto-Issues im Night-Modus. Stufe 1 = nur Docs/Cleanup, Stufe 2 = auch Performance-Regressions, Stufe 3 = alle (entspricht Patch-Modus)
 
 ### Self-Healing
 - `HEALING_MAX_ATTEMPTS=3`: Wie oft der Healing-Loop einen fehlgeschlagenen Test erneut zu fixen versucht
