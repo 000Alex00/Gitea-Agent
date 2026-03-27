@@ -591,6 +591,35 @@ python3 agent_start.py --pr {num} --branch {branch} --summary "..."
     return ctx_file, files_file
 
 
+def _build_issue_context_silent(issue: dict) -> bool:
+    """
+    Baut starter.md + files.md für ein Issue — still, ohne Gitea-Kommentar.
+
+    Wird vom Night-Modus aufgerufen nach Auto-Issue-Erstellung, damit der Context
+    beim nächsten Morgen bereits fertig ist.
+
+    Returns:
+        True bei Erfolg, False bei Fehler (kein raise — Night-Loop darf nicht abbrechen).
+    """
+    try:
+        files = find_relevant_files_advanced(issue)
+        files_dict: dict[str, str] = {}
+        for f in files:
+            try:
+                lines = f.read_text(encoding="utf-8", errors="replace").splitlines()
+                files_dict[str(f.relative_to(PROJECT))] = "\n".join(
+                    lines[: settings.MAX_FILE_LINES]
+                )
+            except Exception:
+                pass
+        save_implement_context(issue, files_dict)
+        log.info(f"Night-Context gebaut für Issue #{issue['number']}")
+        return True
+    except Exception as exc:
+        log.warning(f"Night-Context Build fehlgeschlagen für #{issue.get('number', '?')}: {exc}")
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Kontext-Loader: Import-Analyse + Keyword-Suche
 # ---------------------------------------------------------------------------
@@ -2129,6 +2158,23 @@ def cmd_get_slice(spec: str) -> None:
     _log_slice_request(spec)
 
 
+def cmd_get_llm_cmd(task: str) -> None:
+    """
+    Gibt cli_cmd für einen Task aus llm_routing.json aus (stdout).
+
+    Wird von context_export.sh aufgerufen um den richtigen LLM-CLI-Befehl zu ermitteln.
+    Gibt nur den cli_cmd-Wert aus (ohne Newline-Prefix), damit die Shell ihn direkt nutzen kann.
+    Fallback: leerer String wenn kein cli_cmd konfiguriert.
+    """
+    from plugins.llm import _load_routing, _resolve_task_config
+    routing = _load_routing()
+    if not routing:
+        print("")
+        return
+    cfg = _resolve_task_config(task, routing)
+    print(cfg.get("cli_cmd", ""))
+
+
 # SEARCH/REPLACE Protokoll → plugins/patch.py
 
 
@@ -3228,6 +3274,8 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
                             log.warning(f"Auto-Issue erstellt: #{issue['number']} für '{t.name}'")
                             print(f"[!] Auto-Issue erstellt: #{issue['number']} — {t.name}")
                             _dashboard_event("Auto-Issue erstellt")
+                            if _build_issue_context_silent(issue):
+                                print(f"    [✓] Context gebaut: workspace/open/{issue['number']}-*/starter.md")
 
                     # 2. Performance Regression
                     if t.max_response_ms is not None and t.response_ms > t.max_response_ms:
@@ -3248,6 +3296,8 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False) -> None:
                             log.warning(f"Auto-Perf Issue erstellt: #{issue['number']} für '{t.name}'")
                             print(f"[!] Auto-Perf Issue erstellt: #{issue['number']} — {t.name}")
                             _dashboard_event("Auto-Perf-Issue erstellt")
+                            if _build_issue_context_silent(issue):
+                                print(f"    [✓] Context gebaut: workspace/open/{issue['number']}-*/starter.md")
 
         except Exception as e:
             log.error(f"Watch-Lauf Fehler: {e}")
@@ -4071,6 +4121,13 @@ Ohne Argumente: automatischer Modus.
         help="Exakten Zeilenbereich ausgeben, z.B. agent_start.py:45-90",
     )
     parser.add_argument(
+        "--get-llm-cmd",
+        type=str,
+        metavar="TASK",
+        dest="get_llm_cmd",
+        help="cli_cmd für Task aus llm_routing.json ausgeben (für context_export.sh)",
+    )
+    parser.add_argument(
         "--apply-patch",
         type=int,
         metavar="NR",
@@ -4198,6 +4255,8 @@ Ohne Argumente: automatischer Modus.
         cmd_list()
     elif args.get_slice:
         cmd_get_slice(args.get_slice)
+    elif args.get_llm_cmd is not None:
+        cmd_get_llm_cmd(args.get_llm_cmd)
     elif args.apply_patch:
         cmd_apply_patch(args.apply_patch, dry_run=args.dry_run)
     elif args.issue:
