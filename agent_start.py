@@ -4366,13 +4366,18 @@ def cmd_setup() -> None:
             "zur Log-Datei deiner Anwendung.",
             "",
             "  [1] Server-URL \u2014 Adresse deines laufenden Servers",
-            "      Beispiel: http://localhost:8080",
+            "      Protokoll (http:// oder https://) muss angegeben werden.",
+            "      Beispiele: http://localhost:8080",
+            "                 http://192.168.1.x:8080",
+            "                 http://192.168.1.x  (ohne Port wenn Standard)",
             "",
             "  [2] Log-Pfad \u2014 vollst\u00e4ndiger Pfad zur Log-Datei",
-            "      Beispiel: /home/ki02/jetson-llm-chat/logs/app.log",
+            "      Beispiel: /home/user/mein-projekt/logs/app.log",
             "",
             "  [3] Start-Script \u2014 Script zum Starten des Servers (optional)",
-            "      Beispiel: /home/ki02/jetson-llm-chat/start.sh",
+            "      Beispiel: /home/user/mein-projekt/start.sh",
+            "      \u26a0\ufe0f  Ohne Start-Script kann der Agent den Server nicht",
+            "          automatisch neu starten (Eval, Restart-Workflow).",
         ])
         eval_file = _HERE / "config" / "agent_eval.json"
         write_eval = True
@@ -4382,6 +4387,9 @@ def cmd_setup() -> None:
             server_url   = _ask("  [1] Server-URL")
             log_path     = _ask("  [2] Log-Pfad")
             start_script = _ask("  [3] Start-Script (leer = keins)", "")
+            if not start_script:
+                print("  \u26a0\ufe0f  Kein Start-Script \u2014 automatischer Neustart nicht m\u00f6glich.\n")
+                _log("Schritt 5 Start-Script", "WARNUNG", "Kein Start-Script angegeben")
             eval_data = {"server_url": server_url, "log_path": log_path,
                          "start_script": start_script, "watch_interval_minutes": 60}
             eval_file.parent.mkdir(parents=True, exist_ok=True)
