@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4687,
-    "size_kb": 172,
+    "lines": 4741,
+    "size_kb": 175,
     "symbols": [
       {
         "type": "class",
@@ -520,13 +520,13 @@
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "4049-4452",
+        "lines": "4049-4506",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "4455-4683",
+        "lines": "4509-4737",
         "signature": "def main():"
       },
       {
@@ -549,44 +549,56 @@
       },
       {
         "type": "function",
+        "name": "_mask",
+        "lines": "4061-4064",
+        "signature": "def _mask(val: str) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_log",
+        "lines": "4066-4072",
+        "signature": "def _log(step: str, status: str, detail: str = \"\") -> None:"
+      },
+      {
+        "type": "function",
         "name": "_load_state",
-        "lines": "4055-4061",
+        "lines": "4074-4080",
         "signature": "def _load_state() -> dict:"
       },
       {
         "type": "function",
         "name": "_save_state",
-        "lines": "4063-4064",
+        "lines": "4082-4083",
         "signature": "def _save_state(state: dict) -> None:"
       },
       {
         "type": "function",
         "name": "_ask",
-        "lines": "4066-4069",
+        "lines": "4085-4088",
         "signature": "def _ask(prompt: str, default: str = \"\") -> str:"
       },
       {
         "type": "function",
         "name": "_sanitize_repo",
-        "lines": "4071-4072",
+        "lines": "4090-4091",
         "signature": "def _sanitize_repo(val: str) -> str:"
       },
       {
         "type": "function",
         "name": "_retry",
-        "lines": "4074-4075",
+        "lines": "4093-4094",
         "signature": "def _retry(msg: str) -> bool:"
       },
       {
         "type": "function",
         "name": "_api_get_raw",
-        "lines": "4077-4084",
+        "lines": "4098-4105",
         "signature": "def _api_get_raw(url, user, token, path):"
       },
       {
         "type": "function",
         "name": "_api_post_raw",
-        "lines": "4086-4096",
+        "lines": "4107-4117",
         "signature": "def _api_post_raw(url, user, token, path, data: dict):"
       },
       {

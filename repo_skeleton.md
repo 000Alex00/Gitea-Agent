@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4687 Zeilen)*
+## agent_start.py  *(4741 Zeilen)*
 
 - **Klasse** `_LazyGitea` Zeilen 70-78
   `class _LazyGitea:`
@@ -173,9 +173,9 @@
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
 - **Funktion** `cmd_doctor` Zeilen 3896-4042
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 4049-4452
+- **Funktion** `cmd_setup` Zeilen 4049-4506
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4455-4683
+- **Funktion** `main` Zeilen 4509-4737
   `def main():`
 - **Funktion** `__getattr__` Zeilen 74-78
   `def __getattr__(self, name: str):`
@@ -183,19 +183,23 @@
   `def _sym_map(content: str) -> dict[str, dict]:`
 - **Funktion** `_chk` Zeilen 3902-3903
   `def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:`
-- **Funktion** `_load_state` Zeilen 4055-4061
+- **Funktion** `_mask` Zeilen 4061-4064
+  `def _mask(val: str) -> str:`
+- **Funktion** `_log` Zeilen 4066-4072
+  `def _log(step: str, status: str, detail: str = "") -> None:`
+- **Funktion** `_load_state` Zeilen 4074-4080
   `def _load_state() -> dict:`
-- **Funktion** `_save_state` Zeilen 4063-4064
+- **Funktion** `_save_state` Zeilen 4082-4083
   `def _save_state(state: dict) -> None:`
-- **Funktion** `_ask` Zeilen 4066-4069
+- **Funktion** `_ask` Zeilen 4085-4088
   `def _ask(prompt: str, default: str = "") -> str:`
-- **Funktion** `_sanitize_repo` Zeilen 4071-4072
+- **Funktion** `_sanitize_repo` Zeilen 4090-4091
   `def _sanitize_repo(val: str) -> str:`
-- **Funktion** `_retry` Zeilen 4074-4075
+- **Funktion** `_retry` Zeilen 4093-4094
   `def _retry(msg: str) -> bool:`
-- **Funktion** `_api_get_raw` Zeilen 4077-4084
+- **Funktion** `_api_get_raw` Zeilen 4098-4105
   `def _api_get_raw(url, user, token, path):`
-- **Funktion** `_api_post_raw` Zeilen 4086-4096
+- **Funktion** `_api_post_raw` Zeilen 4107-4117
   `def _api_post_raw(url, user, token, path, data: dict):`
 - **Funktion** `_is_excluded` Zeilen 1954-1955
   `def _is_excluded(f: str) -> bool:`

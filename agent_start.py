@@ -4049,8 +4049,27 @@ def cmd_doctor() -> None:
 def cmd_setup() -> None:
     """--setup: Interaktiver Einrichtungs-Wizard für neue Projekte (Issue #77)."""
     import base64
+    import datetime
 
     _STATE_FILE = Path(__file__).parent / ".setup_state.json"
+    _LOG_DIR    = Path(__file__).parent / "data"
+    _LOG_DIR.mkdir(parents=True, exist_ok=True)
+    _ts         = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    _LOG_FILE   = _LOG_DIR / f"setup_{_ts}.log"
+    _SECRET_KEYS = {"token", "password", "secret", "key", "pass"}
+
+    def _mask(val: str) -> str:
+        if len(val) <= 8:
+            return "***"
+        return val[:4] + "***" + val[-2:]
+
+    def _log(step: str, status: str, detail: str = "") -> None:
+        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        line = f"[{ts}] [{status}] {step}"
+        if detail:
+            line += f" — {detail}"
+        with _LOG_FILE.open("a", encoding="utf-8") as f:
+            f.write(line + "\n")
 
     def _load_state() -> dict:
         if _STATE_FILE.exists():
@@ -4073,6 +4092,8 @@ def cmd_setup() -> None:
 
     def _retry(msg: str) -> bool:
         return input(f"  {msg} Erneut versuchen? [J/n]: ").strip().lower() in ("", "j", "y")
+
+    _log("SETUP START", "INFO", f"Log: {_LOG_FILE}")
 
     def _api_get_raw(url, user, token, path):
         import urllib.request, urllib.error
@@ -4105,8 +4126,10 @@ def cmd_setup() -> None:
         completed = [k for k in ("gitea_url", "gitea_repo", "project_root") if k in state]
         print(f"  ℹ️  Vorheriger Setup-Fortschritt gefunden ({', '.join(completed)})")
         if input("  Dort weitermachen? [J/n]: ").strip().lower() in ("", "j", "y"):
+            _log("RESUME", "INFO", f"Fortgesetzt ab: {', '.join(completed)}")
             print()
         else:
+            _log("RESUME", "INFO", "Abgelehnt — Neustart von Schritt 1")
             state = {}
             _STATE_FILE.unlink(missing_ok=True)
             print()
@@ -4128,9 +4151,11 @@ def cmd_setup() -> None:
             try:
                 _api_get_raw(gitea_url, gitea_user, gitea_token, "/user")
                 print("  ✅ Verbindung erfolgreich\n")
+                _log("Schritt 1 Verbindung", "OK", f"URL={gitea_url} User={gitea_user}")
                 break
             except Exception as exc:
                 print(f"  ❌ Verbindungsfehler: {exc}")
+                _log("Schritt 1 Verbindung", "FEHLER", str(exc))
                 if not _retry(""):
                     print("  ⚠️  Fortfahren trotz Fehler\n")
                     break
@@ -4143,6 +4168,7 @@ def cmd_setup() -> None:
         print("       Leer lassen = Agent nutzt Haupt-Account\n")
         bot_user  = _ask("Bot-User (leer = kein Bot)", "")
         bot_token = _ask("Bot-Token", "") if bot_user else ""
+        _log("Schritt 1 Bot", "INFO", f"Bot-User={bot_user or '(keiner)'}")
 
         state.update(gitea_url=gitea_url, gitea_user=gitea_user, gitea_token=gitea_token,
                      bot_user=bot_user, bot_token=bot_token)
@@ -4153,6 +4179,7 @@ def cmd_setup() -> None:
         gitea_token = state["gitea_token"]
         bot_user    = state["bot_user"]
         bot_token   = state["bot_token"]
+        _log("Schritt 1", "RESUME", f"URL={gitea_url} User={gitea_user}")
         print(f"Schritt 1/9 — Gitea-Verbindung ✅ (Resume: {gitea_url}, {gitea_user})\n")
 
     # ── Schritt 2: Repository ──────────────────────────────────────
@@ -4178,12 +4205,15 @@ def cmd_setup() -> None:
             gitea_repo = _sanitize_repo(raw)
             if gitea_repo != raw:
                 print(f"  ℹ️  Eingabe bereinigt: '{gitea_repo}'")
+                _log("Schritt 2 Sanitize", "INFO", f"'{raw}' → '{gitea_repo}'")
             try:
                 _api_get_raw(gitea_url, gitea_user, gitea_token, f"/repos/{gitea_repo}")
                 print("  ✅ Repository gefunden\n")
+                _log("Schritt 2 Repository", "OK", gitea_repo)
                 break
             except Exception as exc:
                 print(f"  ❌ Repo nicht gefunden: {exc}")
+                _log("Schritt 2 Repository", "FEHLER", f"Eingabe='{gitea_repo}' {exc}")
                 if not _retry(""):
                     print("  ⚠️  Fortfahren trotz Fehler\n")
                     break
@@ -4192,6 +4222,7 @@ def cmd_setup() -> None:
         _save_state(state)
     else:
         gitea_repo = state["gitea_repo"]
+        _log("Schritt 2", "RESUME", gitea_repo)
         print(f"Schritt 2/9 — Repository ✅ (Resume: {gitea_repo})\n")
 
     # ── Schritt 3: Projektverzeichnis ─────────────────────────────
@@ -4202,8 +4233,10 @@ def cmd_setup() -> None:
             if Path(project_root).is_dir():
                 if (Path(project_root) / ".git").exists():
                     print("  ✅ git-Repo gefunden\n")
+                    _log("Schritt 3 Verzeichnis", "OK", project_root)
                 else:
                     print("  ⚠️  Kein git-Repo gefunden.")
+                    _log("Schritt 3 Verzeichnis", "WARNUNG", f"Kein .git in {project_root}")
                     if input("  Trotzdem als PROJECT_ROOT verwenden? [J/n]: ").strip().lower() in ("", "j", "y"):
                         print()
                     else:
@@ -4211,6 +4244,7 @@ def cmd_setup() -> None:
                 break
             else:
                 print(f"  ❌ Verzeichnis existiert nicht: {project_root}")
+                _log("Schritt 3 Verzeichnis", "FEHLER", f"Nicht gefunden: {project_root}")
                 if not _retry(""):
                     print("  ⚠️  Fortfahren trotz Fehler\n")
                     break
@@ -4219,6 +4253,7 @@ def cmd_setup() -> None:
         _save_state(state)
     else:
         project_root = state["project_root"]
+        _log("Schritt 3", "RESUME", project_root)
         print(f"Schritt 3/9 — Projektverzeichnis ✅ (Resume: {project_root})\n")
 
     # ── Schritt 4: Labels ─────────────────────────────────────────
@@ -4240,6 +4275,7 @@ def cmd_setup() -> None:
 
             if not missing:
                 print(f"  ✅ Alle {len(required_labels)} Labels bereits vorhanden\n")
+                _log("Schritt 4 Labels", "OK", "Alle vorhanden")
             else:
                 print(f"  Fehlende Labels: {', '.join(n for n,_,_ in missing)}")
                 confirm = input("  Jetzt anlegen? [J/n]: ").strip().lower()
@@ -4249,10 +4285,12 @@ def cmd_setup() -> None:
                                       f"/repos/{gitea_repo}/labels",
                                       {"name": name, "color": f"#{color}", "description": desc})
                         print(f"  ✅ Label '{name}' angelegt")
+                        _log("Schritt 4 Label", "OK", f"Angelegt: {name}")
                 print()
             break
         except Exception as exc:
             print(f"  ❌ Label-Prüfung fehlgeschlagen: {exc}")
+            _log("Schritt 4 Labels", "FEHLER", str(exc))
             if not _retry(""):
                 print("  ⚠️  Labels übersprungen\n")
                 break
@@ -4278,7 +4316,9 @@ def cmd_setup() -> None:
         eval_file.parent.mkdir(parents=True, exist_ok=True)
         eval_file.write_text(json.dumps(eval_data, indent=2), encoding="utf-8")
         print(f"  ✅ {eval_file} geschrieben\n")
+        _log("Schritt 5 agent_eval.json", "OK", str(eval_file))
     else:
+        _log("Schritt 5 agent_eval.json", "INFO", "Übersprungen")
         print("  Übersprungen\n")
 
     # ── Schritt 6: .env schreiben ─────────────────────────────────
@@ -4302,7 +4342,9 @@ def cmd_setup() -> None:
         env_file.write_text("\n".join(env_lines) + "\n", encoding="utf-8")
         print(f"  ✅ .env geschrieben: {env_file}")
         print("  ⚠️  .env enthält Secrets — nicht in Git commiten!\n")
+        _log("Schritt 6 .env", "OK", f"{env_file} (Secrets maskiert: TOKEN=****)")
     else:
+        _log("Schritt 6 .env", "INFO", "Übersprungen")
         print("  Übersprungen\n")
 
     # ── Schritt 7: Projekttyp + Feature-Flags ──────────────────────
@@ -4348,6 +4390,7 @@ def cmd_setup() -> None:
         if proj_file:
             proj_file.write_text(json.dumps(project_json, indent=4, ensure_ascii=False), encoding="utf-8")
             print(f"  ✅ project.json geschrieben: {proj_file}\n")
+            _log("Schritt 7 project.json", "OK", f"type={proj_type} path={proj_file}")
 
     # ── Schritt 8: LLM-Routing ────────────────────────────────────
     print("Schritt 8/9 — LLM-Routing\n")
@@ -4418,7 +4461,9 @@ def cmd_setup() -> None:
         routing_file.parent.mkdir(parents=True, exist_ok=True)
         routing_file.write_text(json.dumps(routing_data, indent=4, ensure_ascii=False), encoding="utf-8")
         print(f"  ✅ llm_routing.json geschrieben: {routing_file}\n")
+        _log("Schritt 8 LLM-Routing", "OK", f"provider={default_provider} model={default_model}")
     else:
+        _log("Schritt 8 LLM-Routing", "INFO", "Übersprungen")
         print("  Übersprungen\n")
 
     # ── Schritt 9: System-Prompts ─────────────────────────────────
@@ -4437,19 +4482,28 @@ def cmd_setup() -> None:
                     copied += 1
             if copied:
                 print(f"  ✅ {copied} Prompt-Dateien nach {prompts_dst} kopiert")
+                _log("Schritt 9 Prompts", "OK", f"{copied} Dateien nach {prompts_dst}")
             else:
                 print("  ℹ️  Alle Prompts bereits vorhanden")
+                _log("Schritt 9 Prompts", "OK", "Bereits vorhanden")
             print()
         else:
+            _log("Schritt 9 Prompts", "INFO", "Übersprungen")
             print("  Übersprungen — config/llm/prompts/*.md manuell nach Bedarf anlegen\n")
     else:
+        _log("Schritt 9 Prompts", "OK", f"Bereits unter {prompts_dst}")
         print(f"  ℹ️  Prompts bereits unter {prompts_dst}\n")
 
     # ── Aufräumen & Health-Check ──────────────────────────────────
+    _log("SETUP ABGESCHLOSSEN", "OK", f"Install-Log: {_LOG_FILE}")
     _STATE_FILE.unlink(missing_ok=True)
     print(f"{'═' * 60}")
     print("  SETUP ABGESCHLOSSEN — starte Health-Check...\n")
+    print(f"  ℹ️  Install-Log: {_LOG_FILE}\n")
     cmd_doctor()
+    print(f"\n{'═' * 60}")
+    print("  Generiere initiales Dashboard...\n")
+    cmd_dashboard()
 
 
 def main():
