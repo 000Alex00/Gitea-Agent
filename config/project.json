@@ -3,13 +3,13 @@
     "type": "web_api",
     "_comment_type": "Projekttyp: web_api | cli_tool | llm_chat | library | custom",
     "features": {
-        "eval":         true,
+        "eval": true,
         "health_checks": false,
-        "auto_issues":  true,
-        "changelog":    true,
-        "watch":        true,
-        "pr_workflow":  true,
-        "healing":      false
+        "auto_issues": true,
+        "changelog": true,
+        "watch": true,
+        "pr_workflow": true,
+        "healing": false
     },
     "_comment_healing": "healing=true: Autonomous Self-Healing Loop — erfordert LLM-Backend (Risikostufe 4/4)",
     "_comment_features": "Fehlende project.json oder fehlende Einträge → alle Features aktiv (Rückwärtskompatibilität)"

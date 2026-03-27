@@ -53,7 +53,7 @@ python3 agent_start.py --help
 | `--watch` | - | Endlos-Loop: Scanne Issues alle X Sekunden |
 | `--eval-interval` | `<seconds>` | Intervall zwischen Eval-Läufen (Standard: 3600) |
 | `--watch-interval` | `<seconds>` | Intervall zwischen Issue-Scans (Standard: 300) |
-| `--night-mode` | - | Nur low-risk Issues ([Rezept 16](16-night-vs-patch.md)) |
+| ~~`--night-mode`~~ | - | Nicht als CLI-Flag vorhanden — Night-Modus läuft via systemd (`gitea-agent-night.service`, [Rezept 16](16-night-vs-patch.md)) |
 
 #### **Eval/Testing**
 
@@ -125,11 +125,9 @@ python3 agent_start.py --project ~/proj --issue 42 --branch fix/typo
 # ══════════════════════════════════════════════════════════
 # Watch-Modus (Night)
 # ══════════════════════════════════════════════════════════
-python3 agent_start.py \
-  --project ~/proj \
-  --watch \
-  --night-mode \
-  --eval-interval 14400
+python3 agent_start.py --project ~/proj --install-service night
+# → installiert gitea-agent-night.service (NIGHT_MODE=true, nur risk≤2)
+systemctl --user start gitea-agent-night
 
 # ══════════════════════════════════════════════════════════
 # Eval-Only
