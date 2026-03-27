@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4429,
-    "size_kb": 160,
+    "lines": 4476,
+    "size_kb": 162,
     "symbols": [
       {
         "type": "function",
@@ -466,61 +466,61 @@
       {
         "type": "function",
         "name": "cmd_watch",
-        "lines": "3226-3414",
+        "lines": "3226-3461",
         "signature": "def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False, night_mode: bool = False) -> None:"
       },
       {
         "type": "function",
         "name": "_dashboard_event",
-        "lines": "3422-3429",
+        "lines": "3469-3476",
         "signature": "def _dashboard_event(context: str = \"\") -> None:"
       },
       {
         "type": "function",
         "name": "cmd_install_service",
-        "lines": "3455-3500",
+        "lines": "3502-3547",
         "signature": "def cmd_install_service() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_dashboard",
-        "lines": "3508-3514",
+        "lines": "3555-3561",
         "signature": "def cmd_dashboard() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_auto",
-        "lines": "3516-3608",
+        "lines": "3563-3655",
         "signature": "def cmd_auto() -> None:"
       },
       {
         "type": "function",
         "name": "_apply_auto_approve",
-        "lines": "3616-3644",
+        "lines": "3663-3691",
         "signature": "def _apply_auto_approve() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_heal",
-        "lines": "3651-3750",
+        "lines": "3698-3797",
         "signature": "def cmd_heal(test_name: str = \"\", log_lines: int = 30) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_doctor",
-        "lines": "3753-3899",
+        "lines": "3800-3946",
         "signature": "def cmd_doctor() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "3906-4197",
+        "lines": "3953-4244",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "4200-4425",
+        "lines": "4247-4472",
         "signature": "def main():"
       },
       {
@@ -532,25 +532,25 @@
       {
         "type": "function",
         "name": "_chk",
-        "lines": "3759-3760",
+        "lines": "3806-3807",
         "signature": "def _chk(name: str, status: str, detail: str = \"\", fix: str = \"\") -> None:"
       },
       {
         "type": "function",
         "name": "_ask",
-        "lines": "3910-3913",
+        "lines": "3957-3960",
         "signature": "def _ask(prompt: str, default: str = \"\") -> str:"
       },
       {
         "type": "function",
         "name": "_api_get_raw",
-        "lines": "3915-3922",
+        "lines": "3962-3969",
         "signature": "def _api_get_raw(url, user, token, path):"
       },
       {
         "type": "function",
         "name": "_api_post_raw",
-        "lines": "3924-3934",
+        "lines": "3971-3981",
         "signature": "def _api_post_raw(url, user, token, path, data: dict):"
       },
       {
@@ -948,6 +948,104 @@
     ]
   },
   {
+    "path": "plugins/log_anomaly.py",
+    "truncated": false,
+    "lines": 413,
+    "size_kb": 14,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "Anomaly",
+        "lines": "92-100",
+        "signature": "class Anomaly:"
+      },
+      {
+        "type": "class",
+        "name": "AnomalyResult",
+        "lines": "104-121",
+        "signature": "class AnomalyResult:"
+      },
+      {
+        "type": "function",
+        "name": "_state_path",
+        "lines": "128-129",
+        "signature": "def _state_path(project_root: Path) -> Path:"
+      },
+      {
+        "type": "function",
+        "name": "_load_state",
+        "lines": "132-139",
+        "signature": "def _load_state(project_root: Path) -> set[str]:"
+      },
+      {
+        "type": "function",
+        "name": "_save_state",
+        "lines": "142-148",
+        "signature": "def _save_state(project_root: Path, reported: set[str]) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "_fingerprint",
+        "lines": "151-152",
+        "signature": "def _fingerprint(tag: str, first_line: str) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_analyze_rules",
+        "lines": "159-189",
+        "signature": "def _analyze_rules(lines: list[str]) -> list[Anomaly]:"
+      },
+      {
+        "type": "function",
+        "name": "_llm_available",
+        "lines": "196-208",
+        "signature": "def _llm_available(project_root: Path) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "_call_llm",
+        "lines": "211-248",
+        "signature": "def _call_llm(project_root: Path, prompt: str) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_enrich_with_llm",
+        "lines": "251-262",
+        "signature": "def _enrich_with_llm(anomaly: Anomaly, log_excerpt: str, project_root: Path) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "run",
+        "lines": "269-345",
+        "signature": "def run(project_root: Path, log_path: Optional[Path] = None,"
+      },
+      {
+        "type": "function",
+        "name": "build_issue_body",
+        "lines": "348-372",
+        "signature": "def build_issue_body(result: AnomalyResult) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "format_terminal",
+        "lines": "375-386",
+        "signature": "def format_terminal(result: AnomalyResult) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "has_new",
+        "lines": "114-115",
+        "signature": "def has_new(self) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "max_severity",
+        "lines": "118-121",
+        "signature": "def max_severity(self) -> int:"
+      }
+    ]
+  },
+  {
     "path": "plugins/health.py",
     "truncated": false,
     "lines": 173,
@@ -1012,6 +1110,134 @@
         "name": "all_passed",
         "lines": "49-50",
         "signature": "def all_passed(self) -> bool:"
+      }
+    ]
+  },
+  {
+    "path": "plugins/optimizer.py",
+    "truncated": false,
+    "lines": 559,
+    "size_kb": 19,
+    "symbols": [
+      {
+        "type": "class",
+        "name": "OptimizationTarget",
+        "lines": "41-47",
+        "signature": "class OptimizationTarget:"
+      },
+      {
+        "type": "class",
+        "name": "OptimizationAttempt",
+        "lines": "51-58",
+        "signature": "class OptimizationAttempt:"
+      },
+      {
+        "type": "class",
+        "name": "OptimizerResult",
+        "lines": "62-75",
+        "signature": "class OptimizerResult:"
+      },
+      {
+        "type": "function",
+        "name": "_load_history",
+        "lines": "82-92",
+        "signature": "def _load_history(project_root: Path) -> list[dict]:"
+      },
+      {
+        "type": "function",
+        "name": "_detect_stagnation",
+        "lines": "95-119",
+        "signature": "def _detect_stagnation(history: list[dict], min_evals: int = 5) -> Optional[OptimizationTarget]:"
+      },
+      {
+        "type": "function",
+        "name": "_detect_complexity_growth",
+        "lines": "122-167",
+        "signature": "def _detect_complexity_growth(project_root: Path) -> Optional[OptimizationTarget]:"
+      },
+      {
+        "type": "function",
+        "name": "_ast_diff_simple",
+        "lines": "170-192",
+        "signature": "def _ast_diff_simple(old_content: str, new_content: str) -> list[str]:"
+      },
+      {
+        "type": "function",
+        "name": "_llm_available",
+        "lines": "199-210",
+        "signature": "def _llm_available(project_root: Path) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "_call_llm",
+        "lines": "213-247",
+        "signature": "def _call_llm(project_root: Path, prompt: str) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_build_optimize_prompt",
+        "lines": "250-304",
+        "signature": "def _build_optimize_prompt("
+      },
+      {
+        "type": "function",
+        "name": "_parse_optimization",
+        "lines": "307-325",
+        "signature": "def _parse_optimization(llm_output: str) -> tuple[str, list[dict]]:"
+      },
+      {
+        "type": "function",
+        "name": "_apply_fixes",
+        "lines": "332-344",
+        "signature": "def _apply_fixes(project_root: Path, fixes: list[dict]) -> tuple[bool, list[str]]:"
+      },
+      {
+        "type": "function",
+        "name": "_run_eval",
+        "lines": "347-359",
+        "signature": "def _run_eval(project_root: Path) -> tuple[bool, float]:"
+      },
+      {
+        "type": "function",
+        "name": "_git",
+        "lines": "362-363",
+        "signature": "def _git(args: list[str], cwd: Path) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_git_run",
+        "lines": "366-367",
+        "signature": "def _git_run(args: list[str], cwd: Path) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "run",
+        "lines": "374-499",
+        "signature": "def run(project_root: Path, stagnation_evals: int = 5) -> OptimizerResult:"
+      },
+      {
+        "type": "function",
+        "name": "build_issue_body",
+        "lines": "502-519",
+        "signature": "def build_issue_body(result: OptimizerResult) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "format_terminal",
+        "lines": "522-540",
+        "signature": "def format_terminal(result: OptimizerResult) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "attempt_count",
+        "lines": "74-75",
+        "signature": "def attempt_count(self) -> int:"
+      },
+      {
+        "type": "function",
+        "name": "sym_map",
+        "lines": "174-183",
+        "signature": "def sym_map(src: str) -> dict[str, int]:"
       }
     ]
   },

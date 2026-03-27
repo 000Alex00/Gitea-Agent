@@ -9,8 +9,12 @@
         "changelog": true,
         "watch": true,
         "pr_workflow": true,
-        "healing": false
+        "healing": false,
+        "log_anomaly": false,
+        "optimizer": false
     },
     "_comment_healing": "healing=true: Autonomous Self-Healing Loop — erfordert LLM-Backend (Risikostufe 4/4)",
-    "_comment_features": "Fehlende project.json oder fehlende Einträge → alle Features aktiv (Rückwärtskompatibilität)"
+    "_comment_features": "Fehlende project.json oder fehlende Einträge → alle Features aktiv (Rückwärtskompatibilität)",
+    "_comment_log_anomaly": "log_anomaly=true: Log-Anomalie-Detektor — ohne API regelbasiert, mit API LLM-Analyse",
+    "_comment_optimizer": "optimizer=true: Code-Optimizer — ohne API nur Analyse-Issue, mit API autonomer Fix-Loop (CLAUDE_API_ENABLED erforderlich)"
 }

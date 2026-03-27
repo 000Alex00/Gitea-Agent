@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4429 Zeilen)*
+## agent_start.py  *(4476 Zeilen)*
 
 - **Funktion** `_project_root` Zeilen 70-92
   `def _project_root() -> Path:`
@@ -155,35 +155,35 @@
   `def _gitea_version_compare(commit: str, changed_files: list[str]) -> str:`
 - **Funktion** `_build_auto_issue_body` Zeilen 3108-3223
   `def _build_auto_issue_body(`
-- **Funktion** `cmd_watch` Zeilen 3226-3414
+- **Funktion** `cmd_watch` Zeilen 3226-3461
   `def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False, night_mode: bool = False) -> None:`
-- **Funktion** `_dashboard_event` Zeilen 3422-3429
+- **Funktion** `_dashboard_event` Zeilen 3469-3476
   `def _dashboard_event(context: str = "") -> None:`
-- **Funktion** `cmd_install_service` Zeilen 3455-3500
+- **Funktion** `cmd_install_service` Zeilen 3502-3547
   `def cmd_install_service() -> None:`
-- **Funktion** `cmd_dashboard` Zeilen 3508-3514
+- **Funktion** `cmd_dashboard` Zeilen 3555-3561
   `def cmd_dashboard() -> None:`
-- **Funktion** `cmd_auto` Zeilen 3516-3608
+- **Funktion** `cmd_auto` Zeilen 3563-3655
   `def cmd_auto() -> None:`
-- **Funktion** `_apply_auto_approve` Zeilen 3616-3644
+- **Funktion** `_apply_auto_approve` Zeilen 3663-3691
   `def _apply_auto_approve() -> None:`
-- **Funktion** `cmd_heal` Zeilen 3651-3750
+- **Funktion** `cmd_heal` Zeilen 3698-3797
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
-- **Funktion** `cmd_doctor` Zeilen 3753-3899
+- **Funktion** `cmd_doctor` Zeilen 3800-3946
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 3906-4197
+- **Funktion** `cmd_setup` Zeilen 3953-4244
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4200-4425
+- **Funktion** `main` Zeilen 4247-4472
   `def main():`
 - **Funktion** `_sym_map` Zeilen 3022-3024
   `def _sym_map(content: str) -> dict[str, dict]:`
-- **Funktion** `_chk` Zeilen 3759-3760
+- **Funktion** `_chk` Zeilen 3806-3807
   `def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:`
-- **Funktion** `_ask` Zeilen 3910-3913
+- **Funktion** `_ask` Zeilen 3957-3960
   `def _ask(prompt: str, default: str = "") -> str:`
-- **Funktion** `_api_get_raw` Zeilen 3915-3922
+- **Funktion** `_api_get_raw` Zeilen 3962-3969
   `def _api_get_raw(url, user, token, path):`
-- **Funktion** `_api_post_raw` Zeilen 3924-3934
+- **Funktion** `_api_post_raw` Zeilen 3971-3981
   `def _api_post_raw(url, user, token, path, data: dict):`
 - **Funktion** `_len` Zeilen 3035-3040
   `def _len(s: dict) -> int:`
@@ -319,6 +319,39 @@
 - **Funktion** `cmd_changelog` Zeilen 120-165
   `def cmd_changelog(version: str | None = None, update_file: bool = True) -> str:`
 
+## plugins/log_anomaly.py  *(413 Zeilen)*
+
+- **Klasse** `Anomaly` Zeilen 92-100
+  `class Anomaly:`
+- **Klasse** `AnomalyResult` Zeilen 104-121
+  `class AnomalyResult:`
+- **Funktion** `_state_path` Zeilen 128-129
+  `def _state_path(project_root: Path) -> Path:`
+- **Funktion** `_load_state` Zeilen 132-139
+  `def _load_state(project_root: Path) -> set[str]:`
+- **Funktion** `_save_state` Zeilen 142-148
+  `def _save_state(project_root: Path, reported: set[str]) -> None:`
+- **Funktion** `_fingerprint` Zeilen 151-152
+  `def _fingerprint(tag: str, first_line: str) -> str:`
+- **Funktion** `_analyze_rules` Zeilen 159-189
+  `def _analyze_rules(lines: list[str]) -> list[Anomaly]:`
+- **Funktion** `_llm_available` Zeilen 196-208
+  `def _llm_available(project_root: Path) -> bool:`
+- **Funktion** `_call_llm` Zeilen 211-248
+  `def _call_llm(project_root: Path, prompt: str) -> str:`
+- **Funktion** `_enrich_with_llm` Zeilen 251-262
+  `def _enrich_with_llm(anomaly: Anomaly, log_excerpt: str, project_root: Path) -> str:`
+- **Funktion** `run` Zeilen 269-345
+  `def run(project_root: Path, log_path: Optional[Path] = None,`
+- **Funktion** `build_issue_body` Zeilen 348-372
+  `def build_issue_body(result: AnomalyResult) -> str:`
+- **Funktion** `format_terminal` Zeilen 375-386
+  `def format_terminal(result: AnomalyResult) -> str:`
+- **Funktion** `has_new` Zeilen 114-115
+  `def has_new(self) -> bool:`
+- **Funktion** `max_severity` Zeilen 118-121
+  `def max_severity(self) -> int:`
+
 ## plugins/health.py  *(173 Zeilen)*
 
 - **Klasse** `CheckResult` Zeilen 35-40
@@ -341,6 +374,49 @@
   `def format_terminal(result: HealthResult) -> str:`
 - **Funktion** `all_passed` Zeilen 49-50
   `def all_passed(self) -> bool:`
+
+## plugins/optimizer.py  *(559 Zeilen)*
+
+- **Klasse** `OptimizationTarget` Zeilen 41-47
+  `class OptimizationTarget:`
+- **Klasse** `OptimizationAttempt` Zeilen 51-58
+  `class OptimizationAttempt:`
+- **Klasse** `OptimizerResult` Zeilen 62-75
+  `class OptimizerResult:`
+- **Funktion** `_load_history` Zeilen 82-92
+  `def _load_history(project_root: Path) -> list[dict]:`
+- **Funktion** `_detect_stagnation` Zeilen 95-119
+  `def _detect_stagnation(history: list[dict], min_evals: int = 5) -> Optional[OptimizationTarget]:`
+- **Funktion** `_detect_complexity_growth` Zeilen 122-167
+  `def _detect_complexity_growth(project_root: Path) -> Optional[OptimizationTarget]:`
+- **Funktion** `_ast_diff_simple` Zeilen 170-192
+  `def _ast_diff_simple(old_content: str, new_content: str) -> list[str]:`
+- **Funktion** `_llm_available` Zeilen 199-210
+  `def _llm_available(project_root: Path) -> bool:`
+- **Funktion** `_call_llm` Zeilen 213-247
+  `def _call_llm(project_root: Path, prompt: str) -> str:`
+- **Funktion** `_build_optimize_prompt` Zeilen 250-304
+  `def _build_optimize_prompt(`
+- **Funktion** `_parse_optimization` Zeilen 307-325
+  `def _parse_optimization(llm_output: str) -> tuple[str, list[dict]]:`
+- **Funktion** `_apply_fixes` Zeilen 332-344
+  `def _apply_fixes(project_root: Path, fixes: list[dict]) -> tuple[bool, list[str]]:`
+- **Funktion** `_run_eval` Zeilen 347-359
+  `def _run_eval(project_root: Path) -> tuple[bool, float]:`
+- **Funktion** `_git` Zeilen 362-363
+  `def _git(args: list[str], cwd: Path) -> str:`
+- **Funktion** `_git_run` Zeilen 366-367
+  `def _git_run(args: list[str], cwd: Path) -> bool:`
+- **Funktion** `run` Zeilen 374-499
+  `def run(project_root: Path, stagnation_evals: int = 5) -> OptimizerResult:`
+- **Funktion** `build_issue_body` Zeilen 502-519
+  `def build_issue_body(result: OptimizerResult) -> str:`
+- **Funktion** `format_terminal` Zeilen 522-540
+  `def format_terminal(result: OptimizerResult) -> str:`
+- **Funktion** `attempt_count` Zeilen 74-75
+  `def attempt_count(self) -> int:`
+- **Funktion** `sym_map` Zeilen 174-183
+  `def sym_map(src: str) -> dict[str, int]:`
 
 ## plugins/llm.py  *(438 Zeilen)*
 

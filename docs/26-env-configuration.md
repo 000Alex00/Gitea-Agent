@@ -281,6 +281,20 @@ HTTP_RETRY_DELAY=5
 - `HEALING_MAX_ATTEMPTS=3`: Wie oft der Healing-Loop einen fehlgeschlagenen Test erneut zu fixen versucht
 - `HEALING_MAX_TOKENS=50000`: Abbruch wenn geschätzter Token-Verbrauch überschritten wird
 - Aktivierung: `healing=true` in `config/project.json` + Aufruf via `--heal`
+- **LLM-API erforderlich**
+
+### Log-Anomalie-Detektor
+- Aktivierung: `log_anomaly=true` in `config/project.json`
+- **Ohne API**: regelbasierte Erkennung (Crashes, Timeouts, OOM, Auth-Fehler, Error-Spikes) → Gitea-Issue
+- **Mit API**: zusätzlich LLM-Root-Cause + Lösungsvorschlag im Issue
+- State-Tracking: nur neue Anomalien werden als Issue erstellt (`data/log_anomaly_state.json`)
+- State zurücksetzen: `python3 plugins/log_anomaly.py --project . --reset-state`
+
+### Code-Optimizer
+- Aktivierung: `optimizer=true` in `config/project.json`
+- Läuft nur im Night-Modus (`--watch --night`) wenn alle Tests bestehen
+- **Ohne API**: erkennt Stagnation + Komplexitätswachstum → Gitea-Issue mit Analyse
+- **Mit API (LLM-API erforderlich)**: LLM schlägt Optimierung vor → Patch → Eval → History-Vergleich → PR bei Verbesserung. Bei keiner Verbesserung: anderen Ansatz (max `HEALING_MAX_ATTEMPTS` Versuche)
 
 ### Session-Tracking
 - `SESSION_LIMIT=2`: Nach N abgeschlossenen Issues erscheint Drift-Warnung (neue Claude-Session empfohlen)

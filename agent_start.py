@@ -3410,6 +3410,53 @@ def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False, night_mode: 
                 except Exception as e:
                     log.warning(f"Self-Healing Fehler: {e}")
 
+        # ── Log-Anomalie-Detektor ────────────────────────────────────────
+        if settings.FEATURES.get("log_anomaly", False):
+            try:
+                from plugins.log_anomaly import run as anomaly_run
+                from plugins.log_anomaly import build_issue_body as anomaly_body
+                from plugins.log_anomaly import format_terminal as anomaly_fmt
+                ar = anomaly_run(PROJECT)
+                msg = anomaly_fmt(ar)
+                if msg:
+                    print(msg)
+                if ar.has_new:
+                    sev = ar.max_severity
+                    label = settings.LABEL_READY if sev >= 2 else settings.LABEL_HELP
+                    issue = gitea.create_issue(
+                        title=f"[Log-Anomalie] {ar.new_anomalies[0].tag} — {ar.new_anomalies[0].hypothesis}",
+                        body=anomaly_body(ar),
+                        label=label,
+                    )
+                    print(f"[!] Log-Anomalie-Issue erstellt: #{issue['number']}")
+                    _dashboard_event("Log-Anomalie erkannt")
+            except Exception as e:
+                log.warning(f"Log-Anomalie Fehler: {e}")
+
+        # ── Code-Optimizer (nur Night-Modus + LLM-API) ───────────────────
+        if settings.FEATURES.get("optimizer", False) and night_mode and result.passed:
+            try:
+                from plugins.optimizer import run as opt_run
+                from plugins.optimizer import format_terminal as opt_fmt
+                from plugins.optimizer import build_issue_body as opt_body
+                or_ = opt_run(PROJECT)
+                msg = opt_fmt(or_)
+                if msg:
+                    print(msg)
+                if or_.api_missing and or_.target:
+                    # Ohne API: Issue mit Analyse erstellen
+                    issue = gitea.create_issue(
+                        title=f"[Optimizer] {or_.target.description}",
+                        body=opt_body(or_),
+                        label=settings.LABEL_HELP,
+                    )
+                    print(f"[!] Optimizer-Issue erstellt: #{issue['number']}")
+                elif or_.success and or_.pr_url:
+                    log.info(f"Optimizer: Verbesserung gefunden — Branch {or_.pr_url}")
+                    _dashboard_event("Optimizer: Verbesserung gefunden")
+            except Exception as e:
+                log.warning(f"Optimizer Fehler: {e}")
+
         print(f"    Nächster Lauf in {interval_minutes} Minute(n)...\n")
         time.sleep(interval_minutes * 60)
 

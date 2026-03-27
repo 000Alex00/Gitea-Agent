@@ -294,7 +294,7 @@ def _load_features() -> dict:
     defaults = {
         "eval": True, "health_checks": False, "auto_issues": True,
         "changelog": True, "watch": True, "pr_workflow": True,
-        "healing": False,
+        "healing": False, "log_anomaly": False, "optimizer": False,
     }
     config_path = (
         (_AGENT_DIR / "config" / "project.json") if _AGENT_DIR
