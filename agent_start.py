@@ -1179,6 +1179,7 @@ def _warn_slices_not_requested(number: int, branch: str) -> bool:
         if not changed_py:
             return False
 
+        # Nur Dateien über dem Mindest-Schwellwert berücksichtigen
         min_lines = settings.SLICE_GATE_MIN_LINES
         large_files = []
         for rel_path in changed_py:
@@ -1213,7 +1214,9 @@ def _warn_slices_not_requested(number: int, branch: str) -> bool:
         label = "❌ **Slice-Gate**" if gate_mode else "⚠️ **Slice-Warnung**"
 
         if not slices_requested:
-            file_list = "\n".join(f"- `{f}` ({lc} Zeilen)" for f, lc in large_files)
+            file_list = "\n".join(
+                f"- `{f}` ({lc} Zeilen)" for f, lc in large_files
+            )
             msg = (
                 f"{label}: Keine `--get-slice` Anfragen in session.json gefunden.\n\n"
                 f"Geänderte Dateien (≥{min_lines} Zeilen):\n{file_list}\n\n"
@@ -1396,7 +1399,7 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
     # 7. Diff-Validierung: geänderte Zeilen gegen repo_skeleton.json prüfen (Warnung)
     _warn_diff_out_of_scope(number, branch)
 
-    # 8. Slice-Warnung: geänderte Dateien ohne --get-slice Anfragen (Warnung)
+    # 8. Slice-Gate/-Warnung: geänderte Dateien ohne --get-slice Anfragen
     slice_violation = _warn_slices_not_requested(number, branch)
     if slice_violation and settings.SLICE_GATE_ENABLED:
         fehler.append(

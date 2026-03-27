@@ -222,7 +222,7 @@ TOKEN_BUDGET_WARN   = _env_int("TOKEN_BUDGET_WARN",   150000)
 # ---------------------------------------------------------------------------
 
 # True → Slice-Warnung wird zu hartem Fehler (blockiert --pr)
-SLICE_GATE_ENABLED   = _env_bool("SLICE_GATE_ENABLED",  False)
+SLICE_GATE_ENABLED  = _env_bool("SLICE_GATE_ENABLED", False)
 # Dateien mit mehr als N Zeilen müssen via --get-slice gelesen worden sein
 SLICE_GATE_MIN_LINES = _env_int("SLICE_GATE_MIN_LINES", 100)
 
