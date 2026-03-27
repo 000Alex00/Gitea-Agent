@@ -78,6 +78,14 @@ python3 agent_start.py --help
 |------|----------|--------------|
 | `--install-service` | `night\|patch` | Systemd-Service installieren ([Rezept 15](15-watch-mode-systemd.md)) |
 
+#### **Einrichtung & Konfiguration**
+
+| Flag | Argument | Beschreibung |
+|------|----------|--------------|
+| `--setup` | - | Interaktiver Einrichtungs-Wizard (9 Schritte): Gitea-Verbindung, Repo, Labels, Eval, .env, Projekttyp, LLM, Prompts |
+| `--llm` | - | LLM-Konfiguration verwalten: Provider/Modell wechseln, per-Task Routing, Fallback-Kette, Konnektivitätstest |
+| `--doctor` | - | Health-Check: 7 Checks inkl. LLM-Config-Guard ([Rezept 04](04-health-check.md)) |
+
 #### **Konfiguration**
 
 | Flag | Argument | Beschreibung |
@@ -98,7 +106,6 @@ python3 agent_start.py --help
 
 | Flag | Argument | Beschreibung |
 |------|----------|--------------|
-| `--doctor` | - | Health-Check: 7 Checks inkl. LLM-Config-Guard ([Rezept 04](04-health-check.md)) |
 | `--verbose` | - | Detaillierte Logs |
 | `--debug` | - | Noch mehr Logs (HTTP-Bodies) |
 | `--dry-run` | - | Simulation ohne Änderungen |
@@ -154,6 +161,13 @@ sudo python3 agent_start.py --project ~/proj --install-service night
 # Health-Check
 # ══════════════════════════════════════════════════════════
 python3 agent_start.py --project ~/proj --doctor
+
+# ══════════════════════════════════════════════════════════
+# Einrichtung & LLM-Konfiguration
+# ══════════════════════════════════════════════════════════
+python3 agent_start.py --setup          # Ersteinrichtung (9 Schritte)
+python3 agent_start.py --llm            # LLM nachträglich konfigurieren
+python3 agent_start.py --doctor         # Health-Check
 ```
 
 ---

@@ -143,6 +143,8 @@ Der Agent hat zwei Betriebsmodi:
 | `--issue`, `--implement`, `--pr` | ❌ Nein | Kontext erstellen, Branch anlegen, PR posten — Mensch liefert die Implementierung (Web-Chat oder lokal) |
 | `--watch`, `--night`, `--patch` | ❌ Nein | Eval-Loop, Auto-Issues bei Regressions, Context-Build — kein LLM-Aufruf im Loop selbst |
 | `--heal` | ✅ Ja | Autonomer Fix-Loop: Eval → LLM analysiert → Patch → Eval |
+| `--setup` | ❌ Nein | Interaktiver Einrichtungs-Wizard: 9 Schritte, Resume-fähig, Install-Log |
+| `--llm` | ❌ Nein | LLM-Konfiguration nachträglich verwalten: Provider, Modell, Fallback-Kette, Task-Routing |
 | `context_export.sh NR llm` | ✅ Ja | Startet konfigurierten LLM-CLI direkt mit Kontext (`cli_cmd` in `routing.json`) |
 
 **Ohne API:** Vollständiger manueller Workflow nutzbar — Issue-Tracking, Eval, Dashboard, Kontext-Export, PR-Erstellung, Watch-Loop.

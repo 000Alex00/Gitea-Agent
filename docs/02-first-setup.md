@@ -74,12 +74,13 @@ python3 agent_start.py --setup
 # Schritt 5: agent_eval.json
 # ──────────────────────────────────────────────────────────
 # Wizard fragt:
-# Server URL (z.B. http://localhost:8000): http://localhost:8000
-# Chat Endpoint (Enter für /chat): /chat
-# Log-Pfad (optional): /home/user/mein-projekt/server.log
-# Restart-Script (optional): /home/user/scripts/start_server.sh
+# [1] Server-URL (z.B. http://localhost:8080): http://192.168.1.x:8080
+#     Protokoll (http:// oder https://) muss angegeben werden.
+# [2] Log-Pfad: /home/user/mein-projekt/logs/app.log
+# [3] Start-Script (leer = keins): /home/user/scripts/start_server.sh
+#     ⚠️  Ohne Start-Script kein automatischer Neustart möglich.
 
-# → Schreibt /home/user/mein-projekt/config/agent_eval.json
+# → Schreibt ~/Gitea-Agent/config/agent_eval.json
 # → [✓] agent_eval.json erstellt
 
 # ──────────────────────────────────────────────────────────
@@ -90,17 +91,37 @@ python3 agent_start.py --setup
 # → [✓] .env geschrieben
 
 # ──────────────────────────────────────────────────────────
-# Schritt 7: workspace/-Struktur anlegen
+# Schritt 7: Projekttyp & Features
 # ──────────────────────────────────────────────────────────
-# → Legt workspace/open/ und workspace/done/ an
-# → [✓] workspace/ Verzeichnisse erstellt
+# Projekttypen:
+#   1) web_api         — REST-API / Web-Server
+#   2) llm_chat        — LLM-Chat mit Eval-Tests
+#   3) voice_assistant — Voice-Pipeline (STT/TTS/LLM)
+#   4) iot             — IoT / Embedded / Edge (z.B. Jetson)
+#   5) cli_tool        — Kommandozeilen-Programm
+#   6) library         — Python-Bibliothek
+#   7) custom          — Alle Features manuell wählen
+#
+# Features mit Beschreibung:
+#   ✅  eval           Bewertet Server-Antworten automatisch  [benötigt: server_url]
+#   ✅  health_checks  Prüft ob Server erreichbar ist         [benötigt: server_url]
+#   ✅  auto_issues    Erstellt Issues bei Testfehlern        [benötigt: eval]
+#   ✅  changelog      Generiert CHANGELOG.md aus Commits
+#   ✅  watch          Überwacht Gitea auf neue Issues
+#   ✅  pr_workflow    Erstellt PRs nach Implementierung
+#
+# → Einzelne Features anpassen? [j/N]
+# → [✓] config/project.json erstellt
 
 # ──────────────────────────────────────────────────────────
-# Schritt 8: LLM-Routing
+# Schritt 8: LLM-Routing (Minimal-Setup)
 # ──────────────────────────────────────────────────────────
-# → Legt config/llm/routing.json an
-# → Wizard fragt: Provider (claude/openai/gemini/local): claude
+# → Standard-Anbieter [claude]: claude
+# → Bekannte Modelle: claude-opus-4-6, claude-sonnet-4-6, ...
+# → Standard-Modell [claude-sonnet-4-6]: claude-sonnet-4-6
+# → ⚠️  Nicht vergessen: ANTHROPIC_API_KEY=... in .env eintragen
 # → [✓] config/llm/routing.json erstellt
+# → 💡 Per-Task Routing & Fallback: python3 agent_start.py --llm
 
 # ──────────────────────────────────────────────────────────
 # Schritt 9: System-Prompts
@@ -152,11 +173,8 @@ PROJECT_ROOT=/home/user/mein-projekt
 3. **`config/llm/routing.json` (LLM-Routing):**
 ```json
 {
-  "default": { "provider": "claude", "model": "claude-sonnet-4-6" },
-  "tasks": {
-    "issue_analysis": { "provider": "claude", "model": "claude-haiku-4-5-20251001", "system_prompt": "config/llm/prompts/analyst.md" },
-    "implementation": { "provider": "claude", "model": "claude-sonnet-4-6", "system_prompt": "config/llm/prompts/senior_python.md" }
-  }
+  "_comment": "LLM-Routing — generiert vom Setup-Wizard. Erweitern: --llm",
+  "default": { "provider": "claude", "model": "claude-sonnet-4-6", "max_tokens": 1024, "timeout": 60 }
 }
 ```
 
@@ -188,6 +206,14 @@ PROJECT_ROOT=/home/user/mein-projekt
 > Gitea Bot User (optional, Enter für gleichen): [Enter]
 > ```
 > → Verwendet Admin-Token auch für Kommentare (Ein-User-Setup)
+
+> [!TIP]
+> **LLM-Routing nachträglich ändern:**
+> ```bash
+> python3 agent_start.py --llm
+> # → Provider wechseln, per-Task Routing, Fallback-Kette konfigurieren
+> # → Kein Setup-Neustart nötig
+> ```
 
 > [!TIP]
 > **Mehrere Projekte:**
