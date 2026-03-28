@@ -1404,175 +1404,175 @@
   {
     "path": "plugins/llm.py",
     "truncated": false,
-    "lines": 438,
+    "lines": 444,
     "size_kb": 16,
     "symbols": [
       {
         "type": "function",
         "name": "_load_routing",
-        "lines": "40-49",
+        "lines": "40-55",
         "signature": "def _load_routing(extra_path: Optional[Path] = None) -> dict:"
       },
       {
         "type": "function",
         "name": "_resolve_task_config",
-        "lines": "52-63",
+        "lines": "58-69",
         "signature": "def _resolve_task_config(task: str, routing: dict) -> dict:"
       },
       {
         "type": "function",
         "name": "_load_system_prompt",
-        "lines": "66-81",
+        "lines": "72-87",
         "signature": "def _load_system_prompt(cfg: dict) -> str:"
       },
       {
         "type": "class",
         "name": "LLMResponse",
-        "lines": "89-98",
+        "lines": "95-104",
         "signature": "class LLMResponse:"
       },
       {
         "type": "function",
         "name": "_http_post",
-        "lines": "105-109",
+        "lines": "111-115",
         "signature": "def _http_post(url: str, payload: dict, headers: dict, timeout: int) -> dict:"
       },
       {
         "type": "class",
         "name": "ClaudeClient",
-        "lines": "112-150",
+        "lines": "118-156",
         "signature": "class ClaudeClient:"
       },
       {
         "type": "class",
         "name": "OpenAIClient",
-        "lines": "153-191",
+        "lines": "159-197",
         "signature": "class OpenAIClient:"
       },
       {
         "type": "class",
         "name": "DeepseekClient",
-        "lines": "194-203",
+        "lines": "200-209",
         "signature": "class DeepseekClient(OpenAIClient):"
       },
       {
         "type": "class",
         "name": "LMStudioClient",
-        "lines": "206-216",
+        "lines": "212-222",
         "signature": "class LMStudioClient(OpenAIClient):"
       },
       {
         "type": "class",
         "name": "GeminiClient",
-        "lines": "219-252",
+        "lines": "225-258",
         "signature": "class GeminiClient:"
       },
       {
         "type": "class",
         "name": "LocalClient",
-        "lines": "255-285",
+        "lines": "261-291",
         "signature": "class LocalClient:"
       },
       {
         "type": "function",
         "name": "_client_from_env",
-        "lines": "292-331",
+        "lines": "298-337",
         "signature": "def _client_from_env() -> Optional[\"ClaudeClient | LocalClient\"]:"
       },
       {
         "type": "function",
         "name": "_build_client",
-        "lines": "334-387",
+        "lines": "340-393",
         "signature": "def _build_client(cfg: dict) -> \"ClaudeClient | OpenAIClient | GeminiClient | LocalClient\":"
       },
       {
         "type": "function",
         "name": "get_client",
-        "lines": "394-423",
+        "lines": "400-429",
         "signature": "def get_client("
       },
       {
         "type": "function",
         "name": "complete",
-        "lines": "426-438",
+        "lines": "432-444",
         "signature": "def complete("
       },
       {
         "type": "function",
         "name": "ok",
-        "lines": "97-98",
+        "lines": "103-104",
         "signature": "def ok(self) -> bool:"
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "118-124",
+        "lines": "124-130",
         "signature": "def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,"
       },
       {
         "type": "function",
         "name": "complete",
-        "lines": "126-150",
+        "lines": "132-156",
         "signature": "def complete(self, prompt: str) -> LLMResponse:"
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "158-165",
+        "lines": "164-171",
         "signature": "def __init__(self, model: str, api_key: str, base_url: str = \"https://api.openai.com/v1\","
       },
       {
         "type": "function",
         "name": "complete",
-        "lines": "167-191",
+        "lines": "173-197",
         "signature": "def complete(self, prompt: str) -> LLMResponse:"
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "200-203",
+        "lines": "206-209",
         "signature": "def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):"
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "212-216",
+        "lines": "218-222",
         "signature": "def __init__(self, model: str, api_key: str = \"lm-studio\","
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "224-230",
+        "lines": "230-236",
         "signature": "def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,"
       },
       {
         "type": "function",
         "name": "complete",
-        "lines": "232-252",
+        "lines": "238-258",
         "signature": "def complete(self, prompt: str) -> LLMResponse:"
       },
       {
         "type": "function",
         "name": "__init__",
-        "lines": "258-264",
+        "lines": "264-270",
         "signature": "def __init__(self, model: str, base_url: str = \"http://localhost:11434\","
       },
       {
         "type": "function",
         "name": "complete",
-        "lines": "266-285",
+        "lines": "272-291",
         "signature": "def complete(self, prompt: str) -> LLMResponse:"
       },
       {
         "type": "function",
         "name": "_get",
-        "lines": "308-309",
+        "lines": "314-315",
         "signature": "def _get(key: str, default: str = \"\") -> str:"
       },
       {
         "type": "function",
         "name": "_get_key",
-        "lines": "337-347",
+        "lines": "343-353",
         "signature": "def _get_key(env_var: str) -> str:"
       }
     ]

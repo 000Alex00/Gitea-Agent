@@ -39,8 +39,14 @@ _ROUTING_PATHS = [
 
 def _load_routing(extra_path: Optional[Path] = None) -> dict:
     """Lädt llm_routing.json — gibt leeres Dict zurück wenn nicht vorhanden."""
-    paths = ([extra_path] if extra_path else []) + _ROUTING_PATHS
-    for p in paths:
+    if extra_path is not None:
+        if extra_path.exists():
+            try:
+                return json.loads(extra_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        return {}
+    for p in _ROUTING_PATHS:
         if p and p.exists():
             try:
                 return json.loads(p.read_text(encoding="utf-8"))

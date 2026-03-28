@@ -472,63 +472,63 @@
 - **Funktion** `sym_map` Zeilen 174-183
   `def sym_map(src: str) -> dict[str, int]:`
 
-## plugins/llm.py  *(438 Zeilen)*
+## plugins/llm.py  *(444 Zeilen)*
 
-- **Funktion** `_load_routing` Zeilen 40-49
+- **Funktion** `_load_routing` Zeilen 40-55
   `def _load_routing(extra_path: Optional[Path] = None) -> dict:`
-- **Funktion** `_resolve_task_config` Zeilen 52-63
+- **Funktion** `_resolve_task_config` Zeilen 58-69
   `def _resolve_task_config(task: str, routing: dict) -> dict:`
-- **Funktion** `_load_system_prompt` Zeilen 66-81
+- **Funktion** `_load_system_prompt` Zeilen 72-87
   `def _load_system_prompt(cfg: dict) -> str:`
-- **Klasse** `LLMResponse` Zeilen 89-98
+- **Klasse** `LLMResponse` Zeilen 95-104
   `class LLMResponse:`
-- **Funktion** `_http_post` Zeilen 105-109
+- **Funktion** `_http_post` Zeilen 111-115
   `def _http_post(url: str, payload: dict, headers: dict, timeout: int) -> dict:`
-- **Klasse** `ClaudeClient` Zeilen 112-150
+- **Klasse** `ClaudeClient` Zeilen 118-156
   `class ClaudeClient:`
-- **Klasse** `OpenAIClient` Zeilen 153-191
+- **Klasse** `OpenAIClient` Zeilen 159-197
   `class OpenAIClient:`
-- **Klasse** `DeepseekClient` Zeilen 194-203
+- **Klasse** `DeepseekClient` Zeilen 200-209
   `class DeepseekClient(OpenAIClient):`
-- **Klasse** `LMStudioClient` Zeilen 206-216
+- **Klasse** `LMStudioClient` Zeilen 212-222
   `class LMStudioClient(OpenAIClient):`
-- **Klasse** `GeminiClient` Zeilen 219-252
+- **Klasse** `GeminiClient` Zeilen 225-258
   `class GeminiClient:`
-- **Klasse** `LocalClient` Zeilen 255-285
+- **Klasse** `LocalClient` Zeilen 261-291
   `class LocalClient:`
-- **Funktion** `_client_from_env` Zeilen 292-331
+- **Funktion** `_client_from_env` Zeilen 298-337
   `def _client_from_env() -> Optional["ClaudeClient | LocalClient"]:`
-- **Funktion** `_build_client` Zeilen 334-387
+- **Funktion** `_build_client` Zeilen 340-393
   `def _build_client(cfg: dict) -> "ClaudeClient | OpenAIClient | GeminiClient | LocalClient":`
-- **Funktion** `get_client` Zeilen 394-423
+- **Funktion** `get_client` Zeilen 400-429
   `def get_client(`
-- **Funktion** `complete` Zeilen 426-438
+- **Funktion** `complete` Zeilen 432-444
   `def complete(`
-- **Funktion** `ok` Zeilen 97-98
+- **Funktion** `ok` Zeilen 103-104
   `def ok(self) -> bool:`
-- **Funktion** `__init__` Zeilen 118-124
+- **Funktion** `__init__` Zeilen 124-130
   `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,`
-- **Funktion** `complete` Zeilen 126-150
+- **Funktion** `complete` Zeilen 132-156
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 158-165
+- **Funktion** `__init__` Zeilen 164-171
   `def __init__(self, model: str, api_key: str, base_url: str = "https://api.openai.com/v1",`
-- **Funktion** `complete` Zeilen 167-191
+- **Funktion** `complete` Zeilen 173-197
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 200-203
+- **Funktion** `__init__` Zeilen 206-209
   `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60):`
-- **Funktion** `__init__` Zeilen 212-216
+- **Funktion** `__init__` Zeilen 218-222
   `def __init__(self, model: str, api_key: str = "lm-studio",`
-- **Funktion** `__init__` Zeilen 224-230
+- **Funktion** `__init__` Zeilen 230-236
   `def __init__(self, model: str, api_key: str, max_tokens: int = 1024, timeout: int = 60,`
-- **Funktion** `complete` Zeilen 232-252
+- **Funktion** `complete` Zeilen 238-258
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `__init__` Zeilen 258-264
+- **Funktion** `__init__` Zeilen 264-270
   `def __init__(self, model: str, base_url: str = "http://localhost:11434",`
-- **Funktion** `complete` Zeilen 266-285
+- **Funktion** `complete` Zeilen 272-291
   `def complete(self, prompt: str) -> LLMResponse:`
-- **Funktion** `_get` Zeilen 308-309
+- **Funktion** `_get` Zeilen 314-315
   `def _get(key: str, default: str = "") -> str:`
-- **Funktion** `_get_key` Zeilen 337-347
+- **Funktion** `_get_key` Zeilen 343-353
   `def _get_key(env_var: str) -> str:`
 
 ## plugins/__init__.py  *(0 Zeilen)*

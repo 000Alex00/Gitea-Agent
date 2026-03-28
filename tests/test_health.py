@@ -140,7 +140,7 @@ class TestCheckDisk(unittest.TestCase):
 class TestRunChecks(unittest.TestCase):
     def _make_config(self, tmp_path: Path, checks: list, threshold: int = 3) -> Path:
         cfg = {"consecutive_failures_before_issue": threshold, "checks": checks}
-        cfg_file = tmp_path / "agent" / "config" / "health_checks.json"
+        cfg_file = tmp_path / "config" / "health_checks.json"
         cfg_file.parent.mkdir(parents=True, exist_ok=True)
         cfg_file.write_text(json.dumps(cfg), encoding="utf-8")
         return tmp_path
