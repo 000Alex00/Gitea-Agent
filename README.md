@@ -20,13 +20,6 @@ Ein vollständiges Infrastruktur-System für KI-gestützte Code-Entwicklung: Iss
 > - **Gitea-spezifisch:** GitHub-Integration ist in Arbeit, aber noch nicht vollständig
 > - **Keine Garantien:** Nutze es auf eigenes Risiko — Backups empfohlen!
 >
-> **Roadmap zu v1.0:**
-> - ✅ Gitea-Integration (funktioniert)
-> - 🔄 GitHub-Integration (in Arbeit)
-> - 🔄 Code-Refactoring & Generalisierung
-> - 🔄 Erweiterte Fehlerbehandlung
-> - 🔄 Umfassende Test-Coverage
->
 > **Feedback willkommen!** Issues & Pull Requests helfen, das System produktionsreif zu machen. → [GitHub Issues](https://github.com/Alexander-Benesch/Gitea-Agent/issues)
 
 ---
