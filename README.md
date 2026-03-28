@@ -72,23 +72,26 @@ Ein vollständiges Infrastruktur-System für KI-gestützte Code-Entwicklung: Iss
 - **`--get-slice`:** On-Demand-Laden exakter Zeilenbereiche
 - **Kontext-Loader:** Automatisches Finden relevanter Dateien via Imports + Grep
 
-### 🔒 **Prozess-Enforcement**
+### 🔒 **Zwei-Schichten-Sicherheitsmodell**
+
+> **Schicht 1: System-Prompts** — Rollen, Schranken-Sektion, Pflicht-Format (weich, LLM-seitig)
+> **Schicht 2: Code-Enforcement** — `_check_pr_preconditions()` — 9 Hard-Gates (hart, unabhängig vom LLM)
+> **Schicht 3: pre-commit Guard** — `llm_config_guard.py` prüft IDE-Configs bei jedem Commit
+
+- **9-Stufen-Precondition-Check:** Branch-Schutz, Plan vorhanden, Eval aktuell, Self-Consistency — alle vor `--pr` erzwungen per `SystemExit(1)`, nicht per Prompt
+- **Slice-Gate:** `SLICE_GATE_ENABLED=true` blockiert `--pr` wenn Dateien ohne `--get-slice` geändert wurden — verhindert halluzinierte Patches auf nicht gelesenen Dateien
+- **Self-Consistency-Check:** Wenn Agent-Code geändert, läuft `agent_self_check.py` automatisch
+- **Diff-Validation:** Warnung bei Out-of-Scope-Änderungen (geänderte Dateien vs. Issue-Scope)
+- **LLM-Config-Guard:** `plugins/llm_config_guard.py` blockiert Commits bei fehlenden Schranken in IDE-Konfigurationsdateien
 - **Freigabe-Pflicht:** Kein Code ohne "ok"-Kommentar im Issue
 - **Eval-System:** Tests müssen bestehen, sonst PR blockiert
-- **Baseline-Tracking:** Score darf nie unter Referenzwert fallen
-- **Self-Consistency-Check:** Agent prüft sich selbst vor PRs
+- **Branch-Protection:** Nie direkt auf `main` pushen — strukturell, nicht per Prompt
 
 ### 🛡️ **Sicherheitsnetz**
 - **SEARCH/REPLACE-Patches:** LLM-agnostisch, kein Diff-Koordinaten-Chaos
 - **AST-Syntax-Check:** Kaputte Patches werden abgelehnt
-- **Diff-Validation:** Warnung bei Out-of-Scope-Änderungen
-- **Branch-Protection:** Nie direkt auf `main` pushen
-- **8-Stufen-Precondition-Check:** Technische Schranken vor jedem PR (nicht per Prompt!)
-
-### 🔬 **Extreme Technical Enforcement**
-- **Gitea-Version-Compare:** AST-Diff zeigt Code-Änderungen bei Score-Regression
 - **Server-Staleness-Check:** Blockiert PR wenn Server veraltet ist
-- **Slice-Gate:** `SLICE_GATE_ENABLED=true` blockiert `--pr` wenn Dateien ohne `--get-slice` geändert wurden (verhindert halluzinierte Patches)
+- **Gitea-Version-Compare:** AST-Diff zeigt Code-Änderungen bei Score-Regression
 - **Docs-Check:** Automatische Warnung wenn Code geändert aber Doku nicht
 - **Metadaten in jedem Plan:** Token-Schätzung, Modell, Zeitstempel, gelesene Dateien
 - **Token-Budget-Tracker:** Schätzt Kontext-Größe in Token, warnt bei Annäherung an das Limit (`TOKEN_BUDGET_WARN`)
@@ -281,9 +284,10 @@ Das **Cookbook** ist die zentrale Anlaufstelle für alle technischen Details, Wo
 | [40](docs/40-best-practices.md) | Best Practices & Patterns |
 | [41](docs/41-security-guide.md) | Sicherheitshinweise |
 | [42](docs/42-llm-routing.md) | LLM-Routing: Provider wechseln, per-Task Modelle, Fallback-Kette (`--llm`) |
-| [43](docs/43-system-prompts.md) | System-Prompts / Rollen-Prompts anpassen |
+| [43](docs/43-system-prompts.md) | System-Prompts / Rollen-Prompts anpassen (Schicht 1) |
 | [44](docs/44-self-healing.md) | Self-Healing Loop (`--heal`): Fehlgeschlagene Tests autonom beheben |
 | [45](docs/45-project-config.md) | `config/project.json`: Projekttyp & Feature-Flags |
+| [46](docs/46-technical-enforcement.md) | Technische Schranken: 9-Stufen-Precondition-Check + LLM-Config-Guard (Schicht 2 & 3) |
 
 > [!IMPORTANT]
 > **Alle Features erklärt im Cookbook:** Jedes Rezept enthält Copy-Paste-ready Code, Erklärungen, Tipps und Warnungen. → [docs/](docs/)

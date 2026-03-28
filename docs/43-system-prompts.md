@@ -278,6 +278,7 @@ IDE-Konfigurationen.
 ### Nächste Schritte
 
 ✅ System-Prompts konfiguriert
+→ [46 — Technische Schranken](46-technical-enforcement.md) — Zweite Schranken-Schicht: Code-seitige Hard-Gates
 → [42 — LLM-Routing](42-llm-routing.md) — Provider und Modelle konfigurieren
 → [41 — Security-Guide](41-security-guide.md) — LLM-Config-Guard und Prompt-Injection
 → [04 — Health-Check](04-health-check.md) — Konfiguration prüfen
