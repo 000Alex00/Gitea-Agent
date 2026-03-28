@@ -8,10 +8,10 @@ HOOKS_DIR="$REPO_DIR/.git/hooks"
 echo "Installiere git hooks in $HOOKS_DIR ..."
 
 # pre-commit: Skeleton vor jedem Commit neu bauen
-cat > "$HOOKS_DIR/pre-commit" << 'HOOK'
+cat > "$HOOKS_DIR/pre-commit" << HOOK
 #!/bin/bash
 # Skeleton vor jedem Commit neu bauen und stagen
-cd /home/ki02/gitea-agent
+cd "$REPO_DIR"
 python3 agent_start.py --self --build-skeleton 2>/dev/null
 git add repo_skeleton.json repo_skeleton.md 2>/dev/null
 exit 0
