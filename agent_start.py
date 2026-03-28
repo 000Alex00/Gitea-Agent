@@ -3773,13 +3773,46 @@ def cmd_install_service() -> None:
 # ---------------------------------------------------------------------------
 
 
-def cmd_dashboard() -> None:
+def cmd_dashboard(serve: bool = False, port: int = 8888) -> None:
     print(f"[→] Generiere Live-Dashboard...")
     try:
         dashboard.generate(PROJECT)
         print(f"[✓] Dashboard erfolgreich erstellt: {settings.DASHBOARD_PATH}")
     except Exception as e:
         print(f"[!] Fehler bei Dashboard-Generierung: {e}")
+        return
+
+    if serve:
+        import http.server
+        import threading
+        dashboard_dir = Path(settings.DASHBOARD_PATH).parent
+        url = f"http://0.0.0.0:{port}/dashboard.html"
+
+        class _Handler(http.server.SimpleHTTPRequestHandler):
+            def __init__(self, *a, **kw):
+                super().__init__(*a, directory=str(dashboard_dir), **kw)
+            def log_message(self, fmt, *args):
+                pass  # Kein Request-Spam im Terminal
+
+        server = http.server.HTTPServer(("0.0.0.0", port), _Handler)
+        print(f"[✓] Dashboard erreichbar unter: http://<IP>:{port}/dashboard.html")
+        print(f"    Stoppen mit Strg+C\n")
+
+        # Auto-Refresh: Dashboard alle 60s neu generieren
+        def _refresh():
+            import time
+            while True:
+                time.sleep(60)
+                try:
+                    dashboard.generate(PROJECT)
+                except Exception:
+                    pass
+        threading.Thread(target=_refresh, daemon=True).start()
+
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print("\n[✓] Dashboard-Server gestoppt.")
 
 def cmd_auto() -> None:
     """
@@ -4281,6 +4314,18 @@ Ohne Argumente: automatischer Modus.
         help="Generiert das Live-Dashboard manuell",
     )
     parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="Mit --dashboard: Startet Mini-Webserver (Stdlib http.server, kein Pip nötig)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8888,
+        metavar="PORT",
+        help="Port für --serve (Standard: 8888)",
+    )
+    parser.add_argument(
         "--watch", action="store_true", help="Periodischer Eval-Loop mit Auto-Issues"
     )
     parser.add_argument(
@@ -4395,7 +4440,7 @@ Ohne Argumente: automatischer Modus.
     elif args.review:
         cmd_review(args.review)
     elif args.dashboard:
-        cmd_dashboard()
+        cmd_dashboard(serve=args.serve, port=args.port)
     elif args.watch:
         # Interval: CLI-Arg > agent_eval.json > Fallback 60
         interval = args.interval

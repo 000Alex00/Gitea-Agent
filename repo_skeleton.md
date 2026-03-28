@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4428 Zeilen)*
+## agent_start.py  *(4473 Zeilen)*
 
 - **Klasse** `_LazyGitea` Zeilen 70-78
   `class _LazyGitea:`
@@ -165,30 +165,38 @@
   `def _dashboard_event(context: str = "") -> None:`
 - **Funktion** `cmd_install_service` Zeilen 3723-3768
   `def cmd_install_service() -> None:`
-- **Funktion** `cmd_dashboard` Zeilen 3776-3782
-  `def cmd_dashboard() -> None:`
-- **Funktion** `cmd_auto` Zeilen 3784-3876
+- **Funktion** `cmd_dashboard` Zeilen 3776-3815
+  `def cmd_dashboard(serve: bool = False, port: int = 8888) -> None:`
+- **Funktion** `cmd_auto` Zeilen 3817-3909
   `def cmd_auto() -> None:`
-- **Funktion** `_apply_auto_approve` Zeilen 3884-3912
+- **Funktion** `_apply_auto_approve` Zeilen 3917-3945
   `def _apply_auto_approve() -> None:`
-- **Funktion** `cmd_heal` Zeilen 3919-4018
+- **Funktion** `cmd_heal` Zeilen 3952-4051
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
-- **Funktion** `cmd_doctor` Zeilen 4021-4167
+- **Funktion** `cmd_doctor` Zeilen 4054-4200
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 4174-4177
+- **Funktion** `cmd_setup` Zeilen 4207-4210
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4180-4424
+- **Funktion** `main` Zeilen 4213-4469
   `def main():`
 - **Funktion** `__getattr__` Zeilen 74-78
   `def __getattr__(self, name: str):`
 - **Funktion** `_sym_map` Zeilen 3225-3227
   `def _sym_map(content: str) -> dict[str, dict]:`
-- **Funktion** `_chk` Zeilen 4027-4028
+- **Funktion** `_chk` Zeilen 4060-4061
   `def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:`
+- **Klasse** `_Handler` Zeilen 3791-3795
+  `class _Handler(http.server.SimpleHTTPRequestHandler):`
+- **Funktion** `_refresh` Zeilen 3802-3809
+  `def _refresh():`
 - **Funktion** `_is_excluded` Zeilen 2015-2016
   `def _is_excluded(f: str) -> bool:`
 - **Funktion** `_len` Zeilen 3238-3243
   `def _len(s: dict) -> int:`
+- **Funktion** `__init__` Zeilen 3792-3793
+  `def __init__(self, *a, **kw):`
+- **Funktion** `log_message` Zeilen 3794-3795
+  `def log_message(self, fmt, *args):`
 
 ## gitea_api.py  *(448 Zeilen)*
 

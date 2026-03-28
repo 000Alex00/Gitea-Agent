@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4428,
-    "size_kb": 159,
+    "lines": 4473,
+    "size_kb": 160,
     "symbols": [
       {
         "type": "class",
@@ -496,43 +496,43 @@
       {
         "type": "function",
         "name": "cmd_dashboard",
-        "lines": "3776-3782",
-        "signature": "def cmd_dashboard() -> None:"
+        "lines": "3776-3815",
+        "signature": "def cmd_dashboard(serve: bool = False, port: int = 8888) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_auto",
-        "lines": "3784-3876",
+        "lines": "3817-3909",
         "signature": "def cmd_auto() -> None:"
       },
       {
         "type": "function",
         "name": "_apply_auto_approve",
-        "lines": "3884-3912",
+        "lines": "3917-3945",
         "signature": "def _apply_auto_approve() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_heal",
-        "lines": "3919-4018",
+        "lines": "3952-4051",
         "signature": "def cmd_heal(test_name: str = \"\", log_lines: int = 30) -> None:"
       },
       {
         "type": "function",
         "name": "cmd_doctor",
-        "lines": "4021-4167",
+        "lines": "4054-4200",
         "signature": "def cmd_doctor() -> None:"
       },
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "4174-4177",
+        "lines": "4207-4210",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "4180-4424",
+        "lines": "4213-4469",
         "signature": "def main():"
       },
       {
@@ -550,8 +550,20 @@
       {
         "type": "function",
         "name": "_chk",
-        "lines": "4027-4028",
+        "lines": "4060-4061",
         "signature": "def _chk(name: str, status: str, detail: str = \"\", fix: str = \"\") -> None:"
+      },
+      {
+        "type": "class",
+        "name": "_Handler",
+        "lines": "3791-3795",
+        "signature": "class _Handler(http.server.SimpleHTTPRequestHandler):"
+      },
+      {
+        "type": "function",
+        "name": "_refresh",
+        "lines": "3802-3809",
+        "signature": "def _refresh():"
       },
       {
         "type": "function",
@@ -564,6 +576,18 @@
         "name": "_len",
         "lines": "3238-3243",
         "signature": "def _len(s: dict) -> int:"
+      },
+      {
+        "type": "function",
+        "name": "__init__",
+        "lines": "3792-3793",
+        "signature": "def __init__(self, *a, **kw):"
+      },
+      {
+        "type": "function",
+        "name": "log_message",
+        "lines": "3794-3795",
+        "signature": "def log_message(self, fmt, *args):"
       }
     ]
   },
