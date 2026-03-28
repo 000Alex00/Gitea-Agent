@@ -33,8 +33,8 @@ Ein vollständiges Infrastruktur-System für KI-gestützte Code-Entwicklung: Iss
 ### Entstehungsgeschichte
 
 > **Von einem kaputten Chatbot zum autonomen AI-Dev-System.**
->
-> Ich bin kein Entwickler, gerade der "Hallo Welt"-Phase entsprungen. Ich wollte eigentlich nur meinen lokalen LLM-Chatbot debuggen und um Features erweitern. Leider stieß ich bei jedem LLM auf die selben Probleme: Feature-Verlust, überschriebene Dateien, halluzinierte Pfade, Neuerfindung bereits vorhandener Funktionen. Mein Tokenlimit war durch das Einlesen ganzer Code-Dateien ständig erreicht. Dazu kam viel manueller Aufwand: Änderungen im lokalen Gitea-Repository pflegen, den Überblick behalten, Code-Chaos vermeiden.
+> 
+Ich wollte eigentlich nur meinen lokalen LLM-Chatbot debuggen und um Features erweitern. Leider stieß ich bei jedem LLM auf die selben Probleme: Feature-Verlust, überschriebene Dateien, halluzinierte Pfade, Neuerfindung bereits vorhandener Funktionen. Mein Tokenlimit war durch das Einlesen ganzer Code-Dateien ständig erreicht. Dazu kam viel manueller Aufwand: Änderungen im lokalen Gitea-Repository pflegen, den Überblick behalten, Code-Chaos vermeiden.
 >
 > Also dachte ich: "Ich schreibe ein kleines Script, das den LLM daran hindert, Chaos anzurichten — automatisches Branching, Tests vor jedem Merge, keine direkten Pushes auf `main`." Dann kam die nächste Idee: "Er soll Tests laufen lassen, bevor er einen PR öffnet." Und dann: "Er soll nur die Dateien laden, die er wirklich braucht, nicht das gesamte Repository."
 >
@@ -47,7 +47,8 @@ Ein vollständiges Infrastruktur-System für KI-gestützte Code-Entwicklung: Iss
 > - LLM-gestützte Log-Analyse bei Fehlern
 > - Automatische Changelog-Generierung aus Commit-Nachrichten
 >
-> Das System ist inzwischen größer und komplexer, als ich es je verstehen werde. Es läuft komplett lokal — bei mir auf einem **Jetson Orin Nano 8 GB** (Agent) neben **Gitea auf einem Synology NAS**.
+> Das System ist inzwischen größer und komplexer, als ich es je vorstellen wollte.
+> Es läuft komplett lokal — bei mir auf einem **Jetson Orin Nano 8 GB** (Agent) neben **Gitea auf einem Synology NAS**.
 >
 > **Und das Verrückte:** Es funktioniert. Der Agent hat sich selbst weiterentwickelt, seine eigenen Tests geschrieben, seine eigene Dokumentation gepflegt. Ich bin nur noch der Typ, der ideen einsteuert und "ok" in Issues kommentiert — verrückte Welt! :-)
 
