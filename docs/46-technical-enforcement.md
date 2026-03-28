@@ -131,6 +131,34 @@ die ohne vorherigen `--get-slice`-Abruf geändert wurden, blockieren den PR.
 
 Verhindert PRs auf nicht gepushte Branches (Merge würde fehlschlagen).
 
+#### Gate 10 — Agent Policies
+
+```
+❌ Policy-Verstoß: 450 geänderte Zeilen > max_diff_lines (300)
+❌ Policy-Verstoß: forbidden_path 'config/secrets' betroffen: config/secrets/prod.yaml
+❌ Policy-Verstoß: Dateien außerhalb allowed_paths geändert: legacy/old_api.py
+```
+
+Konfigurierbare Regeln in `agent_eval.json` → `"policies"` Block:
+
+```json
+{
+  "policies": {
+    "max_diff_lines": 300,
+    "allowed_paths": ["src/", "tests/"],
+    "forbidden_paths": ["config/secrets", ".env", "credentials"]
+  }
+}
+```
+
+| Policy | Typ | Beschreibung |
+|--------|-----|--------------|
+| `max_diff_lines` | Integer | Maximale geänderte Zeilen im Branch-Diff |
+| `allowed_paths` | Liste | Nur Änderungen in diesen Pfaden erlaubt |
+| `forbidden_paths` | Liste | Diese Pfade dürfen nie geändert werden |
+
+Policies sind optional — kein `"policies"`-Block = kein Check.
+
 ---
 
 ### Zusammenfassung aller Gates
@@ -146,6 +174,7 @@ Verhindert PRs auf nicht gepushte Branches (Merge würde fehlschlagen).
 | 7 | Diff-Scope vs. Issue | Warnung |
 | 8 | Slice-Gate (wenn `SLICE_GATE_ENABLED=true`) | Hard-Block |
 | 9 | Branch auf Remote | Hard-Block |
+| 10 | Agent Policies (wenn `policies` in agent_eval.json) | Hard-Block |
 
 ---
 

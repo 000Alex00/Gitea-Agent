@@ -41,7 +41,8 @@ python3 agent_start.py --help
 |------|----------|--------------|
 | `--issue` | `<number>` | Issue-Nummer bearbeiten |
 | `--branch` | `<name>` | Branch-Name für PR |
-| `--pr` | `<number>` | PR-Nummer bearbeiten (Code-Review) |
+| `--pr` | `<number>` | PR erstellen (mit --branch) — 10 Hard-Gates vorher ([Rezept 46](46-technical-enforcement.md)) |
+| `--review` | `<pr_nr>` | LLM analysiert PR-Diff, postet Findings als Kommentar (erfordert LLM) |
 | `--summary` | `<text>` | PR-/Commit-Summary |
 | `--fixup` | - | Bugfix-Workflow: Git-Commit → Issue-Comment ([Rezept 06](06-bugfix-on-branch.md)) |
 | `--list` | - | Zeige alle offenen Issues |
@@ -61,7 +62,8 @@ python3 agent_start.py --help
 |------|----------|--------------|
 | `--eval` | - | Nur Eval-Lauf (keine Issue-Bearbeitung) |
 | `--update-baseline` | - | Baseline auf aktuellen Score setzen ([Rezept 11](11-baseline-management.md)) |
-| `--generate-tests` | - | LLM generiert Tests ([Rezept 13](13-test-generation.md)) |
+| `--generate-tests` | `<nr>` | LLM generiert Tests für Issue ([Rezept 13](13-test-generation.md)) |
+| `--heal` | `[test_name]` | Self-Healing Loop: fehlgeschlagene Tests autonom fixen ([Rezept 44](44-self-healing.md)) |
 
 #### **Code-Analyse**
 
@@ -168,6 +170,17 @@ python3 agent_start.py --project ~/proj --doctor
 python3 agent_start.py --setup          # Ersteinrichtung (9 Schritte)
 python3 agent_start.py --llm            # LLM nachträglich konfigurieren
 python3 agent_start.py --doctor         # Health-Check
+
+# ══════════════════════════════════════════════════════════
+# PR-Review (erfordert LLM)
+# ══════════════════════════════════════════════════════════
+python3 agent_start.py --review 7       # PR #7 analysieren, Findings als Kommentar posten
+
+# ══════════════════════════════════════════════════════════
+# Self-Healing (erfordert LLM)
+# ══════════════════════════════════════════════════════════
+python3 agent_start.py --heal           # Alle fehlgeschlagenen Tests fixen
+python3 agent_start.py --heal test_chat # Nur Test "test_chat" fixen
 ```
 
 ---

@@ -71,11 +71,13 @@ Ein vollständiges Infrastruktur-System für KI-gestützte Code-Entwicklung: Iss
 > **Schicht 2: Code-Enforcement** — `_check_pr_preconditions()` — 9 Hard-Gates (hart, unabhängig vom LLM)
 > **Schicht 3: pre-commit Guard** — `llm_config_guard.py` prüft IDE-Configs bei jedem Commit
 
-- **9-Stufen-Precondition-Check:** Branch-Schutz, Plan vorhanden, Eval aktuell, Self-Consistency — alle vor `--pr` erzwungen per `SystemExit(1)`, nicht per Prompt
+- **10-Stufen-Precondition-Check:** Branch-Schutz, Plan vorhanden, Eval aktuell, Self-Consistency, Agent Policies — alle vor `--pr` erzwungen per `SystemExit(1)`, nicht per Prompt ([Rezept 46](docs/46-technical-enforcement.md))
+- **Agent Policies:** `agent_eval.json → "policies"` — `max_diff_lines`, `allowed_paths`, `forbidden_paths` als konfigurierbare Hard-Gates
 - **Slice-Gate:** `SLICE_GATE_ENABLED=true` blockiert `--pr` wenn Dateien ohne `--get-slice` geändert wurden — verhindert halluzinierte Patches auf nicht gelesenen Dateien
 - **Self-Consistency-Check:** Wenn Agent-Code geändert, läuft `agent_self_check.py` automatisch
 - **Diff-Validation:** Warnung bei Out-of-Scope-Änderungen (geänderte Dateien vs. Issue-Scope)
 - **LLM-Config-Guard:** `plugins/llm_config_guard.py` blockiert Commits bei fehlenden Schranken in IDE-Konfigurationsdateien
+- **Automatisches PR-Review:** `--review PR_NR` — LLM analysiert Diff auf Bugs, Sicherheit, fehlende Tests, postet Findings als PR-Kommentar
 - **Freigabe-Pflicht:** Kein Code ohne "ok"-Kommentar im Issue
 - **Eval-System:** Tests müssen bestehen, sonst PR blockiert
 - **Branch-Protection:** Nie direkt auf `main` pushen — strukturell, nicht per Prompt
@@ -148,13 +150,14 @@ Der Agent hat zwei Betriebsmodi:
 | `--issue`, `--implement`, `--pr` | ❌ Nein | Kontext erstellen, Branch anlegen, PR posten — Mensch liefert die Implementierung (Web-Chat oder lokal) |
 | `--watch`, `--night`, `--patch` | ❌ Nein | Eval-Loop, Auto-Issues bei Regressions, Context-Build — kein LLM-Aufruf im Loop selbst |
 | `--heal` | ✅ Ja | Autonomer Fix-Loop: Eval → LLM analysiert → Patch → Eval |
+| `--review` | ✅ Ja | PR-Review: LLM analysiert Diff, postet Findings als PR-Kommentar |
 | `--setup` | ❌ Nein | Interaktiver Einrichtungs-Wizard: 9 Schritte, Resume-fähig, Install-Log |
 | `--llm` | ❌ Nein | LLM-Konfiguration nachträglich verwalten: Provider, Modell, Fallback-Kette, Task-Routing |
 | `context_export.sh NR llm` | ✅ Ja | Startet konfigurierten LLM-CLI direkt mit Kontext (`cli_cmd` in `routing.json`) |
 
 **Ohne API:** Vollständiger manueller Workflow nutzbar — Issue-Tracking, Eval, Dashboard, Kontext-Export, PR-Erstellung, Watch-Loop.
 
-**Mit API (`CLAUDE_API_ENABLED=true` oder `config/llm/routing.json`):** `--heal` Self-Healing aktivierbar + `context_export.sh NR llm` für interaktive Sessions.
+**Mit API (`CLAUDE_API_ENABLED=true` oder `config/llm/routing.json`):** `--heal` Self-Healing + `--review` PR-Review aktivierbar + `context_export.sh NR llm` für interaktive Sessions.
 
 ---
 
