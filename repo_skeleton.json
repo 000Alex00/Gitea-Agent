@@ -46,8 +46,8 @@
   {
     "path": "agent_start.py",
     "truncated": false,
-    "lines": 4993,
-    "size_kb": 191,
+    "lines": 4428,
+    "size_kb": 159,
     "symbols": [
       {
         "type": "class",
@@ -526,13 +526,13 @@
       {
         "type": "function",
         "name": "cmd_setup",
-        "lines": "4174-4742",
+        "lines": "4174-4177",
         "signature": "def cmd_setup() -> None:"
       },
       {
         "type": "function",
         "name": "main",
-        "lines": "4745-4989",
+        "lines": "4180-4424",
         "signature": "def main():"
       },
       {
@@ -552,72 +552,6 @@
         "name": "_chk",
         "lines": "4027-4028",
         "signature": "def _chk(name: str, status: str, detail: str = \"\", fix: str = \"\") -> None:"
-      },
-      {
-        "type": "function",
-        "name": "_mask",
-        "lines": "4186-4189",
-        "signature": "def _mask(val: str) -> str:"
-      },
-      {
-        "type": "function",
-        "name": "_log",
-        "lines": "4191-4197",
-        "signature": "def _log(step: str, status: str, detail: str = \"\") -> None:"
-      },
-      {
-        "type": "function",
-        "name": "_load_state",
-        "lines": "4199-4205",
-        "signature": "def _load_state() -> dict:"
-      },
-      {
-        "type": "function",
-        "name": "_save_state",
-        "lines": "4207-4208",
-        "signature": "def _save_state(state: dict) -> None:"
-      },
-      {
-        "type": "function",
-        "name": "_ask",
-        "lines": "4210-4213",
-        "signature": "def _ask(prompt: str, default: str = \"\") -> str:"
-      },
-      {
-        "type": "function",
-        "name": "_sanitize_repo",
-        "lines": "4215-4216",
-        "signature": "def _sanitize_repo(val: str) -> str:"
-      },
-      {
-        "type": "function",
-        "name": "_retry",
-        "lines": "4218-4219",
-        "signature": "def _retry(msg: str) -> bool:"
-      },
-      {
-        "type": "function",
-        "name": "_api_get_raw",
-        "lines": "4223-4230",
-        "signature": "def _api_get_raw(url, user, token, path):"
-      },
-      {
-        "type": "function",
-        "name": "_api_post_raw",
-        "lines": "4232-4242",
-        "signature": "def _api_post_raw(url, user, token, path, data: dict):"
-      },
-      {
-        "type": "function",
-        "name": "_box",
-        "lines": "4250-4258",
-        "signature": "def _box(title: str, lines: list) -> None:"
-      },
-      {
-        "type": "function",
-        "name": "_step_done",
-        "lines": "4260-4268",
-        "signature": "def _step_done(n: int, title: str, detail: str = \"\") -> None:"
       },
       {
         "type": "function",
@@ -1002,6 +936,86 @@
         "name": "__getattr__",
         "lines": "13-17",
         "signature": "def __getattr__(self, name: str):"
+      }
+    ]
+  },
+  {
+    "path": "plugins/setup_wizard.py",
+    "truncated": false,
+    "lines": 582,
+    "size_kb": 32,
+    "symbols": [
+      {
+        "type": "function",
+        "name": "cmd_setup",
+        "lines": "14-582",
+        "signature": "def cmd_setup(_post_doctor=None, _post_dashboard=None) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "_mask",
+        "lines": "26-29",
+        "signature": "def _mask(val: str) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_log",
+        "lines": "31-37",
+        "signature": "def _log(step: str, status: str, detail: str = \"\") -> None:"
+      },
+      {
+        "type": "function",
+        "name": "_load_state",
+        "lines": "39-45",
+        "signature": "def _load_state() -> dict:"
+      },
+      {
+        "type": "function",
+        "name": "_save_state",
+        "lines": "47-48",
+        "signature": "def _save_state(state: dict) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "_ask",
+        "lines": "50-53",
+        "signature": "def _ask(prompt: str, default: str = \"\") -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_sanitize_repo",
+        "lines": "55-56",
+        "signature": "def _sanitize_repo(val: str) -> str:"
+      },
+      {
+        "type": "function",
+        "name": "_retry",
+        "lines": "58-59",
+        "signature": "def _retry(msg: str) -> bool:"
+      },
+      {
+        "type": "function",
+        "name": "_api_get_raw",
+        "lines": "63-70",
+        "signature": "def _api_get_raw(url, user, token, path):"
+      },
+      {
+        "type": "function",
+        "name": "_api_post_raw",
+        "lines": "72-82",
+        "signature": "def _api_post_raw(url, user, token, path, data: dict):"
+      },
+      {
+        "type": "function",
+        "name": "_box",
+        "lines": "90-98",
+        "signature": "def _box(title: str, lines: list) -> None:"
+      },
+      {
+        "type": "function",
+        "name": "_step_done",
+        "lines": "100-108",
+        "signature": "def _step_done(n: int, title: str, detail: str = \"\") -> None:"
       }
     ]
   },

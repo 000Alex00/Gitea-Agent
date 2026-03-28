@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4993 Zeilen)*
+## agent_start.py  *(4428 Zeilen)*
 
 - **Klasse** `_LazyGitea` Zeilen 70-78
   `class _LazyGitea:`
@@ -175,9 +175,9 @@
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
 - **Funktion** `cmd_doctor` Zeilen 4021-4167
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 4174-4742
+- **Funktion** `cmd_setup` Zeilen 4174-4177
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4745-4989
+- **Funktion** `main` Zeilen 4180-4424
   `def main():`
 - **Funktion** `__getattr__` Zeilen 74-78
   `def __getattr__(self, name: str):`
@@ -185,28 +185,6 @@
   `def _sym_map(content: str) -> dict[str, dict]:`
 - **Funktion** `_chk` Zeilen 4027-4028
   `def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:`
-- **Funktion** `_mask` Zeilen 4186-4189
-  `def _mask(val: str) -> str:`
-- **Funktion** `_log` Zeilen 4191-4197
-  `def _log(step: str, status: str, detail: str = "") -> None:`
-- **Funktion** `_load_state` Zeilen 4199-4205
-  `def _load_state() -> dict:`
-- **Funktion** `_save_state` Zeilen 4207-4208
-  `def _save_state(state: dict) -> None:`
-- **Funktion** `_ask` Zeilen 4210-4213
-  `def _ask(prompt: str, default: str = "") -> str:`
-- **Funktion** `_sanitize_repo` Zeilen 4215-4216
-  `def _sanitize_repo(val: str) -> str:`
-- **Funktion** `_retry` Zeilen 4218-4219
-  `def _retry(msg: str) -> bool:`
-- **Funktion** `_api_get_raw` Zeilen 4223-4230
-  `def _api_get_raw(url, user, token, path):`
-- **Funktion** `_api_post_raw` Zeilen 4232-4242
-  `def _api_post_raw(url, user, token, path, data: dict):`
-- **Funktion** `_box` Zeilen 4250-4258
-  `def _box(title: str, lines: list) -> None:`
-- **Funktion** `_step_done` Zeilen 4260-4268
-  `def _step_done(n: int, title: str, detail: str = "") -> None:`
 - **Funktion** `_is_excluded` Zeilen 2015-2016
   `def _is_excluded(f: str) -> bool:`
 - **Funktion** `_len` Zeilen 3238-3243
@@ -337,6 +315,33 @@
   `def cmd_apply_patch(number: int, dry_run: bool = False) -> None:`
 - **Funktion** `__getattr__` Zeilen 13-17
   `def __getattr__(self, name: str):`
+
+## plugins/setup_wizard.py  *(582 Zeilen)*
+
+- **Funktion** `cmd_setup` Zeilen 14-582
+  `def cmd_setup(_post_doctor=None, _post_dashboard=None) -> None:`
+- **Funktion** `_mask` Zeilen 26-29
+  `def _mask(val: str) -> str:`
+- **Funktion** `_log` Zeilen 31-37
+  `def _log(step: str, status: str, detail: str = "") -> None:`
+- **Funktion** `_load_state` Zeilen 39-45
+  `def _load_state() -> dict:`
+- **Funktion** `_save_state` Zeilen 47-48
+  `def _save_state(state: dict) -> None:`
+- **Funktion** `_ask` Zeilen 50-53
+  `def _ask(prompt: str, default: str = "") -> str:`
+- **Funktion** `_sanitize_repo` Zeilen 55-56
+  `def _sanitize_repo(val: str) -> str:`
+- **Funktion** `_retry` Zeilen 58-59
+  `def _retry(msg: str) -> bool:`
+- **Funktion** `_api_get_raw` Zeilen 63-70
+  `def _api_get_raw(url, user, token, path):`
+- **Funktion** `_api_post_raw` Zeilen 72-82
+  `def _api_post_raw(url, user, token, path, data: dict):`
+- **Funktion** `_box` Zeilen 90-98
+  `def _box(title: str, lines: list) -> None:`
+- **Funktion** `_step_done` Zeilen 100-108
+  `def _step_done(n: int, title: str, detail: str = "") -> None:`
 
 ## plugins/docstring_check.py  *(147 Zeilen)*
 
