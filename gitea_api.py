@@ -393,6 +393,29 @@ def get_file_contents(path: str, ref: str) -> str | None:
     return None
 
 
+def get_pr_diff(pr_number: int) -> str | None:
+    """
+    Lädt den rohen Diff-Text eines Pull Requests.
+
+    Args:
+        pr_number: PR-Nummer
+
+    Returns:
+        Diff als String oder None bei Fehler.
+    """
+    url = f"{GITEA_URL}/api/v1/repos/{REPO}/pulls/{pr_number}.diff"
+    req = urllib.request.Request(
+        url,
+        headers={"Authorization": f"Basic {_AUTH}", "Accept": "text/plain"},
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return resp.read().decode("utf-8", errors="replace")
+    except Exception as e:
+        log.warning(f"get_pr_diff({pr_number}): {e}")
+        return None
+
+
 def create_pr(branch: str, title: str, body: str, base: str | None = None) -> dict:
     """
     Erstellt einen Pull Request. Falls bereits einer existiert (409), wird der bestehende zurückgegeben.

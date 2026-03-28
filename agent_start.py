@@ -1486,6 +1486,67 @@ def _check_pr_preconditions(number: int, branch: str) -> None:
     except Exception as e:
         log.debug(f"Remote-Branch-Prüfung übersprungen: {e}")
 
+    # 10. Agent Policies (agent_eval.json → policies Block)
+    if eval_cfg.exists():
+        try:
+            with eval_cfg.open(encoding="utf-8") as f:
+                cfg_data_p = json.load(f)
+            policies = cfg_data_p.get("policies", {})
+            if policies:
+                # max_diff_lines
+                max_diff = policies.get("max_diff_lines")
+                if max_diff:
+                    try:
+                        diff_count = int(subprocess.check_output(
+                            ["git", "diff", "--stat", f"main...{branch}"],
+                            cwd=PROJECT, stderr=subprocess.DEVNULL,
+                        ).decode().splitlines()[-1].split()[0])
+                        if diff_count > max_diff:
+                            fehler.append(
+                                f"Policy-Verstoß: {diff_count} geänderte Zeilen "
+                                f"> max_diff_lines ({max_diff})"
+                            )
+                    except Exception:
+                        pass
+                # forbidden_paths
+                forbidden = policies.get("forbidden_paths", [])
+                if forbidden:
+                    try:
+                        changed = subprocess.check_output(
+                            ["git", "diff", "--name-only", f"main...{branch}"],
+                            cwd=PROJECT, stderr=subprocess.DEVNULL,
+                        ).decode().splitlines()
+                        for fp in forbidden:
+                            hits = [c for c in changed if c.startswith(fp)]
+                            if hits:
+                                fehler.append(
+                                    f"Policy-Verstoß: forbidden_path '{fp}' betroffen: "
+                                    + ", ".join(hits[:3])
+                                )
+                    except Exception:
+                        pass
+                # allowed_paths
+                allowed = policies.get("allowed_paths", [])
+                if allowed:
+                    try:
+                        changed = subprocess.check_output(
+                            ["git", "diff", "--name-only", f"main...{branch}"],
+                            cwd=PROJECT, stderr=subprocess.DEVNULL,
+                        ).decode().splitlines()
+                        outside = [
+                            c for c in changed
+                            if not any(c.startswith(a) for a in allowed)
+                        ]
+                        if outside:
+                            fehler.append(
+                                f"Policy-Verstoß: Dateien außerhalb allowed_paths geändert: "
+                                + ", ".join(outside[:3])
+                            )
+                    except Exception:
+                        pass
+        except Exception as e:
+            log.debug(f"Policies-Prüfung fehlgeschlagen: {e}")
+
     if fehler:
         print("\n❌ cmd_pr abgebrochen — Prozess nicht vollständig:")
         for f in fehler:
@@ -2095,6 +2156,70 @@ Implementierung für Issue #{number}.
     # Maßnahme 4: Abschluss-Validierung
     _validate_pr_completion(number, branch, pr_url, idir_moved)
 
+
+
+def cmd_review(pr_number: int) -> None:
+    """
+    --review PR_NR: LLM analysiert PR-Diff und postet Review-Kommentar.
+
+    Ablauf:
+        1. PR-Diff über Gitea API laden
+        2. Diff an LLM senden (Task: pr_review → config/llm/prompts/reviewer.md)
+        3. Findings als Kommentar im PR posten
+
+    Erfordert LLM-Backend (routing.json oder CLAUDE_API_ENABLED=true).
+    """
+    print(f"[→] Starte PR-Review für PR #{pr_number}...")
+    log.info(f"cmd_review: PR #{pr_number}")
+
+    diff = gitea.get_pr_diff(pr_number)
+    if not diff:
+        print(f"[!] Diff für PR #{pr_number} nicht abrufbar — Gitea-Verbindung prüfen")
+        sys.exit(1)
+
+    diff_trunc = diff[:6000] + ("\n... [diff gekürzt]" if len(diff) > 6000 else "")
+    diff_lines = len(diff.splitlines())
+
+    prompt = (
+        f"# PR-Review — PR #{pr_number}\n\n"
+        f"Analysiere den folgenden Git-Diff und erstelle ein strukturiertes Review.\n\n"
+        f"**Prüfe auf:**\n"
+        f"- Logische Fehler oder Bugs\n"
+        f"- Fehlende Fehlerbehandlung\n"
+        f"- Sicherheitsrisiken (Injection, unsichere Pfade, Secrets im Code)\n"
+        f"- Fehlende Tests für neue Funktionalität\n"
+        f"- Stil- und Konsistenzprobleme\n\n"
+        f"**Ausgabeformat:** Markdown, strukturiert nach Findings. "
+        f"Wenn keine Probleme gefunden: kurze Bestätigung.\n\n"
+        f"```diff\n{diff_trunc}\n```"
+    )
+
+    try:
+        from plugins.llm import get_client
+        client = get_client("pr_review")
+        resp = client.complete(prompt)
+        if not resp.ok:
+            print(f"[!] LLM-Fehler: {resp.error}")
+            sys.exit(1)
+        review_text = resp.text
+    except Exception as e:
+        print(f"[!] LLM nicht verfügbar: {e}")
+        sys.exit(1)
+
+    comment_body = (
+        f"## \U0001f50d Automatisches PR-Review\n\n"
+        f"*Analysiert: {diff_lines} Zeilen Diff \u2014 Modell: pr_review*\n\n"
+        f"{review_text}"
+    )
+
+    try:
+        gitea.post_comment(pr_number, comment_body)
+        print(f"[\u2713] Review-Kommentar in PR #{pr_number} gepostet.")
+        log.info(f"cmd_review: Review gepostet f\u00fcr PR #{pr_number}")
+    except Exception as e:
+        print(f"[!] Kommentar konnte nicht gepostet werden: {e}")
+        print("\n--- Review-Ausgabe ---")
+        print(review_text)
 
 
 def cmd_generate_tests(number: int) -> None:
@@ -4792,6 +4917,12 @@ Ohne Argumente: automatischer Modus.
         const="",
         help="Autonomous Self-Healing Loop: fehlgeschlagenen Test autonom fixen (erfordert LLM)",
     )
+    parser.add_argument(
+        "--review",
+        type=int,
+        metavar="PR_NR",
+        help="PR-Review: LLM analysiert PR-Diff und postet Findings als Kommentar (erfordert LLM)",
+    )
     args = parser.parse_args()
 
     if args.setup:
@@ -4826,6 +4957,8 @@ Ohne Argumente: automatischer Modus.
         cmd_fixup(args.fixup)
     elif args.heal is not None:
         cmd_heal(test_name=args.heal or "")
+    elif args.review:
+        cmd_review(args.review)
     elif args.dashboard:
         cmd_dashboard()
     elif args.watch:

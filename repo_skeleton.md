@@ -15,7 +15,7 @@
 - **Funktion** `run` Zeilen 168-202
   `def run() -> None:`
 
-## agent_start.py  *(4860 Zeilen)*
+## agent_start.py  *(4993 Zeilen)*
 
 - **Klasse** `_LazyGitea` Zeilen 70-78
   `class _LazyGitea:`
@@ -79,138 +79,140 @@
   `def _warn_diff_out_of_scope(number: int, branch: str) -> None:`
 - **Funktion** `_warn_slices_not_requested` Zeilen 1220-1316
   `def _warn_slices_not_requested(number: int, branch: str) -> bool:`
-- **Funktion** `_check_pr_preconditions` Zeilen 1319-1494
+- **Funktion** `_check_pr_preconditions` Zeilen 1319-1555
   `def _check_pr_preconditions(number: int, branch: str) -> None:`
-- **Funktion** `_validate_pr_completion` Zeilen 1497-1541
+- **Funktion** `_validate_pr_completion` Zeilen 1558-1602
   `def _validate_pr_completion(`
-- **Funktion** `_validate_comment` Zeilen 1544-1567
+- **Funktion** `_validate_comment` Zeilen 1605-1628
   `def _validate_comment(body: str, comment_type: str, *, critical: bool = False) -> None:`
-- **Funktion** `_update_discussion` Zeilen 1570-1605
+- **Funktion** `_update_discussion` Zeilen 1631-1666
   `def _update_discussion(issue: dict, starter_path: Path) -> None:`
-- **Funktion** `cmd_list` Zeilen 1613-1631
+- **Funktion** `cmd_list` Zeilen 1674-1692
   `def cmd_list() -> None:`
-- **Funktion** `cmd_plan` Zeilen 1634-1737
+- **Funktion** `cmd_plan` Zeilen 1695-1798
   `def cmd_plan(number: int) -> None:`
-- **Funktion** `cmd_implement` Zeilen 1740-1883
+- **Funktion** `cmd_implement` Zeilen 1801-1944
   `def cmd_implement(number: int) -> None:`
-- **Funktion** `_neustart_required` Zeilen 1896-1901
+- **Funktion** `_neustart_required` Zeilen 1957-1962
   `def _neustart_required(changed_files: list[str]) -> str:`
-- **Funktion** `cmd_pr` Zeilen 1904-2096
+- **Funktion** `cmd_pr` Zeilen 1965-2157
   `def cmd_pr(`
-- **Funktion** `cmd_generate_tests` Zeilen 2100-2125
+- **Funktion** `cmd_review` Zeilen 2161-2222
+  `def cmd_review(pr_number: int) -> None:`
+- **Funktion** `cmd_generate_tests` Zeilen 2225-2250
   `def cmd_generate_tests(number: int) -> None:`
-- **Funktion** `_current_issue_from_branch` Zeilen 2127-2142
+- **Funktion** `_current_issue_from_branch` Zeilen 2252-2267
   `def _current_issue_from_branch() -> int | None:`
-- **Funktion** `_estimate_slice_tokens` Zeilen 2145-2156
+- **Funktion** `_estimate_slice_tokens` Zeilen 2270-2281
   `def _estimate_slice_tokens(spec: str) -> int:`
-- **Funktion** `_log_slice_request` Zeilen 2159-2201
+- **Funktion** `_log_slice_request` Zeilen 2284-2326
   `def _log_slice_request(spec: str) -> None:`
-- **Funktion** `cmd_get_slice` Zeilen 2204-2234
+- **Funktion** `cmd_get_slice` Zeilen 2329-2359
   `def cmd_get_slice(spec: str) -> None:`
-- **Funktion** `cmd_get_llm_cmd` Zeilen 2237-2251
+- **Funktion** `cmd_get_llm_cmd` Zeilen 2362-2376
   `def cmd_get_llm_cmd(task: str) -> None:`
-- **Funktion** `cmd_fixup` Zeilen 2260-2304
+- **Funktion** `cmd_fixup` Zeilen 2385-2429
   `def cmd_fixup(number: int) -> None:`
-- **Funktion** `_auto_issue_exists` Zeilen 2312-2316
+- **Funktion** `_auto_issue_exists` Zeilen 2437-2441
   `def _auto_issue_exists(test_name: str) -> bool:`
-- **Funktion** `_auto_perf_issue_exists` Zeilen 2318-2322
+- **Funktion** `_auto_perf_issue_exists` Zeilen 2443-2447
   `def _auto_perf_issue_exists(test_name: str) -> bool:`
-- **Funktion** `_auto_improvement_issue_exists` Zeilen 2326-2329
+- **Funktion** `_auto_improvement_issue_exists` Zeilen 2451-2454
   `def _auto_improvement_issue_exists(tag: str) -> bool:`
-- **Funktion** `_check_systematic_tag_failures` Zeilen 2331-2405
+- **Funktion** `_check_systematic_tag_failures` Zeilen 2456-2530
   `def _check_systematic_tag_failures(project_root) -> None:`
-- **Funktion** `_sync_closed_contexts` Zeilen 2408-2433
+- **Funktion** `_sync_closed_contexts` Zeilen 2533-2558
   `def _sync_closed_contexts() -> None:`
-- **Funktion** `_consecutive_passes_for_test` Zeilen 2436-2461
+- **Funktion** `_consecutive_passes_for_test` Zeilen 2561-2586
   `def _consecutive_passes_for_test(test_name: str) -> int:`
-- **Funktion** `_close_resolved_auto_issues` Zeilen 2464-2543
+- **Funktion** `_close_resolved_auto_issues` Zeilen 2589-2668
   `def _close_resolved_auto_issues(result: "evaluation.EvalResult") -> None:`
-- **Funktion** `_build_metadata` Zeilen 2546-2625
+- **Funktion** `_build_metadata` Zeilen 2671-2750
   `def _build_metadata(`
-- **Funktion** `_session_path` Zeilen 2628-2630
+- **Funktion** `_session_path` Zeilen 2753-2755
   `def _session_path() -> Path:`
-- **Funktion** `_session_load` Zeilen 2633-2657
+- **Funktion** `_session_load` Zeilen 2758-2782
   `def _session_load() -> dict:`
-- **Funktion** `_session_increment` Zeilen 2660-2670
+- **Funktion** `_session_increment` Zeilen 2785-2795
   `def _session_increment() -> dict:`
-- **Funktion** `_session_status_line` Zeilen 2673-2686
+- **Funktion** `_session_status_line` Zeilen 2798-2811
   `def _session_status_line(data: dict) -> str:`
-- **Funktion** `_format_history_block` Zeilen 2689-2725
+- **Funktion** `_format_history_block` Zeilen 2814-2850
   `def _format_history_block(project_root: Path, n: int = 5) -> str:`
-- **Funktion** `_last_chat_inactive_minutes` Zeilen 2728-2776
+- **Funktion** `_last_chat_inactive_minutes` Zeilen 2853-2901
   `def _last_chat_inactive_minutes(log_path: str | Path) -> float | None:`
-- **Funktion** `_server_start_time` Zeilen 2779-2827
+- **Funktion** `_server_start_time` Zeilen 2904-2952
   `def _server_start_time(log_path: str | Path) -> datetime.datetime | None:`
-- **Funktion** `_check_server_staleness` Zeilen 2830-2898
+- **Funktion** `_check_server_staleness` Zeilen 2955-3023
   `def _check_server_staleness(branch: str, force: bool = False) -> None:`
-- **Funktion** `_restart_server_for_eval` Zeilen 2901-2939
+- **Funktion** `_restart_server_for_eval` Zeilen 3026-3064
   `def _restart_server_for_eval() -> None:`
-- **Funktion** `_has_new_commits_since_last_eval` Zeilen 2942-2973
+- **Funktion** `_has_new_commits_since_last_eval` Zeilen 3067-3098
   `def _has_new_commits_since_last_eval(project_root: Path) -> bool:`
-- **Funktion** `_wait_for_server` Zeilen 2976-3021
+- **Funktion** `_wait_for_server` Zeilen 3101-3146
   `def _wait_for_server(`
-- **Funktion** `cmd_eval_after_restart` Zeilen 3024-3086
+- **Funktion** `cmd_eval_after_restart` Zeilen 3149-3211
   `def cmd_eval_after_restart(number: int | None = None) -> None:`
-- **Funktion** `_ast_diff` Zeilen 3089-3129
+- **Funktion** `_ast_diff` Zeilen 3214-3254
   `def _ast_diff(old_content: str, new_content: str) -> list[str]:`
-- **Funktion** `_gitea_version_compare` Zeilen 3132-3183
+- **Funktion** `_gitea_version_compare` Zeilen 3257-3308
   `def _gitea_version_compare(commit: str, changed_files: list[str]) -> str:`
-- **Funktion** `_build_auto_issue_body` Zeilen 3186-3301
+- **Funktion** `_build_auto_issue_body` Zeilen 3311-3426
   `def _build_auto_issue_body(`
-- **Funktion** `cmd_watch` Zeilen 3304-3557
+- **Funktion** `cmd_watch` Zeilen 3429-3682
   `def cmd_watch(interval_minutes: int = 60, patch_mode: bool = False, night_mode: bool = False) -> None:`
-- **Funktion** `_dashboard_event` Zeilen 3565-3572
+- **Funktion** `_dashboard_event` Zeilen 3690-3697
   `def _dashboard_event(context: str = "") -> None:`
-- **Funktion** `cmd_install_service` Zeilen 3598-3643
+- **Funktion** `cmd_install_service` Zeilen 3723-3768
   `def cmd_install_service() -> None:`
-- **Funktion** `cmd_dashboard` Zeilen 3651-3657
+- **Funktion** `cmd_dashboard` Zeilen 3776-3782
   `def cmd_dashboard() -> None:`
-- **Funktion** `cmd_auto` Zeilen 3659-3751
+- **Funktion** `cmd_auto` Zeilen 3784-3876
   `def cmd_auto() -> None:`
-- **Funktion** `_apply_auto_approve` Zeilen 3759-3787
+- **Funktion** `_apply_auto_approve` Zeilen 3884-3912
   `def _apply_auto_approve() -> None:`
-- **Funktion** `cmd_heal` Zeilen 3794-3893
+- **Funktion** `cmd_heal` Zeilen 3919-4018
   `def cmd_heal(test_name: str = "", log_lines: int = 30) -> None:`
-- **Funktion** `cmd_doctor` Zeilen 3896-4042
+- **Funktion** `cmd_doctor` Zeilen 4021-4167
   `def cmd_doctor() -> None:`
-- **Funktion** `cmd_setup` Zeilen 4049-4617
+- **Funktion** `cmd_setup` Zeilen 4174-4742
   `def cmd_setup() -> None:`
-- **Funktion** `main` Zeilen 4620-4856
+- **Funktion** `main` Zeilen 4745-4989
   `def main():`
 - **Funktion** `__getattr__` Zeilen 74-78
   `def __getattr__(self, name: str):`
-- **Funktion** `_sym_map` Zeilen 3100-3102
+- **Funktion** `_sym_map` Zeilen 3225-3227
   `def _sym_map(content: str) -> dict[str, dict]:`
-- **Funktion** `_chk` Zeilen 3902-3903
+- **Funktion** `_chk` Zeilen 4027-4028
   `def _chk(name: str, status: str, detail: str = "", fix: str = "") -> None:`
-- **Funktion** `_mask` Zeilen 4061-4064
+- **Funktion** `_mask` Zeilen 4186-4189
   `def _mask(val: str) -> str:`
-- **Funktion** `_log` Zeilen 4066-4072
+- **Funktion** `_log` Zeilen 4191-4197
   `def _log(step: str, status: str, detail: str = "") -> None:`
-- **Funktion** `_load_state` Zeilen 4074-4080
+- **Funktion** `_load_state` Zeilen 4199-4205
   `def _load_state() -> dict:`
-- **Funktion** `_save_state` Zeilen 4082-4083
+- **Funktion** `_save_state` Zeilen 4207-4208
   `def _save_state(state: dict) -> None:`
-- **Funktion** `_ask` Zeilen 4085-4088
+- **Funktion** `_ask` Zeilen 4210-4213
   `def _ask(prompt: str, default: str = "") -> str:`
-- **Funktion** `_sanitize_repo` Zeilen 4090-4091
+- **Funktion** `_sanitize_repo` Zeilen 4215-4216
   `def _sanitize_repo(val: str) -> str:`
-- **Funktion** `_retry` Zeilen 4093-4094
+- **Funktion** `_retry` Zeilen 4218-4219
   `def _retry(msg: str) -> bool:`
-- **Funktion** `_api_get_raw` Zeilen 4098-4105
+- **Funktion** `_api_get_raw` Zeilen 4223-4230
   `def _api_get_raw(url, user, token, path):`
-- **Funktion** `_api_post_raw` Zeilen 4107-4117
+- **Funktion** `_api_post_raw` Zeilen 4232-4242
   `def _api_post_raw(url, user, token, path, data: dict):`
-- **Funktion** `_box` Zeilen 4125-4133
+- **Funktion** `_box` Zeilen 4250-4258
   `def _box(title: str, lines: list) -> None:`
-- **Funktion** `_step_done` Zeilen 4135-4143
+- **Funktion** `_step_done` Zeilen 4260-4268
   `def _step_done(n: int, title: str, detail: str = "") -> None:`
-- **Funktion** `_is_excluded` Zeilen 1954-1955
+- **Funktion** `_is_excluded` Zeilen 2015-2016
   `def _is_excluded(f: str) -> bool:`
-- **Funktion** `_len` Zeilen 3113-3118
+- **Funktion** `_len` Zeilen 3238-3243
   `def _len(s: dict) -> int:`
 
-## gitea_api.py  *(425 Zeilen)*
+## gitea_api.py  *(448 Zeilen)*
 
 - **Funktion** `_load_env` Zeilen 36-57
   `def _load_env() -> dict:`
@@ -246,7 +248,9 @@
   `def get_pr_for_branch(branch: str, base: str | None = None) -> dict | None:`
 - **Funktion** `get_file_contents` Zeilen 375-393
   `def get_file_contents(path: str, ref: str) -> str | None:`
-- **Funktion** `create_pr` Zeilen 396-425
+- **Funktion** `get_pr_diff` Zeilen 396-416
+  `def get_pr_diff(pr_number: int) -> str | None:`
+- **Funktion** `create_pr` Zeilen 419-448
   `def create_pr(branch: str, title: str, body: str, base: str | None = None) -> dict:`
 
 ## dashboard.py  *(299 Zeilen)*
